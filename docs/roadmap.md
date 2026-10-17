@@ -2,10 +2,10 @@
 
 ## Fase 1: Sistema Operacional & Ambiente Base
 - [x] Especificações definidas: i7-1185G7 (AVX-512) + 32 GB RAM.
-- [ ] Liberar partição de 60-100 GB no Windows.
-- [ ] Instalar Ubuntu Server 24.04 LTS (Dual Boot).
+- [x] Liberar partição no Windows (116 GB livres identificados).
+- [x] Instalar Ubuntu Server 24.04 LTS (Dual Boot concluído).
+- [x] SSH configurado e conectado com sucesso (`isaac@nakedrift`).
 - [ ] Configurar `/etc/systemd/logind.conf` para notebook operar com tampa fechada.
-- [ ] Ativar SSH e Tailscale para controle remoto a partir do PC principal e celular.
 
 ## Fase 2: Runtime de Inferência & Modelo Hugging Face
 - [ ] Instalar Ollama / llama.cpp compilado com suporte AVX-512.
