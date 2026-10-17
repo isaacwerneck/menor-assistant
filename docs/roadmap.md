@@ -9,14 +9,15 @@
 - [x] Ferramentas essenciais instaladas (`git`, `curl`, `ffmpeg`, `python3-pip`, `python3-venv`).
 
 ## Fase 2: Runtime de Inferência & Modelo Hugging Face
-- [ ] Instalar Ollama com suporte AVX-512.
-- [ ] Baixar modelo local (Qwen 2.5 Coder 7B / 14B).
-- [ ] Testar benchmark de geração de tokens/segundo em CPU.
+- [x] Instalar Ollama com suporte AVX-512.
+- [x] Baixar modelo local `qwen2.5-coder:7b` (inferência operando em CPU).
+- [x] Primeiro teste de geração e chat validado via terminal.
 
 ## Fase 3: Servidor & Acesso Remoto
-- [ ] Criar API base com FastAPI (endpoint `/chat` e `/health`).
-- [ ] Configurar Tailscale no notebook, PC e celular para conexão segura.
-- [ ] Criar interface web minimalista (Streamlit ou HTML/JS leve) para testes.
+- [ ] Criar ambiente virtual Python (`.venv`) no repositório `~/menor-assistant`.
+- [ ] Criar API base com FastAPI conectando diretamente ao Ollama.
+- [ ] Configurar Tailscale no notebook, PC e celular para conexão segura fora de casa.
+- [ ] Criar interface web/chat para testes pelo navegador.
 
 ## Fase 4: Pipeline de Áudio (Voz Bidirecional)
 - [ ] Integrar `faster-whisper` para transcrição de áudio do microfone.
