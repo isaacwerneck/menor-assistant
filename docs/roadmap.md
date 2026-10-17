@@ -5,11 +5,12 @@
 - [x] Liberar partição no Windows (116 GB livres identificados).
 - [x] Instalar Ubuntu Server 24.04 LTS (Dual Boot concluído).
 - [x] SSH configurado e conectado com sucesso (`isaac@nakedrift`).
-- [ ] Configurar `/etc/systemd/logind.conf` para notebook operar com tampa fechada.
+- [x] Configuração de suspensão desativada (notebook opera fechado 24/7).
+- [x] Ferramentas essenciais instaladas (`git`, `curl`, `ffmpeg`, `python3-pip`, `python3-venv`).
 
 ## Fase 2: Runtime de Inferência & Modelo Hugging Face
-- [ ] Instalar Ollama / llama.cpp compilado com suporte AVX-512.
-- [ ] Baixar modelo quantizado GGUF (recomendado: `Qwen 2.5 Coder 14B Q4_K_M` ou `7B`).
+- [ ] Instalar Ollama com suporte AVX-512.
+- [ ] Baixar modelo local (Qwen 2.5 Coder 7B / 14B).
 - [ ] Testar benchmark de geração de tokens/segundo em CPU.
 
 ## Fase 3: Servidor & Acesso Remoto
