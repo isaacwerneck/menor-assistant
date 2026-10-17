@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.env
+
+# Modelos e Dados Grandes (Hugging Face / GGUF)
+*.gguf
+*.bin
+*.pt
+*.safetensors
+models/
+cache/
+
+# Áudio e Logs temporários
+logs/
+temp/
+*.wav
+*.mp3
+
+# IDEs e Sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
