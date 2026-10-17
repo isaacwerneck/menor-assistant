@@ -1,11 +1,11 @@
-# Jarvis Local - Sistema de Assistente Pessoal
+# Menor - Sistema de Assistente Pessoal de IA
 
 Assistente local executado em servidor doméstico com voz, memória persistente em Markdown, integração de rede e capacidades agênticas.
 
 ## 🎯 Pilares do Projeto
-- **Cérebro Local**: LLM open-source rodando via Hugging Face / Ollama / llama.cpp no notebook.
-- **Acesso Ubíquo**: API para comunicação via PC principal e celular (rede local / túnel seguro).
-- **Voz Bidirecional**: STT (Whisper) para entrada e TTS (Piper/Coqui) para saída de áudio.
+- **Cérebro Local**: LLM open-source (`Qwen 2.5 Coder 7B`) rodando via Ollama no servidor doméstico.
+- **Acesso Ubíquo**: API FastAPI para comunicação via PC principal e celular (rede local / túnel seguro).
+- **Voz Bidirecional**: STT (Whisper) para entrada e TTS (Piper) para saída de áudio.
 - **Memória & Projetos**: Gerenciamento automático de arquivos `.md` para contexto, notas e tarefas.
 - **Capacidades Agênticas**: Execução de scripts, planejamento de jogos, análise de código e auto-aprimoramento contínuo.
 
