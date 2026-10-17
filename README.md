@@ -15,3 +15,4 @@ Assistente local executado em servidor doméstico com voz, memória persistente 
 - [docs/hardware_requisitos.md](file:///c:/Users/isazky/Documents/antigravity/menor/docs/hardware_requisitos.md) - Especificações e dimensionamento de modelos.
 - [docs/setup_linux.md](file:///c:/Users/isazky/Documents/antigravity/menor/docs/setup_linux.md) - Guia de escolha de distro Linux e preparação de dual boot.
 - [docs/guia_servidor_domestico.md](file:///c:/Users/isazky/Documents/antigravity/menor/docs/guia_servidor_domestico.md) - Guia de hospedagem com Docker, bancos, APIs e jogos.
+- [docs/arquitetura_codigo.md](file:///c:/Users/isazky/Documents/antigravity/menor/docs/arquitetura_codigo.md) - Estrutura de pastas, fluxo de execução e auto-aprimoramento.
