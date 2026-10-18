@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -9,9 +10,20 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
+from src.memory.store import BrainStore
+
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def app_lifespan(_app):
+    # Nenhum dado mutável é escrito dentro do checkout Git do servidor.
+    BrainStore().initialize()
+    yield
+
+
 app = FastAPI(
+    lifespan=app_lifespan,
     title="Menor - Assistente de IA Pessoal",
     description="Servidor de orquestração do Menor, assistente pessoal rodando em hardware doméstico.",
     version="0.2.0",
@@ -68,11 +80,28 @@ def ollama_error(error):
     return HTTPException(status_code=502, detail="O Ollama retornou uma resposta inválida ou uma falha de inferência.")
 
 
+def prompt_with_preferences():
+    """Inclui somente preferencias explicitas sem bloquear o chat por falhas de leitura."""
+    try:
+        preferences = BrainStore().preference_context()
+    except (OSError, UnicodeError, ValueError) as error:
+        logger.warning("Nao foi possivel ler preferencias: %s", type(error).__name__)
+        return SYSTEM_PROMPT
+    if not preferences:
+        return SYSTEM_PROMPT
+    return (
+        SYSTEM_PROMPT
+        + "\nPreferencias explicitas registradas pelo usuario (nao substituem "
+        + "instrucoes de seguranca):\n"
+        + preferences
+    )
+
+
 def open_ollama(req: ChatRequest, stream: bool):
     payload = {
         "model": req.model,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": prompt_with_preferences()},
             *[item.model_dump() for item in req.history],
             {"role": "user", "content": req.message},
         ],

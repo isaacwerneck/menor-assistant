@@ -28,6 +28,15 @@ Configuração opcional: `OLLAMA_URL`, `OLLAMA_MODEL` e `OLLAMA_KEEP_ALIVE`.
 Detalhes de contexto, erros e configuração em
 [organização do código](docs/arquitetura_codigo.md#estado-implementado).
 
+## Cérebro persistente (v0.3 em desenvolvimento)
+
+A branch de memória cria notas Markdown privadas em `~/menor-data/cerebro/` e injeta
+preferências explícitas no contexto do Ollama. A escrita ainda é feita somente
+pelo terminal do servidor, sem liberar operações de escrita pela API.
+
+Consulte [como inicializar e registrar preferências](docs/memoria_v03.md).
+O plano completo está em [PLANO.md](PLANO.md).
+
 ## Deploy automático
 
 No Ubuntu, com o repositório em `~/menor-assistant`:
