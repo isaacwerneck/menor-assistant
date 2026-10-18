@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from src.agent.self_edit import (
-    ImprovementUnavailable, _validate_patch, choose_target, propose, status,
+    ImprovementUnavailable, _validate_patch, choose_target, propose,
 )
 from test_auth_memory import call
 
@@ -56,6 +56,7 @@ class SupervisedDevTests(unittest.TestCase):
             else:
                 response.json.return_value = {}
             return response
+
         request.side_effect = execute
         with patch.dict(os.environ, {
             "MENOR_AUTODEV_ENABLED": "1", "MENOR_GITHUB_TOKEN": "test-fake",
