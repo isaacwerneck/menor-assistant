@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
+from src.agent.router import classify
 from src.memory.store import BrainStore
 from src.security import auth
 
@@ -69,7 +70,39 @@ class PasswordRequest(BaseModel):
 
 class RememberRequest(BaseModel):
     text: str = Field(min_length=1, max_length=280)
-    kind: Literal["preference", "knowledge"]
+    kind: Literal["preference", "knowledge", "project", "tool"]
+
+
+class IntentRequest(ChatRequest):
+    pass
+
+
+def _save_memory(kind, text):
+    store = BrainStore()
+    if kind == "preference":
+        saved = store.remember_preference(text)
+        path = "identidade/preferencias.md"
+    elif kind == "knowledge":
+        saved = store.remember_knowledge(text)
+        path = "conhecimentos/aprendizados_gerais.md"
+    else:
+        saved = store.remember_idea(kind, text)
+        path = "projetos/ideias.md" if kind == "project" else "ferramentas/ideias.md"
+    return {"saved": saved, "path": path, "kind": kind}
+
+
+@app.post("/agent/route")
+def route_intent(body: IntentRequest, request: Request):
+    auth.require_owner(request)
+    result = classify(body.message, [item.model_dump() for item in body.history])
+    if result["decision"] == "save":
+        try:
+            result["memory"] = _save_memory(result["target"], result["text"])
+        except (ValueError, OSError) as error:
+            logger.warning("Falha ao salvar proposta do classificador: %s", type(error).__name__)
+            result["decision"] = "ask"
+            result["question"] = "Não consegui salvar automaticamente. Quer revisar esta anotação?"
+    return result
 
 
 def require_chat_access(request: Request):
@@ -106,16 +139,11 @@ def auth_logout(request: Request, response: Response):
 @app.post("/memory/remember")
 def remember_memory(body: RememberRequest, request: Request):
     auth.require_owner(request)
-    store = BrainStore()
     try:
-        if body.kind == "preference":
-            saved = store.remember_preference(body.text)
-        else:
-            saved = store.remember_knowledge(body.text)
+        return _save_memory(body.kind, body.text)
     except (ValueError, OSError) as error:
         logger.warning("Falha ao registrar memoria: %s", type(error).__name__)
         raise HTTPException(422, "Não foi possível salvar a memória solicitada.") from error
-    return {"saved": saved, "kind": body.kind}
 
 
 @app.get("/memory/preferences")
