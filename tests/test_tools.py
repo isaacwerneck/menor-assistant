@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from src.agent.diagnostics import analyze
 from src.memory.store import BrainStore
 from src.tools.audit import record
 from src.tools.registry import list_tools, perform
@@ -60,6 +61,19 @@ class ToolRegistryTests(unittest.TestCase):
         payload = json.loads(audit.read_text().strip())
         self.assertEqual(payload["fields"], ["kind", "text"])
         self.assertNotIn("senha-de-acesso", audit.read_text())
+
+    def test_diagnose_groups_failures_without_contents(self):
+        record("projects.create", "failed", ["name"])
+        record("projects.create", "failed", ["name"])
+        record("projects.list", "executed")
+        status = analyze()
+        self.assertEqual(status["status"], "needs-review")
+        self.assertEqual(status["failures"], 2)
+        self.assertEqual(status["issues"][0]["tool"], "projects.create")
+        self.assertEqual(status["issues"][0]["failures"], 2)
+        result = perform("system.diagnose", {}, dry_run=False)
+        self.assertEqual(result["result"]["events"], 3)
+        self.assertNotIn("arguments", result["result"])
 
     def test_audit_rejects_symlink(self):
         store = BrainStore()
