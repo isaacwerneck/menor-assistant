@@ -93,4 +93,4 @@ curl http://127.0.0.1:8000/health
 ```
 
 Após registrar uma preferência, converse com o Menor para observar o contexto aplicado.
-A próxima etapa acrescentará busca e recuperação de conhecimentos gerais e gerenciamento de projetos.
+A busca textual dos conhecimentos gerais está descrita em [Busca de conhecimentos](busca_conhecimentos.md). A recuperação específica dos projetos e a busca semântica permanecem em desenvolvimento.
