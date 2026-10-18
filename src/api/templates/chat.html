@@ -444,6 +444,12 @@
         .modal-layer { max-width: 100vw; overflow-x: hidden; }
         .modal-box { min-width: 0; max-width: min(100%, 480px); }
 
+        .attach-btn { background: transparent; border: none; padding: 4px 7px;
+            color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;
+            flex-shrink: 0; align-self: flex-end; }
+        .message-image { display: block; max-width: min(100%, 512px); max-height: 540px;
+            border-radius: 12px; margin-top: 10px; object-fit: contain; }
+        .message-content { overflow-wrap: anywhere; }
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
             .topbar { gap: 5px; padding: 8px 10px; min-height: 54px; }
@@ -513,11 +519,16 @@
 
         <div class="input-area">
             <div class="input-wrapper">
+                <button class="attach-btn" aria-label="Anexar foto para editar" title="Anexar foto"
+                    onclick="chooseImage()">＋</button>
+                <input type="file" id="imageAttachment" accept="image/png,image/jpeg,image/webp"
+                    onchange="imageSelected(this)" hidden>
                 <textarea id="userInput" rows="1" maxlength="8000" aria-label="Mensagem para o Menor" placeholder="Mande uma mensagem para o Menor..."
                     onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
                 <button class="send-btn" id="sendBtn" aria-label="Enviar mensagem" onclick="sendMsg()">➤</button>
             </div>
         </div>
+        <div class="input-footer" id="imageAttachmentName" hidden></div>
         <div class="input-footer" id="storageStatus" role="alert" hidden></div>
         <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
     </div>
@@ -590,6 +601,7 @@
         let brainEditingId = null;
         let pendingProjectSlug = '';
         let availableProjects = [];
+        let selectedImageFile = null;
 
         // ========== INIT ==========
         renderConvList();
@@ -952,6 +964,7 @@
             if (isGenerating) return;
             activeConvId = null;
             pendingProjectSlug = '';
+            clearImageAttachment();
             updateProjectBadge();
             showWelcome();
             renderConvList();
@@ -985,7 +998,7 @@
             showMessages();
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
-            conv.messages.forEach(m => appendMessage(m.role, m.content, false));
+            conv.messages.forEach(m => appendMessage(m.role, m.content, false, m.image));
             scrollToBottom();
         }
 
@@ -1053,7 +1066,7 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!isGenerating) sendMsg(); }
         }
 
-        function appendMessage(role, text, animate = false) {
+        function appendMessage(role, text, animate = false, imageUrl = '') {
             const container = document.getElementById('messagesContainer');
             const row = document.createElement('div');
             row.className = `message-row ${role}`;
@@ -1064,6 +1077,14 @@
             const content = document.createElement('div');
             content.className = 'message-content' + (animate ? ' cursor' : '');
             content.textContent = text;
+            if (imageUrl && /^\/images\/files\/[a-f0-9]{32}$/.test(imageUrl)) {
+                const image = document.createElement('img');
+                image.className = 'message-image';
+                image.src = imageUrl;
+                image.alt = 'Imagem gerada ou editada pelo Menor';
+                image.loading = 'lazy';
+                content.appendChild(image);
+            }
 
             row.innerHTML = `<div class="avatar ${avatarClass}">${avatarText}</div>`;
             row.appendChild(content);
@@ -1077,12 +1098,119 @@
             sendMsg();
         }
 
+        // ========== IMAGENS E ESTADO DE TAREFA ==========
+        function chooseImage() {
+            document.getElementById('imageAttachment').click();
+        }
+
+        function imageSelected(input) {
+            selectedImageFile = input.files && input.files[0] ? input.files[0] : null;
+            const label = document.getElementById('imageAttachmentName');
+            label.hidden = !selectedImageFile;
+            label.textContent = selectedImageFile ? 'Foto anexada: ' + selectedImageFile.name : '';
+        }
+
+        function clearImageAttachment() {
+            selectedImageFile = null;
+            document.getElementById('imageAttachment').value = '';
+            document.getElementById('imageAttachmentName').hidden = true;
+        }
+
+        async function imageJson(url, body) {
+            const response = await fetch(url, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(typeof data.detail === 'string' ? data.detail
+                    : 'Não consegui gerar a imagem.');
+            }
+            return data;
+        }
+
+        function imageReply(conv, content, message, imageUrl = '') {
+            content.textContent = message;
+            if (imageUrl && /^\/images\/files\/[a-f0-9]{32}$/.test(imageUrl)) {
+                const image = document.createElement('img');
+                image.className = 'message-image';
+                image.src = imageUrl;
+                image.alt = 'Imagem criada pelo Menor';
+                content.appendChild(image);
+            }
+            conv.messages.push({ role: 'bot', content: message, ...(imageUrl ? { image: imageUrl } : {}) });
+            save();
+            scrollToBottom();
+        }
+
+        async function handleImageTurn(conv, message, content) {
+            const attachment = selectedImageFile;
+            const pending = conv.pendingImage;
+            const normalized = message.trim().toLowerCase();
+            if (pending && /^(cancela|cancelar|deixa|não precisa|nao precisa)$/.test(normalized)) {
+                delete conv.pendingImage;
+                clearImageAttachment();
+                imageReply(conv, content, 'Certo, cancelei o pedido de imagem.');
+                return true;
+            }
+            const intent = pending ? {
+                decision: pending.kind === 'edit' ? 'image_edit' : 'image_generate',
+                prompt: message,
+            } : await imageJson('/images/intent', {
+                message, has_attachment: !!attachment,
+            });
+            if (intent.decision === 'chat' && !attachment) return false;
+            if (intent.decision === 'image_ask') {
+                conv.pendingImage = { kind: intent.kind };
+                imageReply(conv, content, intent.question);
+                return true;
+            }
+            const kind = intent.decision === 'image_edit' || (attachment && intent.decision === 'chat')
+                ? 'edit' : 'generate';
+            if (kind === 'edit' && !attachment) {
+                conv.pendingImage = { kind: 'edit' };
+                imageReply(conv, content, 'Anexa a imagem que você quer editar.');
+                return true;
+            }
+            const prompt = (intent.prompt || message).trim();
+            if (kind === 'generate' && (prompt.length < 12 || /^(realista|vertical|quadrada)$/.test(normalized))) {
+                conv.pendingImage = { kind: 'generate' };
+                imageReply(conv, content, 'O que deve aparecer na imagem? Me descreve a cena.');
+                return true;
+            }
+            content.textContent = kind === 'edit' ? 'Editando imagem...' : 'Gerando imagem...';
+            try {
+                let result;
+                if (kind === 'edit') {
+                    const payload = new FormData();
+                    payload.append('file', attachment);
+                    payload.append('prompt', prompt);
+                    const response = await fetch('/images/edit', { method: 'POST', body: payload });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.detail || 'Erro ao editar imagem.');
+                    result = data;
+                } else {
+                    result = await imageJson('/images/generate', { prompt });
+                }
+                if (result.status !== 'completed' || !result.url) {
+                    throw new Error('O motor não confirmou a imagem.');
+                }
+                delete conv.pendingImage;
+                clearImageAttachment();
+                imageReply(conv, content, kind === 'edit' ? 'Imagem editada.' : 'Imagem gerada.', result.url);
+            } catch (failure) {
+                // Erro é real: não dizer que criou imagem nem enviar o pedido ao Qwen.
+                imageReply(conv, content, failure.message);
+            }
+            return true;
+        }
+
         // ========== SEND MESSAGE ==========
         async function sendMsg() {
             if (isGenerating) return;
             const input = document.getElementById('userInput');
-            const msg = input.value.trim();
-            if (!msg || msg.length > 8000) return;
+            const msg = input.value.trim() || (selectedImageFile ? 'edita essa imagem' : '');
+            if ((!msg && !selectedImageFile) || msg.length > 8000) return;
             isGenerating = true;
             document.getElementById('sendBtn').disabled = true;
             input.value = '';
@@ -1092,7 +1220,7 @@
             if (!activeConvId) { createConversation(msg); }
             showMessages();
             document.getElementById('messagesContainer').replaceChildren();
-            getActiveConv().messages.forEach(m => appendMessage(m.role, m.content));
+            getActiveConv().messages.forEach(m => appendMessage(m.role, m.content, false, m.image));
 
             const conv = getActiveConv();
             const history = buildHistory(conv.messages, msg);
@@ -1104,6 +1232,7 @@
             const botContent = appendMessage('bot', '', true);
 
             try {
+                if (!conv.pendingMemory && (await handleImageTurn(conv, msg, botContent))) return;
                 if (conv.pendingMemory) {
                     const pending = conv.pendingMemory;
                     const response = await fetch('/agent/resolve', {
