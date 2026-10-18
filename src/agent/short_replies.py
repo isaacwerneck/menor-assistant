@@ -36,7 +36,15 @@ def simple_answer(answer, suggested_target="none", question="", project=None):
         kind for kind, aliases in CATEGORIES.items()
         if any(re.search(r"\b" + re.escape(alias) + r"\b", text) for alias in aliases)
     }
-    if len(mentioned) == 1 and len(text.split()) <= 8:
+    allowed = {
+        "anota", "anote", "salva", "salve", "guarda", "guarde", "registra",
+        "registre", "coloca", "coloque", "isso", "essa", "a", "ideia", "em",
+        "na", "no", "nas", "nos", "para", "pra", "pasta", "de", "do", "da",
+        "por", "favor",
+    }
+    chosen_words = set().union(*(CATEGORIES[k] for k in mentioned)) if mentioned else set()
+    # Não transforme menções incidentais a "projeto" em confirmação de escrita.
+    if len(mentioned) == 1 and set(text.split()).issubset(chosen_words | allowed):
         target = next(iter(mentioned))
         return {"decision": "save", "target": target, "note_kind": "none", "question": ""}
     if text in YES:
