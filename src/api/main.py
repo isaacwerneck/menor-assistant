@@ -14,7 +14,7 @@ import requests
 from src.agent.router import classify
 from src.agent.image_intent import image_intent
 from src.agent.missions import MissionStore
-from src.agent.skills import catalog as skill_catalog
+from src.agent.skills import catalog as skill_catalog, capability_status
 from src.agent.delegation import generate_image as delegate_image
 from src.agent.self_edit import ImprovementUnavailable, propose, status as dev_status
 from src.agent.resolve import resolve
@@ -214,10 +214,13 @@ def images_intent(body: ImageIntentRequest, request: Request):
 @app.get("/images/status")
 def images_status(request: Request):
     auth.require_owner(request)
+    local = images.provider() == "local"
+    skill = capability_status("images.generate") if local else None
     return {
-        "configured": images.configured(),
+        "configured": skill["ready"] if local else images.configured(),
         "provider": images.provider(),
-        "local_model": local_images.status() if images.provider() == "local" else None,
+        "local_model": local_images.status() if local else None,
+        "skill": skill,
     }
 
 
