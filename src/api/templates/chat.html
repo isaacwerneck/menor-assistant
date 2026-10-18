@@ -1317,10 +1317,19 @@
                     : mission.status === 'ready'
                         ? 'O teste anterior passou, mas o runtime não está disponível agora.'
                     : mission.status === 'failed'
-                        ? 'A preparação falhou. Confira as dependências ou o disco; a skill não está pronta.'
+                        ? 'O subagente falhou na instalação ou no teste. A skill ainda não está pronta.'
+                        : mission.status === 'blocked' && mission.result?.error === 'insufficient_disk'
+                            ? 'Não há espaço suficiente para instalar o modelo. Precisamos de 5 GB livres.'
                         : mission.status === 'blocked'
-                            ? 'Ainda falta um executor seguro para essa habilidade.'
-                            : 'Estado atual: ' + mission.status + '. Ainda não está pronta.';
+                            ? 'Ainda falta um executor autorizado para essa habilidade.'
+                        : mission.status === 'installing'
+                            ? ({ preparing: 'Preparando o ambiente isolado...',
+                                downloading: 'Baixando o modelo local...',
+                                testing: 'Testando a geração e verificando a imagem...' }[mission.stage]
+                                || 'Preparando o subagente local...')
+                            : mission.status === 'queued'
+                                ? 'A missão está aprovada e aguardando o worker automático.'
+                                : 'Estado atual: ' + mission.status + '. Ainda não está pronta.';
                 imageReply(conv, content, state);
                 return true;
             }
