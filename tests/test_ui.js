@@ -14,6 +14,9 @@ function browser(saved = '[]', intent = { decision: 'chat' }) {
     const routed = [];
     const downloads = [];
     const memories = [];
+    const knowledgeActions = [];
+    let knowledgeItems = [{ id: '3.0123456789abcdef', text: 'Meu jogo usa Godot', date: '2026-10-18',
+        source: 'conhecimentos/aprendizados_gerais.md' }];
     let blob;
     function element() {
         return {
@@ -34,7 +37,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }) {
             },
             createElement: element,
         },
-        window: { matchMedia: () => ({ matches: false }) },
+        window: { matchMedia: () => ({ matches: false }), confirm: () => true },
         localStorage: {
             getItem: () => saved,
             setItem: (key, value) => writes.push(JSON.parse(value)),
@@ -48,6 +51,29 @@ function browser(saved = '[]', intent = { decision: 'chat' }) {
             if (url === '/memory/remember') {
                 memories.push(JSON.parse(options.body));
                 return { ok: true, json: async () => ({ saved: true, path: 'identidade/preferencias.md' }) };
+            }
+            if (url === '/memory/knowledge' && !options?.body) {
+                return { ok: true, json: async () => ({ items: knowledgeItems }) };
+            }
+            if (url === '/memory/search') {
+                const query = JSON.parse(options.body).query.toLowerCase();
+                return { ok: true, json: async () => ({
+                    items: knowledgeItems.filter(x => x.text.toLowerCase().includes(query))
+                        .map(x => ({ content: x.text, source: x.source, line: 3 })),
+                }) };
+            }
+            if (url === '/memory/knowledge/edit') {
+                const body = JSON.parse(options.body);
+                knowledgeActions.push({ type: 'edit', ...body });
+                knowledgeItems = knowledgeItems.map(x => x.id === body.id
+                    ? { ...x, text: body.text, id: '3.abcdefabcdefabcd' } : x);
+                return { ok: true, json: async () => ({ action: 'edit' }) };
+            }
+            if (url === '/memory/knowledge/delete') {
+                const body = JSON.parse(options.body);
+                knowledgeActions.push({ type: 'delete', ...body });
+                knowledgeItems = knowledgeItems.filter(x => x.id !== body.id);
+                return { ok: true, json: async () => ({ action: 'delete' }) };
             }
             if (url === '/agent/route') {
                 routed.push(JSON.parse(options.body));
@@ -65,7 +91,8 @@ function browser(saved = '[]', intent = { decision: 'chat' }) {
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, memories, downloads, getBlob: () => blob };
+    return { context, elements, writes, requests, routed, memories, knowledgeActions,
+        downloads, getBlob: () => blob };
 }
 
 test('histórico mantém ordem, converte bot e respeita orçamento de contexto', () => {
@@ -232,4 +259,31 @@ test('conversa não muda enquanto classificação ou geração está em curso', 
     finish({ ok: false, json: async () => ({ detail: 'Serviço indisponível' }) });
     await pending;
     assert.equal(conv.messages.length, 1);
+});
+
+
+test('painel de conhecimentos permite consultar, pesquisar, editar e excluir', async () => {
+    const ui = browser();
+    await ui.context.openBrain();
+    assert.equal(ui.elements.get('brainPanel').hidden, false);
+    assert.equal(ui.elements.get('brainList').children.length, 1);
+    ui.elements.get('brainSearchInput').value = 'Godot';
+    await ui.context.searchBrain();
+    assert.equal(ui.elements.get('brainList').children.length, 1);
+    ui.elements.get('brainSearchInput').value = 'Rust';
+    await ui.context.searchBrain();
+    assert.match(ui.elements.get('brainList').children[0].textContent, /Nenhum conhecimento/);
+    await ui.context.loadBrain();
+    ui.context.editBrainItem('3.0123456789abcdef');
+    assert.equal(ui.elements.get('brainEditText').value, 'Meu jogo usa Godot');
+    ui.elements.get('brainEditText').value = 'Meu jogo usa Unity';
+    await ui.context.saveBrainEdit();
+    assert.equal(ui.knowledgeActions[0].type, 'edit');
+    assert.equal(ui.knowledgeActions[0].text, 'Meu jogo usa Unity');
+    await ui.context.deleteBrainItem('3.abcdefabcdefabcd');
+    assert.equal(ui.knowledgeActions[1].type, 'delete');
+    assert.equal(ui.elements.get('brainList').children.length, 1);
+    assert.match(ui.elements.get('brainList').children[0].textContent, /Nenhum conhecimento/);
+    ui.context.closeBrain();
+    assert.equal(ui.elements.get('brainPanel').hidden, true);
 });
