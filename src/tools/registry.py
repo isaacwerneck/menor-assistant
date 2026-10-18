@@ -4,6 +4,7 @@ Nenhum caminho informado pelo modelo é repassado diretamente ao sistema.
 """
 from dataclasses import dataclass
 
+from src.agent.diagnostics import analyze
 from src.memory.store import BrainStore
 from src.projects.manager import create_project
 from src.projects.workspace import ProjectWorkspace
@@ -19,6 +20,9 @@ class Tool:
 
 
 TOOLS = {
+    "system.diagnose": Tool(
+        "system.diagnose", "Resume falhas das ferramentas em auditoria local.", "read", False, (),
+    ),
     "projects.list": Tool(
         "projects.list", "Lista projetos existentes no cérebro.", "read", False, (),
     ),
@@ -63,7 +67,9 @@ def perform(name, arguments, dry_run=True):
     if dry_run:
         return {"status": "planned", "tool": name, "writes": tool.writes,
                 "arguments": list(tool.arguments)}
-    if name == "projects.list":
+    if name == "system.diagnose":
+        output = analyze()
+    elif name == "projects.list":
         output = ProjectWorkspace().list_projects()
     elif name == "projects.read":
         output = ProjectWorkspace().read_project(arguments["slug"])
