@@ -361,6 +361,40 @@
             color: var(--text-muted);
         }
 
+
+        /* ========== PROTECAO E MEMORIA ========== */
+        [hidden] { display: none !important; }
+
+        .modal-layer {
+            position: fixed; inset: 0; z-index: 300;
+            background: rgba(5, 9, 18, 0.94);
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; overflow-y: auto;
+        }
+        .modal-box {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 16px; padding: 24px; width: 100%; max-width: 480px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        .modal-box h2 { font-size: 1.25rem; }
+        .modal-box p { color: var(--text-secondary); line-height: 1.6; }
+        .modal-box input {
+            background: var(--bg-tertiary); color: var(--text-primary);
+            border: 1px solid var(--border); padding: 12px; border-radius: 8px;
+            font: inherit; width: 100%;
+        }
+        .modal-box button {
+            background: var(--accent); color: var(--bg-primary);
+            border: 0; border-radius: 8px; padding: 12px;
+            font: inherit; font-weight: 600; cursor: pointer;
+        }
+        .modal-box button.secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .modal-error { color: #fda4af !important; }
+        .modal-box .memory-text {
+            white-space: pre-wrap; word-break: break-word; color: var(--text-primary);
+            background: var(--bg-tertiary); padding: 12px; border-radius: 8px;
+        }
+
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
             .sidebar { position: fixed; z-index: 100; height: 100%; }
@@ -384,7 +418,7 @@
         </div>
         <div class="sidebar-footer">
             <div class="dot"></div>
-            <span>Menor v0.2 · IA local</span>
+            <span>Menor v0.3 · Memória local</span>
         </div>
     </aside>
 
@@ -423,18 +457,142 @@
         <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
     </div>
 
+
+    <section id="authPanel" class="modal-layer" aria-label="Acesso ao Menor">
+        <form class="modal-box" onsubmit="submitAuth(event)">
+            <h2 id="authTitle">Acessar Menor</h2>
+            <p id="authHelp">Verificando acesso ao servidor...</p>
+            <input id="authPassword" type="password" minlength="12" maxlength="128"
+                autocomplete="current-password" placeholder="Senha do Menor"
+                aria-label="Senha do Menor" required>
+            <button id="authSubmit" type="submit">Continuar</button>
+            <p id="authError" class="modal-error" role="alert"></p>
+        </form>
+    </section>
+
+    <section id="memoryPanel" class="modal-layer" aria-label="Confirmar memória" hidden>
+        <div class="modal-box">
+            <h2>Salvar no cérebro?</h2>
+            <p id="memoryText" class="memory-text"></p>
+            <p>Como o Menor deve guardar isso?</p>
+            <button onclick="confirmMemory('preference')">Como preferência (aplicar nas próximas respostas)</button>
+            <button onclick="confirmMemory('knowledge')">Como conhecimento (guardar para recuperação futura)</button>
+            <button class="secondary" onclick="cancelMemory()">Cancelar</button>
+            <p id="memoryError" class="modal-error" role="alert"></p>
+        </div>
+    </section>
     <script>
         // ========== STATE ==========
         let canSave = true;
         let conversations = loadConversations();
         let activeConvId = null;
         let isGenerating = false;
+        let authSetupNeeded = false;
+        let pendingMemory = null;
+        let savingMemory = false;
 
         // ========== INIT ==========
         renderConvList();
         showWelcome();
+        checkAuth();
         refreshHealth();
         setInterval(refreshHealth, 30000);
+
+        // ========== AUTENTICACAO DO PROPRIETARIO ==========
+        async function checkAuth() {
+            const error = document.getElementById('authError');
+            try {
+                const response = await fetch('/auth/status');
+                if (!response.ok) throw new Error('Não foi possível verificar o acesso.');
+                const status = await response.json();
+                document.getElementById('authPanel').hidden = !!status.authenticated;
+                authSetupNeeded = !status.configured;
+                document.getElementById('authTitle').textContent = authSetupNeeded
+                    ? 'Crie a senha do Menor' : 'Entre no Menor';
+                document.getElementById('authHelp').textContent = authSetupNeeded
+                    ? 'Primeiro acesso: crie uma senha com pelo menos 12 caracteres. '
+                      + 'Configure somente na sua rede Wi-Fi privada.'
+                    : 'Digite a senha que você criou para acessar suas memórias.';
+            } catch (failure) {
+                document.getElementById('authPanel').hidden = false;
+                error.textContent = failure.message;
+            }
+        }
+
+        async function submitAuth(event) {
+            event.preventDefault();
+            const error = document.getElementById('authError');
+            error.textContent = '';
+            try {
+                const password = document.getElementById('authPassword').value;
+                const endpoint = authSetupNeeded ? '/auth/setup' : '/auth/login';
+                const response = await fetch(endpoint, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(typeof data.detail === 'string' ? data.detail : 'Falha no acesso.');
+                }
+                document.getElementById('authPassword').value = '';
+                document.getElementById('authPanel').hidden = true;
+                authSetupNeeded = false;
+            } catch (failure) {
+                error.textContent = failure.message;
+            }
+        }
+
+        // ========== MEMORIA CONFIRMADA PELO USUARIO ==========
+        function getRememberText(message) {
+            const match = message.match(/^\s*(?:menor[,!]?\s+)?lembre(?:-se)?\s+(?:disso|disto|de que|que)\s*[:;,]?\s*(.+)$/i);
+            return match ? match[1].trim() : null;
+        }
+
+        function showMemoryConfirm(text, original) {
+            pendingMemory = { text, original };
+            document.getElementById('memoryText').textContent = text;
+            document.getElementById('memoryError').textContent = '';
+            document.getElementById('memoryPanel').hidden = false;
+        }
+
+        function cancelMemory() {
+            if (savingMemory) return;
+            document.getElementById('memoryPanel').hidden = true;
+            pendingMemory = null;
+        }
+
+        async function confirmMemory(kind) {
+            if (!pendingMemory || savingMemory) return;
+            savingMemory = true;
+            const memory = pendingMemory;
+            const error = document.getElementById('memoryError');
+            try {
+                const response = await fetch('/memory/remember', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: memory.text, kind }),
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(typeof data.detail === 'string' ? data.detail : 'Não foi possível salvar.');
+                }
+                document.getElementById('memoryPanel').hidden = true;
+                pendingMemory = null;
+                if (!activeConvId) createConversation(memory.original);
+                const conv = getActiveConv();
+                conv.messages.push({ role: 'user', content: memory.original });
+                const reply = kind === 'preference'
+                    ? 'Preferência salva no cérebro. Vou considerá-la nas próximas respostas.'
+                    : 'Conhecimento anotado no cérebro. A busca de conhecimentos será ampliada nas próximas etapas.';
+                conv.messages.push({ role: 'bot', content: reply });
+                save();
+                openConv(conv.id);
+            } catch (failure) {
+                error.textContent = failure.message;
+                if (failure.message.includes('Entre com a senha')) checkAuth();
+            } finally {
+                savingMemory = false;
+            }
+        }
 
         // ========== CONVERSATIONS ==========
         function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -643,6 +801,17 @@
             const input = document.getElementById('userInput');
             const msg = input.value.trim();
             if (!msg || msg.length > 8000) return;
+            const remembered = getRememberText(msg);
+            if (remembered !== null) {
+                input.value = '';
+                if (remembered.length === 0 || remembered.length > 280) {
+                    document.getElementById('connectionStatus').textContent =
+                        'A memória deve conter entre 1 e 280 caracteres.';
+                    return;
+                }
+                showMemoryConfirm(remembered, msg);
+                return;
+            }
 
             isGenerating = true;
             document.getElementById('sendBtn').disabled = true;
