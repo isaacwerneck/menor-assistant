@@ -1208,7 +1208,9 @@
                 clearImageAttachment();
                 imageReply(conv, content, kind === 'edit' ? 'Imagem editada.' : 'Imagem gerada.', result.url);
             } catch (failure) {
-                // Erro é real: não dizer que criou imagem nem enviar o pedido ao Qwen.
+                // Falha não vira sucesso; limpa a tarefa para não prender outros assuntos.
+                delete conv.pendingImage;
+                clearImageAttachment();
                 imageReply(conv, content, failure.message);
             }
             return true;
