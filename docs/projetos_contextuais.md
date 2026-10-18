@@ -27,6 +27,11 @@ O seletor compacto **Projetos**, no topo do chat, permite vincular a conversa
 a um projeto existente. Esse vínculo é salvo com a conversa no navegador, de
 modo que outras conversas não recebem contexto de projetos diferentes.
 
+Também é possível dizer na conversa "Vamos continuar no projeto Cidade Noturna".
+Quando o nome coincide com um projeto existente, o Menor o seleciona
+automaticamente, sem exigir um botão. Se não encontrar, pergunta qual projeto
+você deseja abrir.
+
 Depois de selecionar um projeto, o Menor passa a recuperar, dentro de um
 orçamento de contexto, o objetivo, decisões recentes, tarefas e diário.
 As notas são apresentadas ao Qwen como **dados**, não como novas instruções
