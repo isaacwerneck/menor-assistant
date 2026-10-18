@@ -14,6 +14,8 @@ import requests
 from src.agent.router import classify
 from src.agent.image_intent import image_intent
 from src.agent.missions import MissionStore
+from src.agent.skills import catalog as skill_catalog
+from src.agent.delegation import generate_image as delegate_image
 from src.agent.self_edit import ImprovementUnavailable, propose, status as dev_status
 from src.agent.resolve import resolve
 from src.memory.store import BrainStore
@@ -145,6 +147,12 @@ class MissionApprovalRequest(BaseModel):
     approved: bool
 
 
+@app.get("/agent/skills")
+def agent_skills(request: Request):
+    auth.require_owner(request)
+    return {"items": skill_catalog()}
+
+
 @app.get("/agent/missions")
 def missions_list(request: Request):
     auth.require_owner(request)
@@ -225,7 +233,10 @@ def image_error(error):
 def images_generate(body: ImageRequest, request: Request):
     auth.require_owner(request)
     try:
-        result = images.generate(body.prompt)
+        result = (
+            delegate_image(body.prompt)
+            if images.provider() == "local" else images.generate(body.prompt)
+        )
         record("images.generate", "executed", ["prompt"])
         return result
     except (images.ImageUnavailable, ValueError, OSError) as error:
