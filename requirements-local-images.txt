@@ -1,5 +1,8 @@
-# Dependências opcionais de um subagente de imagens que roda localmente.
-# Instaladas somente após aprovação explícita, dentro do venv do projeto.
+# Dependências do subagente local, instaladas em um venv ISOLADO após aprovação.
+# Não modificar o ambiente Python da API.
 openvino>=2025.0.0,<2027
 openvino-genai>=2025.0.0,<2027
+openvino-tokenizers>=2025.0.0,<2027
 huggingface_hub>=0.25,<2
+pillow>=11.0,<13
+requests>=2.31,<3

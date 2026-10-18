@@ -126,15 +126,26 @@ class MissionStore:
                 "preferred": candidates[0]["id"] if candidates else None,
                 "requires_approval": True,
             }
+            if capability == "images.generate":
+                from src.tools.local_images import preflight
+                obj["plan"]["preflight"] = preflight(self.store)
             obj["status"] = "awaiting_approval"
-            obj["question"] = (
-                "Encontrei o modelo local OpenVINO SD 1.5 para imagens. "
-                "O download reserva cerca de 5 GB e a CPU pode ser lenta. "
-                "Posso preparar esse subagente?"
-                if candidates else
-                "Ainda não tenho um instalador aprovado para essa capacidade. "
-                "Quer que eu registre o plano e prepare uma proposta de implementação?"
-            )
+            if candidates and not obj["plan"]["preflight"]["enough_disk"]:
+                obj["question"] = (
+                    "Encontrei o modelo local, mas não há 5 GB livres em disco. "
+                    "Precisamos liberar espaço antes do download."
+                )
+            elif candidates:
+                obj["question"] = (
+                    "Encontrei o modelo OpenVINO SD 1.5, que roda no servidor. "
+                    "O download exige cerca de 5 GB livres e a CPU pode ser lenta. "
+                    "Posso instalar e testar o subagente?"
+                )
+            else:
+                obj["question"] = (
+                    "Ainda não tenho instalador aprovado para essa capacidade. "
+                    "Quer que eu registre o plano e prepare uma proposta de implementação?"
+                )
             self._write(obj)
             return obj
 
@@ -150,14 +161,35 @@ class MissionStore:
                 obj["status"] = "cancelled"
                 obj["question"] = "Entendi. Não instalei nada."
             elif obj["capability"] == "images.generate" and obj["plan"]["preferred"]:
-                obj["status"] = "queued"
-                obj["question"] = "Autorizado. Vou baixar e preparar o modelo local."
+                from src.tools.local_images import preflight
+                if preflight(self.store)["enough_disk"]:
+                    obj["status"] = "queued"
+                    obj["question"] = "Autorizado. Vou baixar e preparar o modelo local."
+                else:
+                    obj["status"] = "blocked"
+                    obj["question"] = (
+                        "Autorizei o pedido, mas não há espaço suficiente em disco. "
+                        "Nenhum download foi iniciado."
+                    )
+                    obj["result"] = {"error": "insufficient_disk", "verified": False}
             else:
                 obj["status"] = "blocked"
                 obj["question"] = (
                     "Plano autorizado, mas falta um executor seguro para criar "
                     "essa ferramenta. Não vou fingir que ela está instalada."
                 )
+            self._write(obj)
+            return obj
+
+    def stage(self, mission_id, value):
+        """Atualiza a etapa da operação sem mudar a autorização da missão."""
+        if value not in ("preparing", "downloading", "testing"):
+            raise ValueError("Etapa desconhecida.")
+        with _LOCK:
+            obj = self.get(mission_id)
+            if obj["status"] != "installing":
+                raise ValueError("A missão não está em execução.")
+            obj["stage"] = value
             self._write(obj)
             return obj
 

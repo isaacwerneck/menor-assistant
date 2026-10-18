@@ -97,3 +97,24 @@ As dependências opcionais vêm de um arquivo revisado do próprio repositório.
 precisam de teste no Ubuntu. Criar uma ferramenta genérica de música,
 programação ou edição de foto continua dependendo de novos executores.
 
+## Operação do subagente local (PR #9)
+
+A instalação do modelo OpenVINO passou a usar um runtime Python próprio em
+`~/menor-data/runtimes/openvino-image/`, fora do ambiente da API. Um
+subprocesso com opções fixas executa o download de arquivos de modelo
+`OpenVINO/stable-diffusion-v1-5-int8-ov` ou a geração de imagem. O child
+não recebe segredos de outras integrações e tem limite de tempo.
+
+O modelo permanece em `~/menor-data/models/openvino-sd15-int8/`.
+Downloads parciais não são classificados como modelo pronto.
+A primeira instalação precisa de internet; depois a geração usa apenas
+pesos locais. Dependências opcionais são instaladas só após autorização.
+
+Na conversa, "status" retorna a etapa em andamento: preparar dependências,
+baixar os pesos ou testar o PNG. Antes da aprovação, o Menor informa se
+há espaço livre suficiente para iniciar. O timer systemd processa tarefas
+aprovadas sem necessitar de comandos manuais de Git.
+
+**Ainda é necessário testar no notebook real.** A automação não garante
+velocidade, compatibilidade com drivers ou qualidade artística.
+

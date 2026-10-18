@@ -126,3 +126,14 @@ Implantar e medir desempenho no hardware Intel real antes de aceitar a fase.
 - Testes automatizados cobrem estas invariantes com modelos simulados.
 - O modelo precisa ser testado no Ubuntu com Intel para aceite operacional.
 
+## R10 — Subagente local isolado e recuperável
+
+- A instalação de OpenVINO não modifica o .venv do chat.
+- A geração só ocorre depois de missão aprovada, modelo completo e teste.
+- Com download incompleto, o Menor informa a falha e pode retomar a preparação
+  em uma missão autorizada, sem marcar a capacidade como pronta.
+- Espaço insuficiente bloqueia o download; erros/timeouts geram falha explícita.
+- O processo filho não herda tokens GitHub, chaves da API de imagens ou variáveis
+  de conexão do Qwen. Somente instruções JSON aceitas são executadas.
+- Testar inferência real de 512x512 no notebook antes de declarar operação pronta.
+
