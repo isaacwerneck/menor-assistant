@@ -74,6 +74,20 @@ autenticado `GET /tools` e execução controlada em
 metadados locais de auditoria. O Menor ainda não cria/instala
 autonomamente ferramentas Python nem controla Git.
 
+## Imagens e revisões de código (v0.6 — em revisão)
+
+O chat identifica pedidos de gerar/editar imagem, faz perguntas curtas
+quando falta informação, aceita anexo de foto e mostra o resultado
+quando um motor externo de imagens está configurado.
+
+A opção de corrigir código gera um **PR rascunho**, em branch separada,
+somente se o proprietário ativar explicitamente a integração GitHub.
+O monitor diário de falhas roda localmente, sem auto-merge e sem
+executar patches na máquina.
+
+Veja [configuração, custos, privacidade e limites](docs/imagens_autoedicao_v06.md).
+O motor de imagens e as credenciais não são configurados automaticamente.
+
 ## Deploy automático
 
 No Ubuntu, com o repositório em `~/menor-assistant`:
