@@ -74,3 +74,26 @@ As dependências opcionais vêm de um arquivo revisado do próprio repositório.
 - Sem alegar que concluiu uma tarefa quando existe apenas um plano.
 - Sem prosseguir indefinidamente: limite de custo, memória e tentativas.
 - Não transformar instruções contidas em arquivos consultados em regras.
+
+## Integração: planejador, registro de skills e revisor (incremento PR #8)
+
+- `src/agent/planner.py` usa o Qwen no Ollama para transformar briefing em etapas,
+  critérios de aceite e limites; em caso de erro, devolve plano de contingência.
+  Esse texto **nunca** concede permissão de instalar ou executar algo.
+- `src/agent/skills.py` consulta o estado persistente e o runtime. Uma skill só é
+  `ready` quando existe uma missão aprovada e validada **e** o modelo local está
+  disponível. O endpoint `GET /agent/skills` exibe o catálogo autenticado.
+- `src/agent/delegation.py` só delega geração local a uma skill verificada.
+  O resultado passa por `review_image`; se falhar, no máximo duas tentativas
+  antes de informar um erro. Essa revisão é **técnica**, não estética.
+- Após o smoke test do instalador, o Menor cria
+  `cerebro/ferramentas/imagens/geracao_local.md` com instruções reais,
+  restrições e referência da missão. Não cria esse manual antes de verificar.
+- O chat exibe plano e critérios antes do consentimento. Consultas de status
+  confirmam que missão e runtime continuam válidos, sem alegar sucesso
+  apenas porque um arquivo foi baixado.
+
+**Limite:** integração real de instalação e velocidade da inferência ainda
+precisam de teste no Ubuntu. Criar uma ferramenta genérica de música,
+programação ou edição de foto continua dependendo de novos executores.
+
