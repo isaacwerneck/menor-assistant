@@ -11,9 +11,8 @@ import os
 import secrets
 import threading
 import time
-from pathlib import Path
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 
 from src.memory.store import BrainStore
 
