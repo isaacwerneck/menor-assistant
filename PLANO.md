@@ -152,12 +152,18 @@ A execução de comandos arbitrários, acesso a segredos, alterações do deploy
 ### Fase 2 — Gerenciador de conhecimentos e memória
 
 - [ ] Implementar registro, revisão, atualização, busca e exclusão de conhecimento com fontes.
-- [ ] Usar SQLite (preferencialmente FTS5) para pesquisa textual e metadados.
+- [x] Usar SQLite (FTS5) para indexação e pesquisa textual dos conhecimentos gerais.
 - [ ] Separar memória episódica de preferências e fatos consolidados.
 - [ ] Estabelecer política de relevância, deduplicação e conflito entre informações.
 - [ ] Opcional posterior: embeddings locais e busca semântica/RAG.
 
 **Aceite:** conhecimentos ensinados reaparecem em conversas posteriores quando relevantes, sem invadir assuntos não relacionados; usuário consegue ler/corrigir/apagar as entradas.
+
+**Incremento entregue em PR #4:** recuperação textual contextual de conhecimentos gerais,
+consulta, correção e exclusão autenticadas pela interface, com índice FTS5.
+Busca semântica/embeddings, reconciliação de conflitos e recuperação dos
+conhecimentos específicos de projetos permanecem pendentes. O aceite completo
+da Fase 2 depende de validação no servidor com o modelo real.
 
 ### Fase 3 — Gestor de projetos
 
