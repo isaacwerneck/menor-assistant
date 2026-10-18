@@ -1,0 +1,11 @@
+[Unit]
+Description=Atualizar Menor a partir do GitHub
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/menor-assistant
+Environment=GIT_TERMINAL_PROMPT=0
+ExecStart=/usr/bin/bash %h/menor-assistant/scripts/deploy.sh
+TimeoutStartSec=15min
+NoNewPrivileges=true
+UMask=0077
