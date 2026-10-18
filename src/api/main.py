@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
 from src.agent.router import classify
+from src.agent.resolve import resolve
 from src.memory.store import BrainStore
 from src.memory.manage import KnowledgeManager
 from src.memory.search import KnowledgeIndex, contextual_knowledge
@@ -131,6 +132,35 @@ def knowledge_delete(body: KnowledgeChangeRequest, request: Request):
 
 class IntentRequest(ChatRequest):
     pass
+
+
+class PendingAnswerRequest(ChatRequest):
+    original: str = Field(min_length=1, max_length=280)
+    question: str = Field(default="", max_length=180)
+    suggested_target: Literal["none", "preference", "knowledge", "project", "tool"] = "none"
+
+
+@app.post("/agent/resolve")
+def resolve_intent(body: PendingAnswerRequest, request: Request):
+    auth.require_owner(request)
+    result = resolve(
+        body.original, body.message, body.suggested_target,
+        project=body.project, question=body.question,
+        history=[item.model_dump() for item in body.history],
+    )
+    if result["decision"] == "save":
+        try:
+            if result["target"] == "project" and result["note_kind"] != "none":
+                result["project_note"] = ProjectWorkspace().append(
+                    body.project, result["note_kind"], body.original, origin="chat",
+                )
+            else:
+                result["memory"] = _save_memory(result["target"], body.original)
+        except (OSError, ValueError, LookupError) as error:
+            logger.warning("Não foi possível concluir anotação solicitada: %s", type(error).__name__)
+            return {"decision": "ask", "target": result["target"], "note_kind": "none",
+                    "question": "Não consegui salvar. Quer revisar a pasta ou o projeto escolhido?"}
+    return result
 
 
 class ProjectNoteRequest(BaseModel):
