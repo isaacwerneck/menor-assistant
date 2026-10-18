@@ -9,7 +9,6 @@ import io
 import os
 import re
 import secrets
-from pathlib import Path
 
 import requests
 from PIL import Image, UnidentifiedImageError
