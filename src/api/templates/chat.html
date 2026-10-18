@@ -298,10 +298,6 @@
             padding: 10px 12px;
         }
         .message-row.user { flex-wrap: wrap; }
-        .message-row.user .save-memory-btn {
-            flex: 0 0 auto;
-            margin: 2px 46px 0 auto;
-        }
 
         @media (prefers-reduced-motion: reduce) {
             *, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -402,6 +398,7 @@
             font: inherit; width: 100%;
         }
         .modal-box button {
+            align-self: flex-start;
             background: var(--accent); color: var(--bg-primary);
             border: 0; border-radius: 8px; padding: 12px;
             font: inherit; font-weight: 600; cursor: pointer;
@@ -413,13 +410,6 @@
             background: var(--bg-tertiary); padding: 12px; border-radius: 8px;
         }
 
-        .save-memory-btn {
-            margin: 6px 0 0 54px; padding: 6px 10px;
-            border: 1px solid var(--border); border-radius: 7px;
-            color: var(--text-secondary); background: transparent;
-            font-size: 0.74rem; cursor: pointer;
-        }
-        .save-memory-btn:hover { color: var(--text-primary); }
 
         .brain-list { max-height: 40vh; overflow: auto; display: grid; gap: 10px; }
         .brain-item { padding: 10px; border: 1px solid var(--border);
@@ -527,19 +517,6 @@
         </form>
     </section>
 
-    <section id="memoryPanel" class="modal-layer" aria-label="Confirmar memória" hidden>
-        <div class="modal-box">
-            <h2>Salvar no cérebro?</h2>
-            <p id="memoryText" class="memory-text"></p>
-            <p id="memoryQuestion">Como o Menor deve guardar isso?</p>
-            <button onclick="confirmMemory('preference')">Como preferência (aplicar nas próximas respostas)</button>
-            <button onclick="confirmMemory('knowledge')">Como conhecimento (guardar para recuperação futura)</button>
-            <button onclick="confirmMemory('project')">Como ideia de projeto (na pasta projetos)</button>
-            <button onclick="confirmMemory('tool')">Como proposta de ferramenta (na pasta ferramentas)</button>
-            <button class="secondary" onclick="cancelMemory()">Cancelar</button>
-            <p id="memoryError" class="modal-error" role="alert"></p>
-        </div>
-    </section>
     <section id="brainPanel" class="modal-layer" aria-label="Gerenciar conhecimentos" hidden>
         <div class="modal-box">
             <h2>Conhecimentos do Menor</h2>
@@ -591,8 +568,6 @@
         let activeConvId = null;
         let isGenerating = false;
         let authSetupNeeded = false;
-        let pendingMemory = null;
-        let savingMemory = false;
         let brainItems = [];
         let brainEditingId = null;
         let pendingProjectSlug = '';
@@ -651,62 +626,6 @@
         }
 
         // ========== MEMORIA CONFIRMADA PELO USUARIO ==========
-        function showMemoryConfirm(text, original, fromChat = false, question = '') {
-            pendingMemory = { text, original, fromChat };
-            document.getElementById('memoryText').textContent = text;
-            document.getElementById('memoryQuestion').textContent = question ||
-                'Você quer registrar isso? Escolha onde guardar.';
-            document.getElementById('memoryError').textContent = '';
-            document.getElementById('memoryPanel').hidden = false;
-        }
-
-        function cancelMemory() {
-            if (savingMemory) return;
-            const memory = pendingMemory;
-            document.getElementById('memoryPanel').hidden = true;
-            pendingMemory = null;
-            if (memory && memory.fromChat) {
-                const conv = getActiveConv();
-                conv.messages.push({ role: 'bot', content: 'Não registrei nenhuma memória.' });
-                save();
-                openConv(conv.id);
-            }
-        }
-
-        async function confirmMemory(kind) {
-            if (!pendingMemory || savingMemory) return;
-            savingMemory = true;
-            const memory = pendingMemory;
-            const error = document.getElementById('memoryError');
-            try {
-                const response = await fetch('/memory/remember', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: memory.text, kind }),
-                });
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(typeof data.detail === 'string' ? data.detail : 'Não foi possível salvar.');
-                }
-                const data = await response.json();
-                document.getElementById('memoryPanel').hidden = true;
-                pendingMemory = null;
-                if (!memory.fromChat && !activeConvId) createConversation(memory.original);
-                const conv = getActiveConv();
-                if (!memory.fromChat) conv.messages.push({ role: 'user', content: memory.original });
-                const reply = 'Registrei a memória em ' + (data.path || 'cérebro') + '.'
-                    + ((kind === 'tool' || kind === 'project')
-                        ? ' É uma proposta registrada, ainda não implementada.' : '');
-                conv.messages.push({ role: 'bot', content: reply });
-                save();
-                openConv(conv.id);
-            } catch (failure) {
-                error.textContent = failure.message;
-                if (failure.message.includes('Entre com a senha')) checkAuth();
-            } finally {
-                savingMemory = false;
-            }
-        }
-
         // ========== CONHECIMENTOS DO CEREBRO ==========
         async function brainRequest(path, body) {
             const options = body === undefined ? {} : {
@@ -1130,24 +1049,6 @@
 
             row.innerHTML = `<div class="avatar ${avatarClass}">${avatarText}</div>`;
             row.appendChild(content);
-            if (role === 'user') {
-                const saveButton = document.createElement('button');
-                saveButton.className = 'save-memory-btn';
-                saveButton.type = 'button';
-                saveButton.textContent = 'Guardar memória';
-                saveButton.ariaLabel = 'Guardar esta mensagem na memória do Menor';
-                saveButton.onclick = () => {
-                    const value = text.trim();
-                    if (!value || value.length > 280) {
-                        document.getElementById('connectionStatus').textContent =
-                            'Para salvar, envie uma lembrança com até 280 caracteres.';
-                        return;
-                    }
-                    if (isGenerating || pendingMemory) return;
-                    showMemoryConfirm(value, text);
-                };
-                row.appendChild(saveButton);
-            }
             container.appendChild(row);
             scrollToBottom();
             return content;
@@ -1185,6 +1086,46 @@
             const botContent = appendMessage('bot', '', true);
 
             try {
+                if (conv.pendingMemory) {
+                    const pending = conv.pendingMemory;
+                    const response = await fetch('/agent/resolve', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: msg, history, project,
+                            original: pending.text, question: pending.question,
+                            suggested_target: pending.target,
+                        }),
+                    });
+                    if (!response.ok) {
+                        if (response.status === 401) checkAuth();
+                        throw new Error('Não consegui interpretar sua resposta. Tente novamente.');
+                    }
+                    const result = await response.json();
+                    if (result.decision === 'ask') {
+                        const question = result.question || 'Pode me dizer em qual pasta devo salvar?';
+                        conv.pendingMemory.question = question;
+                        if (result.target && result.target !== 'none') {
+                            conv.pendingMemory.target = result.target;
+                        }
+                        botContent.textContent = question;
+                        conv.messages.push({ role: 'bot', content: question });
+                        save();
+                        return;
+                    }
+                    if (result.decision !== 'chat') {
+                        delete conv.pendingMemory;
+                        const notice = result.decision === 'cancel'
+                            ? 'Beleza, não registrei nada.'
+                            : 'Registrei em ' + (result.memory?.path || result.project_note?.path)
+                                + '. Podemos continuar.';
+                        botContent.textContent = notice;
+                        conv.messages.push({ role: 'bot', content: notice });
+                        save();
+                        return;
+                    }
+                    delete conv.pendingMemory;
+                    save();
+                }
                 let routeNotice = '';
                 try {
                     const routeResponse = await fetch('/agent/route', {
@@ -1194,9 +1135,15 @@
                     if (routeResponse.ok) {
                         const route = await routeResponse.json();
                         if (route.decision === 'ask') {
-                            const question = route.question || 'Quer que eu registre isso? Em qual pasta?';
+                            const question = route.question || 'Quer que eu anote essa ideia? Em qual pasta?';
+                            conv.pendingMemory = {
+                                text: route.text || msg.slice(0, 280),
+                                question: question.slice(0, 180),
+                                target: route.target || 'none',
+                            };
                             botContent.textContent = question;
-                            showMemoryConfirm(route.text, msg, true, question);
+                            conv.messages.push({ role: 'bot', content: question });
+                            save();
                             return;
                         }
                         if (route.decision === 'save' && route.memory && route.memory.path) {
