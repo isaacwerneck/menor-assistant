@@ -11,8 +11,11 @@ class WatchTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        env = patch.dict(os.environ, {"MENOR_DATA_DIR": self.tmp.name,
-                                   "MENOR_AUTODEV_ENABLED": "0", "MENOR_GITHUB_TOKEN": ""})
+        env = patch.dict(os.environ, {
+            "MENOR_DATA_DIR": self.tmp.name,
+            "MENOR_AUTODEV_ENABLED": "0",
+            "MENOR_GITHUB_TOKEN": "",
+        })
         env.start()
         self.addCleanup(env.stop)
 
