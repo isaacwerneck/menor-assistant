@@ -226,10 +226,21 @@ def _save_memory(kind, text):
 def route_intent(body: IntentRequest, request: Request):
     auth.require_owner(request)
     result = classify(body.message, [item.model_dump() for item in body.history], project=body.project)
-    if result["decision"] in ("save", "create_project", "add_project_note"):
+    if result["decision"] in ("save", "create_project", "select_project", "add_project_note"):
         try:
             if result["decision"] == "create_project":
                 result["project"] = create_project(result["text"])
+            elif result["decision"] == "select_project":
+                name = result["text"].casefold()
+                found = next((
+                    item for item in ProjectWorkspace().list_projects()
+                    if item["name"].casefold() == name or item["slug"].casefold() == name
+                ), None)
+                if found is None:
+                    result["decision"] = "ask"
+                    result["question"] = "Não encontrei esse projeto. Qual projeto você quer abrir?"
+                else:
+                    result["selected_project"] = found
             elif result["decision"] == "add_project_note":
                 result["project_note"] = ProjectWorkspace().append(
                     body.project, result["note_kind"], result["text"], origin="chat",
