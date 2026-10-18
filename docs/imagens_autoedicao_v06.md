@@ -34,6 +34,10 @@ Falhas de execução produzem eventos na auditoria sem o conteúdo dos prompts.
 
 ## Autoedição em branch com Pull Request
 
+No chat, um pedido explícito como **“Menor, corrige esse bug no código”**
+tenta iniciar uma proposta supervisionada. Se a integração não estiver autorizada,
+o Menor explica que não pode criar o PR e não finge ter corrigido o sistema.
+
 `POST /agent/improve` aceita a descrição do problema. Por padrão, apenas
 simula a preparação. Para publicar correção, o proprietário precisa ativar
 `MENOR_AUTODEV_ENABLED=1` e configurar `MENOR_GITHUB_TOKEN` com permissões
