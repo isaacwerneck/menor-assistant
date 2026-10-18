@@ -45,6 +45,13 @@ na Internet e não use Wi-Fi público. Prefira VPN e HTTPS.
 Veja [como usar o cérebro com segurança](docs/memoria_v03.md) e o
 [PLANO.md](PLANO.md) para as próximas fases.
 
+## Busca e revisão de conhecimentos (v0.4)
+
+A cada pergunta, o Menor busca no cérebro apenas conhecimentos gerais
+relacionados ao assunto, usando SQLite FTS5 local. Na interface, o ícone
+de **cérebro** permite consultar, pesquisar, corrigir e apagar anotações
+sem usar terminal. Consulte [o guia da busca](docs/busca_conhecimentos.md).
+
 ## Deploy automático
 
 No Ubuntu, com o repositório em `~/menor-assistant`:
