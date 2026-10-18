@@ -96,7 +96,7 @@ def classify(message, history, project=None):
         return _fallback()
     if not 0 <= confidence <= 1:
         return _fallback()
-    if decision == "chat" or target == "none":
+    if decision == "chat" or (target == "none" and decision != "ask"):
         return _fallback()
     if decision == "add_project_note" and (target != "project" or not project):
         return _fallback()
