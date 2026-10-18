@@ -130,6 +130,29 @@ class MemoryChatTests(unittest.TestCase):
         self.assertIn("Prefiro respostas objetivas", BrainStore().preference_context())
         self.assertEqual(call("/agent/route", {"message": "oi"})[0], 401)
 
+    @patch("src.api.main.classify")
+    def test_select_existing_project_by_name_without_writing(self, classifier):
+        cookie = self._setup()
+        from src.projects.manager import create_project
+        create_project("Cidade Noturna")
+        classifier.return_value = {
+            "decision": "select_project", "target": "project",
+            "text": "Cidade Noturna", "confidence": 0.99, "question": "",
+        }
+        code, result, _ = call("/agent/route", {
+            "message": "Vamos continuar no projeto Cidade Noturna",
+        }, cookie=cookie)
+        self.assertEqual(code, 200, result)
+        self.assertEqual(result["selected_project"]["slug"], "cidade-noturna")
+        self.assertNotIn("memory", result)
+        self.assertNotIn("project", result)
+        classifier.return_value["text"] = "Projeto Inexistente"
+        code, result, _ = call("/agent/route", {
+            "message": "Abra o Projeto Inexistente",
+        }, cookie=cookie)
+        self.assertEqual(code, 200)
+        self.assertEqual(result["decision"], "ask")
+
     def test_create_project_api_rejects_unsafe_names_and_unauthenticated_calls(self):
         payload = {"name": "Projeto Seguro"}
         self.assertEqual(call("/projects/create", payload)[0], 401)
