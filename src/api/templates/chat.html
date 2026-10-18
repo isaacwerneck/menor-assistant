@@ -1234,6 +1234,19 @@
             return /^(não|nao|deixa|cancela|cancelar|não precisa|nao precisa)$/i.test(text.trim());
         }
 
+        function missionPlanSummary(mission) {
+            const plan = mission.plan || {};
+            const steps = Array.isArray(plan.steps) ? plan.steps.slice(0, 4) : [];
+            const acceptance = Array.isArray(plan.acceptance) ? plan.acceptance.slice(0, 3) : [];
+            const lines = ['Planejei assim:'];
+            for (let i = 0; i < steps.length; i++) lines.push((i + 1) + '. ' + steps[i]);
+            if (acceptance.length) {
+                lines.push('Para considerar pronto: ' + acceptance.join('; ') + '.');
+            }
+            lines.push(mission.question);
+            return lines.join('\n');
+        }
+
         async function handleMissionTurn(conv, message, content) {
             const offer = conv.pendingCapabilityOffer;
             if (offer) {
@@ -1270,7 +1283,7 @@
                     requirements: message,
                 });
                 active.status = result.status;
-                imageReply(conv, content, result.question);
+                imageReply(conv, content, missionPlanSummary(result));
                 return true;
             }
             if (active.status === 'awaiting_approval') {
@@ -1291,10 +1304,20 @@
                 if (!response.ok) throw new Error('Não consegui consultar a missão.');
                 const mission = await response.json();
                 active.status = mission.status;
-                const state = mission.status === 'ready'
-                    ? 'A skill passou no teste e está pronta para gerar imagens.'
+                let verifiedReady = mission.status === 'ready';
+                if (verifiedReady) {
+                    const skillsResponse = await fetch('/agent/skills');
+                    if (!skillsResponse.ok) throw new Error('Não consegui verificar a skill.');
+                    const skills = await skillsResponse.json();
+                    verifiedReady = skills.items.some(item =>
+                        item.mission_id === active.id && item.ready === true);
+                }
+                const state = verifiedReady
+                    ? 'O subagente local passou no teste e está disponível.'
+                    : mission.status === 'ready'
+                        ? 'O teste anterior passou, mas o runtime não está disponível agora.'
                     : mission.status === 'failed'
-                        ? 'A preparação falhou. Confira as dependências ou o disco; não instalei a skill.'
+                        ? 'A preparação falhou. Confira as dependências ou o disco; a skill não está pronta.'
                         : mission.status === 'blocked'
                             ? 'Ainda falta um executor seguro para essa habilidade.'
                             : 'Estado atual: ' + mission.status + '. Ainda não está pronta.';
