@@ -35,7 +35,7 @@ def image_intent(message, has_attachment=False):
         if not has_attachment:
             return {"decision": "image_ask", "kind": "edit",
                     "question": "Manda a imagem que quer editar e me diz o que mudar."}
-        if len(normal) < 35 or normal in ("edita essa imagem", "edita essa foto", "editar imagem"):
+        if not re.search(r"\b(deixa|troca|muda|remove|tira|adiciona|coloca|substitui|por|para)\b", normal):
             return {"decision": "image_ask", "kind": "edit",
                     "question": "O que você quer mudar na imagem?"}
         return {"decision": "image_edit", "prompt": message.strip()}
