@@ -10,7 +10,9 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
+from src.agent.router import classify
 from src.memory.store import BrainStore
+from src.projects.manager import create_project
 from src.security import auth
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,10 @@ SYSTEM_PROMPT = (
     "Você é o Menor, o assistente pessoal de inteligência artificial criado e hospedado localmente pelo Isaac. "
     "Você é altamente competente em programação, desenvolvimento de jogos, "
     "planejamento de projetos e tarefas do dia a dia. "
-    "Seu tom é parceiro, inteligente, direto e prestativo. Responda sempre em português brasileiro."
+    "Responda em português brasileiro de forma objetiva, sem omitir informações importantes. "
+    "Nunca afirme que salvou uma memória, executou ferramenta ou alterou arquivo sem confirmação do sistema. "
+    "Se um pedido de memorização chegar como conversa normal, explique que precisa de confirmação "
+    "pelo botão Guardar memória da interface. Não prometa lembrar sem ter gravado."
 )
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 MessageText = Annotated[str, StringConstraints(min_length=1, max_length=8000, pattern=r"\S")]
@@ -66,7 +71,56 @@ class PasswordRequest(BaseModel):
 
 class RememberRequest(BaseModel):
     text: str = Field(min_length=1, max_length=280)
-    kind: Literal["preference", "knowledge"]
+    kind: Literal["preference", "knowledge", "project", "tool"]
+
+
+class IntentRequest(ChatRequest):
+    pass
+
+
+class CreateProjectRequest(BaseModel):
+    name: str = Field(min_length=3, max_length=64)
+
+
+@app.post("/projects/create")
+def project_create(body: CreateProjectRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return create_project(body.name)
+    except (OSError, ValueError) as error:
+        logger.warning("Não foi possível criar projeto: %s", type(error).__name__)
+        raise HTTPException(422, "Nome inválido ou projeto já existente.") from error
+
+
+def _save_memory(kind, text):
+    store = BrainStore()
+    if kind == "preference":
+        saved = store.remember_preference(text)
+        path = "identidade/preferencias.md"
+    elif kind == "knowledge":
+        saved = store.remember_knowledge(text)
+        path = "conhecimentos/aprendizados_gerais.md"
+    else:
+        saved = store.remember_idea(kind, text)
+        path = "projetos/ideias.md" if kind == "project" else "ferramentas/ideias.md"
+    return {"saved": saved, "path": path, "kind": kind}
+
+
+@app.post("/agent/route")
+def route_intent(body: IntentRequest, request: Request):
+    auth.require_owner(request)
+    result = classify(body.message, [item.model_dump() for item in body.history])
+    if result["decision"] in ("save", "create_project"):
+        try:
+            if result["decision"] == "create_project":
+                result["project"] = create_project(result["text"])
+            else:
+                result["memory"] = _save_memory(result["target"], result["text"])
+        except (ValueError, OSError) as error:
+            logger.warning("Não foi possível executar ação classificada: %s", type(error).__name__)
+            result["decision"] = "ask"
+            result["question"] = "Não consegui criar ou salvar. Quer revisar o nome e destino?"
+    return result
 
 
 def require_chat_access(request: Request):
@@ -103,16 +157,11 @@ def auth_logout(request: Request, response: Response):
 @app.post("/memory/remember")
 def remember_memory(body: RememberRequest, request: Request):
     auth.require_owner(request)
-    store = BrainStore()
     try:
-        if body.kind == "preference":
-            saved = store.remember_preference(body.text)
-        else:
-            saved = store.remember_knowledge(body.text)
+        return _save_memory(body.kind, body.text)
     except (ValueError, OSError) as error:
         logger.warning("Falha ao registrar memoria: %s", type(error).__name__)
         raise HTTPException(422, "Não foi possível salvar a memória solicitada.") from error
-    return {"saved": saved, "kind": body.kind}
 
 
 @app.get("/memory/preferences")

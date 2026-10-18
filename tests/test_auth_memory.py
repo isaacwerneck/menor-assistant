@@ -103,6 +103,41 @@ class MemoryChatTests(unittest.TestCase):
         cookie = headers[b"set-cookie"].decode().split(";", 1)[0]
         self.assertTrue(call("/auth/status", cookie=cookie)[1]["authenticated"])
 
+    @patch("src.api.main.classify")
+    def test_contextual_agent_creates_project_and_files(self, classifier):
+        cookie = self._setup()
+        classifier.return_value = {
+            "decision": "create_project", "target": "project", "text": "Cidade Noturna",
+            "confidence": 0.99, "question": "",
+        }
+        code, result, _ = call("/agent/route", {"message": "Crie um projeto Cidade Noturna"}, cookie=cookie)
+        self.assertEqual(code, 200, result)
+        self.assertEqual(result["project"]["path"], "projetos/cidade-noturna")
+        self.assertIn("Cidade Noturna", BrainStore().read_note("projetos/cidade-noturna/contexto.md"))
+        self.assertEqual(call("/agent/route", {"message": "Crie o mesmo projeto"}, cookie=cookie)[1]["decision"],
+                         "ask")
+
+    @patch("src.api.main.classify")
+    def test_contextual_agent_saves_explicit_preference_without_modal(self, classifier):
+        cookie = self._setup()
+        classifier.return_value = {
+            "decision": "save", "target": "preference", "text": "Prefiro respostas objetivas",
+            "confidence": 0.99, "question": "",
+        }
+        code, result, _ = call("/agent/route", {"message": "Prefiro respostas objetivas"}, cookie=cookie)
+        self.assertEqual(code, 200, result)
+        self.assertEqual(result["memory"]["path"], "identidade/preferencias.md")
+        self.assertIn("Prefiro respostas objetivas", BrainStore().preference_context())
+        self.assertEqual(call("/agent/route", {"message": "oi"})[0], 401)
+
+    def test_create_project_api_rejects_unsafe_names_and_unauthenticated_calls(self):
+        payload = {"name": "Projeto Seguro"}
+        self.assertEqual(call("/projects/create", payload)[0], 401)
+        cookie = self._setup()
+        self.assertEqual(call("/projects/create", {"name": "../secreto"}, cookie=cookie)[0], 422)
+        self.assertEqual(call("/projects/create", payload, cookie=cookie)[0], 200)
+        self.assertEqual(call("/projects/create", payload, cookie=cookie)[0], 422)
+
     def test_cookie_signature_is_verified(self):
         cookie = self._setup()
         self.assertTrue(call("/auth/status", cookie=cookie)[1]["authenticated"])

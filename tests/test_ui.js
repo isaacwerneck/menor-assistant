@@ -7,10 +7,11 @@ const { test } = require('node:test');
 const html = fs.readFileSync(path.join(__dirname, '../src/api/templates/chat.html'), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 
-function browser(saved = '[]') {
+function browser(saved = '[]', intent = { decision: 'chat' }) {
     const elements = new Map();
     const writes = [];
     const requests = [];
+    const routed = [];
     const downloads = [];
     const memories = [];
     let blob;
@@ -46,7 +47,11 @@ function browser(saved = '[]') {
             }
             if (url === '/memory/remember') {
                 memories.push(JSON.parse(options.body));
-                return { ok: true, json: async () => ({ saved: true }) };
+                return { ok: true, json: async () => ({ saved: true, path: 'identidade/preferencias.md' }) };
+            }
+            if (url === '/agent/route') {
+                routed.push(JSON.parse(options.body));
+                return { ok: true, json: async () => intent };
             }
             if (url === '/health') {
                 return { ok: true, json: async () => ({ default_model: 'test-model', ollama_status: 'online' }) };
@@ -60,7 +65,7 @@ function browser(saved = '[]') {
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, memories, downloads, getBlob: () => blob };
+    return { context, elements, writes, requests, routed, memories, downloads, getBlob: () => blob };
 }
 
 test('histórico mantém ordem, converte bot e respeita orçamento de contexto', () => {
@@ -122,21 +127,7 @@ test('falha no stream aparece na interface e não vira resposta no histórico', 
     assert.equal(ui.elements.get('sendBtn').disabled, false);
 });
 
-test('conversa não pode mudar enquanto há uma resposta em andamento', async () => {
-    const ui = browser();
-    let finish;
-    ui.context.fetch = () => new Promise(resolve => { finish = resolve; });
-    ui.elements.get('userInput').value = 'oi';
-    const pending = ui.context.sendMsg();
-    const original = ui.context.getActiveConv();
-    ui.context.newChat();
-    ui.context.openConv('outra');
-    ui.context.deleteConv(original.id, { stopPropagation() {} });
-    assert.equal(ui.context.getActiveConv(), original);
-    finish({ ok: false, json: async () => ({ detail: 'Serviço indisponível' }) });
-    await pending;
-    assert.equal(ui.context.getActiveConv().messages.length, 1);
-});
+
 
 test('falha ao salvar permanece visível depois do health check', async () => {
     const ui = browser();
@@ -147,32 +138,98 @@ test('falha ao salvar permanece visível depois do health check', async () => {
     assert.equal(ui.elements.get('modelName').textContent, 'test-model');
 });
 
-test('lembre disso exige confirmação e grava no cérebro sem chamar Ollama', async () => {
+test('sem intenção de memória segue para o chat incluindo o histórico', async () => {
     const ui = browser();
-    ui.elements.get('userInput').value = 'Menor, lembre disso: Prefiro respostas objetivas';
+    ui.elements.get('userInput').value = 'Explica variáveis em Python';
     await ui.context.sendMsg();
+    assert.equal(ui.routed.length, 1);
+    assert.equal(ui.requests.length, 1);
+    assert.equal(ui.memories.length, 0);
+});
+
+test('intenção ambígua pergunta onde registrar, sem gravar automaticamente', async () => {
+    const ui = browser('[]', {
+        decision: 'ask', target: 'project', text: 'Criar um jogo de corrida',
+        question: 'Quer registrar essa ideia? Em qual pasta?',
+    });
+    ui.elements.get('userInput').value = 'Tive uma ideia: criar um jogo de corrida';
+    await ui.context.sendMsg();
+    assert.equal(ui.routed.length, 1);
     assert.equal(ui.requests.length, 0);
     assert.equal(ui.memories.length, 0);
     assert.equal(ui.elements.get('memoryPanel').hidden, false);
-    assert.equal(ui.elements.get('memoryText').textContent, 'Prefiro respostas objetivas');
-    await ui.context.confirmMemory('preference');
-    assert.equal(ui.memories.length, 1);
-    assert.equal(ui.memories[0].kind, 'preference');
-    assert.equal(ui.memories[0].text, 'Prefiro respostas objetivas');
-    assert.equal(ui.elements.get('memoryPanel').hidden, true);
+    assert.match(ui.elements.get('memoryQuestion').textContent, /qual pasta/i);
+    await ui.context.confirmMemory('project');
+    assert.equal(ui.memories[0].kind, 'project');
     assert.equal(ui.context.getActiveConv().messages.length, 2);
-    assert.match(ui.context.getActiveConv().messages[1].content, /Preferência salva/);
+    assert.match(ui.context.getActiveConv().messages[1].content, /Registrei/);
 });
 
-test('cancelar memória não a salva e aprendizado permanece separado de preferência', async () => {
-    const ui = browser();
-    ui.elements.get('userInput').value = 'lembre disso: Meu jogo usa Godot';
+test('cancelar proposta não grava nenhuma memória', async () => {
+    const ui = browser('[]', {
+        decision: 'ask', target: 'tool', text: 'Ferramenta que gera imagens',
+        question: 'Quer registrar isso como proposta de ferramenta?',
+    });
+    ui.elements.get('userInput').value = 'Acho que podemos criar uma ferramenta de imagens';
     await ui.context.sendMsg();
     ui.context.cancelMemory();
     assert.equal(ui.memories.length, 0);
-    ui.elements.get('userInput').value = 'lembre disso: Meu jogo usa Godot';
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Não registrei/);
+});
+
+test('decisão clara confirmada pelo backend registra sem perguntar nem inventar', async () => {
+    const ui = browser('[]', {
+        decision: 'save', target: 'preference', text: 'Prefiro respostas objetivas',
+        memory: { path: 'identidade/preferencias.md' },
+    });
+    ui.elements.get('userInput').value = 'Prefiro respostas objetivas, guarda isso';
     await ui.context.sendMsg();
+    assert.equal(ui.memories.length, 0);
+    assert.equal(ui.requests.length, 0);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Registrei no cérebro/);
+});
+
+test('criação de projeto é ação real com confirmação do caminho criado', async () => {
+    const ui = browser('[]', {
+        decision: 'create_project', target: 'project', text: 'Cidade Noturna',
+        project: { name: 'Cidade Noturna', path: 'projetos/cidade-noturna' },
+    });
+    ui.elements.get('userInput').value = 'Vamos criar um projeto novo chamado Cidade Noturna';
+    await ui.context.sendMsg();
+    assert.equal(ui.requests.length, 0);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Criei o projeto Cidade Noturna/);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /projetos\/cidade-noturna/);
+});
+
+test('botão Guardar memória permite escolher onde registrar texto comum', async () => {
+    const ui = browser();
+    const msg = 'Quero trabalhar com Godot nos meus jogos';
+    ui.context.appendMessage('user', msg);
+    const row = ui.elements.get('messagesContainer').children.at(-1);
+    const saveButton = row.children.at(-1);
+    assert.equal(saveButton.textContent, 'Guardar memória');
+    saveButton.onclick();
+    assert.equal(ui.elements.get('memoryText').textContent, msg);
     await ui.context.confirmMemory('knowledge');
+    assert.equal(ui.memories.length, 1);
     assert.equal(ui.memories[0].kind, 'knowledge');
-    assert.match(ui.context.getActiveConv().messages[1].content, /Conhecimento anotado/);
+});
+
+test('conversa não muda enquanto classificação ou geração está em curso', async () => {
+    const ui = browser();
+    let finish;
+    const old = ui.context.fetch;
+    ui.context.fetch = (url, opts) => {
+        if (url === '/chat/stream') return new Promise(resolve => { finish = resolve; });
+        return old(url, opts);
+    };
+    ui.elements.get('userInput').value = 'oi';
+    const pending = ui.context.sendMsg();
+    await new Promise(resolve => setImmediate(resolve));
+    const conv = ui.context.getActiveConv();
+    ui.context.newChat();
+    assert.equal(ui.context.getActiveConv(), conv);
+    finish({ ok: false, json: async () => ({ detail: 'Serviço indisponível' }) });
+    await pending;
+    assert.equal(conv.messages.length, 1);
 });

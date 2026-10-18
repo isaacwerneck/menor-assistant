@@ -186,6 +186,23 @@ class BrainStore:
                 self.write_note(relative, current.rstrip() + "\n" + line + "\n")
         return line
 
+    def remember_idea(self, kind, idea):
+        """Registra proposta; não instala ferramenta ou cria projeto automaticamente."""
+        if kind not in ("project", "tool"):
+            raise ValueError("Tipo de ideia desconhecido.")
+        value = self._memory_text(idea)
+        self.initialize()
+        relative = "projetos/ideias.md" if kind == "project" else "ferramentas/ideias.md"
+        heading = "# Ideias de projetos" if kind == "project" else "# Propostas de ferramentas"
+        line = "- " + datetime.now(timezone.utc).strftime("%Y-%m-%d") + " — " + value
+        with _write_lock:
+            current = self.read_note(relative)
+            if not current:
+                current = heading + "\n"
+            contents = current.rstrip() + "\n" + line + "\n"
+            self.write_note(relative, contents)
+        return line
+
     def preference_context(self, max_chars=4000):
         """Retorna apenas preferências já gravadas; não varre dados de outros projetos."""
         if not self.brain_dir.exists():

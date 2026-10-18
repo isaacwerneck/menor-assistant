@@ -226,4 +226,31 @@ A execução de comandos arbitrários, acesso a segredos, alterações do deploy
 
 ---
 
+## 12. Decisão de produto — iniciativa contextual (18/10/2026)
+
+O Menor **não dependerá de palavras-chave fixas ou comandos decorados**. Antes de
+responder, interpretará a intenção e o histórico recente para escolher entre:
+conversar, registrar memória clara, pedir esclarecimento e executar uma ação
+suportada (por exemplo, criar de verdade um projeto e seus arquivos).
+
+- Intenções inequívocas e de baixo risco poderão gerar memória sem confirmação
+  adicional, **sempre com registro visível do que foi salvo e onde**.
+- Quando intenção, informação ou categoria forem incertas, o Menor fará
+  pergunta objetiva para escolher entre conhecimentos, projetos, ferramentas etc.
+- Pedidos explícitos de criar um projeto devem resultar em pastas e documentos
+  reais, não apenas em uma anotação da frase "criar projeto".
+- Pedidos de criação de ferramentas devem virar planejamento e, quando houver
+  executor agêntico isolado, implementação testada em branch e Pull Request;
+  **não afirmar que a ferramenta existe se foi apenas registrada como ideia**.
+- Ferramentas, código, shell, Git e ações destrutivas precisam das permissões e
+  revisões já definidas neste documento. Autonomia não equivale a acesso irrestrito.
+- O classificador baseado em modelo nunca decide sozinho caminhos arbitrários;
+  o sistema valida entradas, nomes, locais permitidos, consequências e limites.
+- Falhas na interpretação não devem resultar em gravação silenciosa nem em
+  promessas falsas. A conversa deve continuar ou pedir esclarecimento.
+
+Implementação incremental: [roteamento contextual](docs/roteamento_contextual.md).
+
+---
+
 **Direção acordada:** *Você ensina → Menor registra → Menor recupera → Menor aplica → Menor avalia → Menor propõe melhorias.*
