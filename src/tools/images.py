@@ -122,10 +122,17 @@ def generate(prompt):
 def edit(prompt, raw):
     prompt = _prompt(prompt)
     raw = _verify_image(raw)
+    # Enviar PNG de verdade, independentemente da origem JPEG/WEBP.
+    with Image.open(io.BytesIO(raw)) as image:
+        target = io.BytesIO()
+        image.convert("RGB").save(target, "PNG")
+        payload = target.getvalue()
+    if len(payload) > MAX_BYTES:
+        raise ValueError("Imagem convertida excede o limite de 12 MB.")
     result = _request(
         "edits", data={"model": os.environ.get("MENOR_IMAGE_MODEL", "gpt-image-1"),
                        "prompt": prompt, "size": "1024x1024", "n": "1"},
-        files={"image": ("original.png", raw, "image/png")},
+        files={"image": ("original.png", payload, "image/png")},
     )
     return {"status": "completed", "kind": "edit", "prompt": prompt, **result}
 
