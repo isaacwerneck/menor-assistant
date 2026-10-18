@@ -2,23 +2,30 @@
 set -Eeuo pipefail
 trap 'echo "Deploy falhou na linha $LINENO. Consulte journalctl --user -u menor-deploy.service." >&2' ERR
 
-# Instala o timer opcional apenas se os arquivos já existirem no checkout.
-ensure_review_timer() {
-    if [[ ! -f deploy/systemd/menor-review.timer ]]; then
-        return 0
-    fi
-    # Evita fazer daemon-reload e enable a cada verificação de 30 segundos.
-    if systemctl --user is-enabled --quiet menor-review.timer; then
-        return 0
-    fi
-    local units
-    units="$HOME/.config/systemd/user"
+# Instala os timers opcionais uma vez, sem reconfigurar cada ciclo de deploy.
+ensure_optional_timers() {
+    local units="$HOME/.config/systemd/user"
+    local name changed=0
     mkdir -p "$units"
-    for name in menor-review.service menor-review.timer; do
-        ln -sfn "$PWD/deploy/systemd/$name" "$units/$name"
+    for name in menor-review menor-missions; do
+        if [[ ! -f "deploy/systemd/$name.timer" ]]; then
+            continue
+        fi
+        if systemctl --user is-enabled --quiet "$name.timer"; then
+            continue
+        fi
+        ln -sfn "$PWD/deploy/systemd/$name.service" "$units/$name.service"
+        ln -sfn "$PWD/deploy/systemd/$name.timer" "$units/$name.timer"
+        changed=1
     done
-    systemctl --user daemon-reload
-    systemctl --user enable --now menor-review.timer
+    if [[ "$changed" == 1 ]]; then
+        systemctl --user daemon-reload
+        for name in menor-review menor-missions; do
+            if [[ -e "$units/$name.timer" ]]; then
+                systemctl --user enable --now "$name.timer"
+            fi
+        done
+    fi
 }
 
 # O Bash lê a função inteira antes do pull que pode atualizar este arquivo.
@@ -51,7 +58,7 @@ main() {
     if [[ -f .git/menor-deployed-revision ]] &&
         [[ "$(cat .git/menor-deployed-revision)" == "$target" ]] &&
         systemctl --user is-active --quiet menor-api.service; then
-        ensure_review_timer
+        ensure_optional_timers
         echo "Sem mudanças: $target"
         return 0
     fi
@@ -67,6 +74,7 @@ main() {
     curl --fail --silent --show-error --retry 10 --retry-connrefused \
         --retry-delay 2 --max-time 5 http://127.0.0.1:8000/health
     systemctl --user is-active --quiet menor-api.service
+    ensure_optional_timers
     printf '%s\n' "$target" > .git/menor-deployed-revision
     echo "Deploy concluído: $target"
 }
