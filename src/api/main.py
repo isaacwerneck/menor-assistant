@@ -78,6 +78,20 @@ class IntentRequest(ChatRequest):
     pass
 
 
+class CreateProjectRequest(BaseModel):
+    name: str = Field(min_length=3, max_length=64)
+
+
+@app.post("/projects/create")
+def project_create(body: CreateProjectRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return create_project(body.name)
+    except (OSError, ValueError) as error:
+        logger.warning("Não foi possível criar projeto: %s", type(error).__name__)
+        raise HTTPException(422, "Nome inválido ou projeto já existente.") from error
+
+
 def _save_memory(kind, text):
     store = BrainStore()
     if kind == "preference":
