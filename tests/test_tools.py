@@ -8,6 +8,7 @@ from unittest.mock import patch
 from src.agent.diagnostics import analyze
 from src.memory.store import BrainStore
 from src.tools.audit import record
+from src.tools.design import plan_tool
 from src.tools.registry import list_tools, perform
 from test_auth_memory import call
 
@@ -25,6 +26,17 @@ class ToolRegistryTests(unittest.TestCase):
         self.assertFalse(listing["projects.list"]["writes"])
         self.assertTrue(listing["brain.remember"]["writes"])
         self.assertEqual(listing["projects.add_task"]["arguments"], ["slug", "text"])
+
+    def test_tool_design_starts_real_spec_without_installing_code(self):
+        result = plan_tool("Vamos criar uma ferramenta de gerar imagens")
+        self.assertEqual(result["status"], "planned")
+        self.assertFalse(result["implemented"])
+        note = BrainStore().read_note(result["path"])
+        self.assertIn("gerar imagens", note)
+        self.assertIn("Pull Request", note)
+        self.assertIn("NÃO significa que a ferramenta está instalada", note)
+        again = plan_tool("Vamos criar uma ferramenta de gerar imagens")
+        self.assertEqual(again["path"], result["path"])
 
     def test_dry_run_never_creates_any_project(self):
         before = BrainStore().data_dir / "cerebro" / "projetos" / "cidade-noturna"
