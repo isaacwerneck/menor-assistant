@@ -96,6 +96,19 @@ class ProjectWorkspaceTests(unittest.TestCase):
         )
 
     @patch("src.agent.router.requests.post")
+    def test_router_selects_existing_project_from_natural_message(self, post):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.json.return_value = {"message": {"content": (
+            '{"decision":"select_project","target":"project","text":"Cidade Noturna",'
+            '"confidence":0.99,"question":""}'
+        )}}
+        post.return_value = response
+        result = classify("Vamos continuar no projeto Cidade Noturna", [])
+        self.assertEqual(result["decision"], "select_project")
+        self.assertEqual(result["text"], "Cidade Noturna")
+
+    @patch("src.agent.router.requests.post")
     def test_router_rejects_hallucinated_notes(self, post):
         response = MagicMock()
         response.__enter__.return_value = response
