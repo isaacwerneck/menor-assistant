@@ -1153,12 +1153,21 @@
                 imageReply(conv, content, 'Certo, cancelei o pedido de imagem.');
                 return true;
             }
-            const intent = pending ? {
-                decision: pending.kind === 'edit' ? 'image_edit' : 'image_generate',
-                prompt: message,
-            } : await imageJson('/images/intent', {
-                message, has_attachment: !!attachment,
-            });
+            let intent;
+            if (pending) {
+                intent = { decision: pending.kind === 'edit' ? 'image_edit' : 'image_generate',
+                    prompt: message };
+            } else {
+                try {
+                    intent = await imageJson('/images/intent', {
+                        message, has_attachment: !!attachment,
+                    });
+                } catch (error) {
+                    // Se o roteador de imagens falhar, não derrubar o chat de texto.
+                    if (!attachment) return false;
+                    throw error;
+                }
+            }
             if (intent.decision === 'chat' && !attachment) return false;
             if (intent.decision === 'image_ask') {
                 conv.pendingImage = { kind: intent.kind };
