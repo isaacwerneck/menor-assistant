@@ -17,6 +17,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
     const memories = [];
     const knowledgeActions = [];
     const imageCalls = [];
+    const repairCalls = [];
     let knowledgeItems = [{ id: '3.0123456789abcdef', text: 'Meu jogo usa Godot', date: '2026-10-18',
         source: 'conhecimentos/aprendizados_gerais.md' }];
     let blob;
@@ -118,6 +119,12 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
                     status: 'completed', url: '/images/files/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
                 }) };
             }
+            if (url === '/agent/improve') {
+                repairCalls.push(JSON.parse(options.body));
+                return { ok: true, json: async () => ({
+                    status: 'pr_created', url: 'https://github.com/example/pull/10',
+                }) };
+            }
             if (url === '/agent/route') {
                 routed.push(JSON.parse(options.body));
                 return { ok: true, json: async () => intent };
@@ -134,7 +141,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls,
+    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, repairCalls,
         downloads, getBlob: () => blob };
 }
 
@@ -416,4 +423,24 @@ test('estado de imagem persiste na conversa e pode ser cancelado', async () => {
     assert.equal(ui.context.getActiveConv().pendingImage, undefined);
     assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 0);
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /cancelei/);
+});
+
+
+test('pedido de corrigir bug abre PR supervisionado sem alegar merge', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'Menor, corrige esse bug no código do roteador';
+    await ui.context.sendMsg();
+    assert.equal(ui.repairCalls.length, 1);
+    assert.equal(ui.repairCalls[0].dry_run, false);
+    assert.equal(ui.requests.length, 0);
+    assert.equal(ui.routed.length, 0);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Precisa de revisão/);
+});
+
+test('pergunta sobre como corrigir um bug continua como conversa normal', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'como corrigir um bug no código?';
+    await ui.context.sendMsg();
+    assert.equal(ui.repairCalls.length, 0);
+    assert.equal(ui.requests.length, 1);
 });
