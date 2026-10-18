@@ -130,14 +130,22 @@ class MissionStore:
                 from src.tools.local_images import preflight
                 obj["plan"]["preflight"] = preflight(self.store)
             obj["status"] = "awaiting_approval"
-            obj["question"] = (
-                "Encontrei o modelo local OpenVINO SD 1.5 para imagens. "
-                "O download reserva cerca de 5 GB e a CPU pode ser lenta. "
-                "Posso preparar esse subagente?"
-                if candidates else
-                "Ainda não tenho um instalador aprovado para essa capacidade. "
-                "Quer que eu registre o plano e prepare uma proposta de implementação?"
-            )
+            if candidates and not obj["plan"]["preflight"]["enough_disk"]:
+                obj["question"] = (
+                    "Encontrei o modelo local, mas não há 5 GB livres em disco. "
+                    "Precisamos liberar espaço antes do download."
+                )
+            elif candidates:
+                obj["question"] = (
+                    "Encontrei o modelo OpenVINO SD 1.5, que roda no servidor. "
+                    "O download exige cerca de 5 GB livres e a CPU pode ser lenta. "
+                    "Posso instalar e testar o subagente?"
+                )
+            else:
+                obj["question"] = (
+                    "Ainda não tenho instalador aprovado para essa capacidade. "
+                    "Quer que eu registre o plano e prepare uma proposta de implementação?"
+                )
             self._write(obj)
             return obj
 
