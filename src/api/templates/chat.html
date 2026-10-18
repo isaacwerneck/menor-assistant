@@ -395,6 +395,14 @@
             background: var(--bg-tertiary); padding: 12px; border-radius: 8px;
         }
 
+        .save-memory-btn {
+            margin: 6px 0 0 54px; padding: 6px 10px;
+            border: 1px solid var(--border); border-radius: 7px;
+            color: var(--text-secondary); background: transparent;
+            font-size: 0.74rem; cursor: pointer;
+        }
+        .save-memory-btn:hover { color: var(--text-primary); }
+
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
             .sidebar { position: fixed; z-index: 100; height: 100%; }
@@ -544,8 +552,20 @@
 
         // ========== MEMORIA CONFIRMADA PELO USUARIO ==========
         function getRememberText(message) {
-            const match = message.match(/^\s*(?:menor[,!]?\s+)?lembre(?:-se)?\s+(?:disso|disto|de que|que)\s*[:;,]?\s*(.+)$/i);
-            return match ? match[1].trim() : null;
+            // Nao depende de uma frase exata. As variacoes comuns de ditado
+            // por voz e texto informal devem abrir a confirmacao de memoria.
+            const text = message.trim().replace(/^(?:ei|eai|e aí)[,!]?\s+/i, '')
+                .replace(/^menor[,!]?\s+/i, '');
+            const patterns = [
+                /^(?:lembre(?:[-\s]?se)?|lembra(?:[-\s]?se)?|se lembre)\s+(?:(?:de|do|da)\s+)?(?:(?:disso|disto|que|seguinte)\s*[:;,]?\s*)?(.+)$/i,
+                /^(?:anota|anote|guarda|guarde|registra|registre|salva|salve)\s+(?:a[ií]\s+)?(?:(?:isso|na mem[oó]ria|que)\s*[:;,]?\s*)?(.+)$/i,
+                /^quero que (?:voc[eê]|vc) (?:lembre|anote|guarde|registre)\s+(?:(?:de|que)\s+)?(.+)$/i,
+            ];
+            for (const pattern of patterns) {
+                const match = text.match(pattern);
+                if (match) return match[1].trim().replace(/^[:;,\s]+/, '');
+            }
+            return null;
         }
 
         function showMemoryConfirm(text, original) {
@@ -581,8 +601,8 @@
                 const conv = getActiveConv();
                 conv.messages.push({ role: 'user', content: memory.original });
                 const reply = kind === 'preference'
-                    ? 'Preferência salva no cérebro. Vou considerá-la nas próximas respostas.'
-                    : 'Conhecimento anotado no cérebro. A busca de conhecimentos será ampliada nas próximas etapas.';
+                    ? 'Memória salva em identidade/preferencias.md. Vou considerar essa preferência nas próximas respostas.'
+                    : 'Conhecimento salvo em conhecimentos/aprendizados_gerais.md. A recuperação automática ainda será implementada.';
                 conv.messages.push({ role: 'bot', content: reply });
                 save();
                 openConv(conv.id);
@@ -785,6 +805,24 @@
 
             row.innerHTML = `<div class="avatar ${avatarClass}">${avatarText}</div>`;
             row.appendChild(content);
+            if (role === 'user') {
+                const saveButton = document.createElement('button');
+                saveButton.className = 'save-memory-btn';
+                saveButton.type = 'button';
+                saveButton.textContent = 'Guardar memória';
+                saveButton.setAttribute('aria-label', 'Guardar esta mensagem na memória do Menor');
+                saveButton.onclick = () => {
+                    const value = getRememberText(text) ?? text.trim();
+                    if (!value || value.length > 280) {
+                        document.getElementById('connectionStatus').textContent =
+                            'Para salvar, envie uma lembrança com até 280 caracteres.';
+                        return;
+                    }
+                    if (isGenerating || pendingMemory) return;
+                    showMemoryConfirm(value, text);
+                };
+                row.appendChild(saveButton);
+            }
             container.appendChild(row);
             scrollToBottom();
             return content;
