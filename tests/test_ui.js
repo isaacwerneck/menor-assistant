@@ -7,11 +7,12 @@ const { test } = require('node:test');
 const html = fs.readFileSync(path.join(__dirname, '../src/api/templates/chat.html'), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 
-function browser(saved = '[]', intent = { decision: 'chat' }) {
+function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { decision: 'cancel' }) {
     const elements = new Map();
     const writes = [];
     const requests = [];
     const routed = [];
+    const resolved = [];
     const downloads = [];
     const memories = [];
     const knowledgeActions = [];
@@ -75,6 +76,10 @@ function browser(saved = '[]', intent = { decision: 'chat' }) {
                 knowledgeItems = knowledgeItems.filter(x => x.id !== body.id);
                 return { ok: true, json: async () => ({ action: 'delete' }) };
             }
+            if (url === '/agent/resolve') {
+                resolved.push(JSON.parse(options.body));
+                return { ok: true, json: async () => resolution };
+            }
             if (url === '/agent/route') {
                 routed.push(JSON.parse(options.body));
                 return { ok: true, json: async () => intent };
@@ -91,7 +96,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }) {
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, memories, knowledgeActions,
+    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions,
         downloads, getBlob: () => blob };
 }
 
@@ -174,34 +179,69 @@ test('sem intenção de memória segue para o chat incluindo o histórico', asyn
     assert.equal(ui.memories.length, 0);
 });
 
-test('intenção ambígua pergunta onde registrar, sem gravar automaticamente', async () => {
+test('pergunta de memória aparece na conversa, sem modal nem botões', async () => {
     const ui = browser('[]', {
         decision: 'ask', target: 'project', text: 'Criar um jogo de corrida',
-        question: 'Quer registrar essa ideia? Em qual pasta?',
+        question: 'Quer que eu registre essa ideia? Onde?',
     });
     ui.elements.get('userInput').value = 'Tive uma ideia: criar um jogo de corrida';
     await ui.context.sendMsg();
-    assert.equal(ui.routed.length, 1);
+    const conv = ui.context.getActiveConv();
     assert.equal(ui.requests.length, 0);
     assert.equal(ui.memories.length, 0);
-    assert.equal(ui.elements.get('memoryPanel').hidden, false);
-    assert.match(ui.elements.get('memoryQuestion').textContent, /qual pasta/i);
-    await ui.context.confirmMemory('project');
-    assert.equal(ui.memories[0].kind, 'project');
-    assert.equal(ui.context.getActiveConv().messages.length, 2);
-    assert.match(ui.context.getActiveConv().messages[1].content, /Registrei/);
+    assert.equal(conv.messages.length, 2);
+    assert.equal(conv.pendingMemory.text, 'Criar um jogo de corrida');
+    assert.match(conv.messages.at(-1).content, /Onde/);
+    assert.equal(ui.elements.has('memoryPanel'), false);
 });
 
-test('cancelar proposta não grava nenhuma memória', async () => {
+test('resposta natural à pergunta salva na pasta indicada pelo usuário', async () => {
     const ui = browser('[]', {
-        decision: 'ask', target: 'tool', text: 'Ferramenta que gera imagens',
-        question: 'Quer registrar isso como proposta de ferramenta?',
+        decision: 'ask', target: 'none', text: 'Ideia de criar uma ferramenta de sprites',
+        question: 'Quer guardar essa ideia? Em qual pasta?',
+    }, {
+        decision: 'save', target: 'tool', note_kind: 'none',
+        memory: { path: 'ferramentas/ideias.md' },
     });
-    ui.elements.get('userInput').value = 'Acho que podemos criar uma ferramenta de imagens';
+    ui.elements.get('userInput').value = 'Pensei em criar uma ferramenta para sprites';
     await ui.context.sendMsg();
-    ui.context.cancelMemory();
+    ui.elements.get('userInput').value = 'Sim, anota na pasta de ferramentas';
+    await ui.context.sendMsg();
+    const conv = ui.context.getActiveConv();
+    assert.equal(ui.resolved.length, 1);
+    assert.equal(ui.resolved[0].original, 'Ideia de criar uma ferramenta de sprites');
+    assert.equal(ui.requests.length, 0);
+    assert.equal(conv.pendingMemory, undefined);
+    assert.equal(conv.messages.length, 4);
+    assert.match(conv.messages.at(-1).content, /ferramentas\/ideias.md/);
+});
+
+test('resposta negativa cancela memória sem modificar nada', async () => {
+    const ui = browser('[]', {
+        decision: 'ask', target: 'project', text: 'Jogo de corrida',
+        question: 'Quer registrar isso?',
+    }, { decision: 'cancel' });
+    ui.elements.get('userInput').value = 'Talvez criar um jogo de corrida';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'Não precisa, deixa';
+    await ui.context.sendMsg();
+    assert.equal(ui.context.getActiveConv().pendingMemory, undefined);
     assert.equal(ui.memories.length, 0);
-    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Não registrei/);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /não registrei/);
+});
+
+test('nova dúvida mantém contexto pendente até esclarecer destino', async () => {
+    const ui = browser('[]', {
+        decision: 'ask', target: 'project', text: 'Sistema de batalha',
+        question: 'Onde devo guardar?',
+    }, { decision: 'ask', target: 'none', question: 'Em projetos ou conhecimentos?' });
+    ui.elements.get('userInput').value = 'Pensei em um sistema de batalha';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'Não sei ainda';
+    await ui.context.sendMsg();
+    const conv = ui.context.getActiveConv();
+    assert.equal(conv.pendingMemory.text, 'Sistema de batalha');
+    assert.match(conv.messages.at(-1).content, /projetos ou conhecimentos/);
 });
 
 test('decisão clara confirmada pelo backend registra sem perguntar nem inventar', async () => {
@@ -216,6 +256,21 @@ test('decisão clara confirmada pelo backend registra sem perguntar nem inventar
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /Registrei no cérebro/);
 });
 
+test('conversa natural seleciona projeto sem modal e envia contexto no próximo turno', async () => {
+    const ui = browser('[]', {
+        decision: 'select_project', target: 'project', text: 'Cidade Noturna',
+        selected_project: { name: 'Cidade Noturna', slug: 'cidade-noturna' },
+    });
+    ui.elements.get('userInput').value = 'Vamos continuar no projeto Cidade Noturna';
+    await ui.context.sendMsg();
+    assert.equal(ui.context.getActiveConv().project, 'cidade-noturna');
+    assert.equal(ui.requests.length, 0);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Cidade Noturna/);
+    ui.elements.get('userInput').value = 'Qual é nosso próximo passo?';
+    await ui.context.sendMsg();
+    assert.equal(ui.routed[1].project, 'cidade-noturna');
+});
+
 test('criação de projeto é ação real com confirmação do caminho criado', async () => {
     const ui = browser('[]', {
         decision: 'create_project', target: 'project', text: 'Cidade Noturna',
@@ -226,20 +281,6 @@ test('criação de projeto é ação real com confirmação do caminho criado', 
     assert.equal(ui.requests.length, 0);
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /Criei o projeto Cidade Noturna/);
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /projetos\/cidade-noturna/);
-});
-
-test('botão Guardar memória permite escolher onde registrar texto comum', async () => {
-    const ui = browser();
-    const msg = 'Quero trabalhar com Godot nos meus jogos';
-    ui.context.appendMessage('user', msg);
-    const row = ui.elements.get('messagesContainer').children.at(-1);
-    const saveButton = row.children.at(-1);
-    assert.equal(saveButton.textContent, 'Guardar memória');
-    saveButton.onclick();
-    assert.equal(ui.elements.get('memoryText').textContent, msg);
-    await ui.context.confirmMemory('knowledge');
-    assert.equal(ui.memories.length, 1);
-    assert.equal(ui.memories[0].kind, 'knowledge');
 });
 
 test('conversa não muda enquanto classificação ou geração está em curso', async () => {

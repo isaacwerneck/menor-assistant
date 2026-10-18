@@ -170,12 +170,18 @@
         .toggle-sidebar-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 
         .topbar-title {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             font-size: 1rem;
             font-weight: 600;
             color: var(--text-primary);
         }
 
         .topbar-model {
+            flex-shrink: 0;
             margin-left: auto;
             font-size: 0.8rem;
             color: var(--text-muted);
@@ -283,7 +289,15 @@
             max-width: 720px;
         }
 
-        .message-row.user .message-content { text-align: right; }
+        .message-row.user .message-content {
+            flex: 0 1 auto;
+            max-width: min(80%, 620px);
+            text-align: left;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+        .message-row.user { flex-wrap: wrap; }
 
         @media (prefers-reduced-motion: reduce) {
             *, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -384,6 +398,7 @@
             font: inherit; width: 100%;
         }
         .modal-box button {
+            align-self: flex-start;
             background: var(--accent); color: var(--bg-primary);
             border: 0; border-radius: 8px; padding: 12px;
             font: inherit; font-weight: 600; cursor: pointer;
@@ -395,13 +410,6 @@
             background: var(--bg-tertiary); padding: 12px; border-radius: 8px;
         }
 
-        .save-memory-btn {
-            margin: 6px 0 0 54px; padding: 6px 10px;
-            border: 1px solid var(--border); border-radius: 7px;
-            color: var(--text-secondary); background: transparent;
-            font-size: 0.74rem; cursor: pointer;
-        }
-        .save-memory-btn:hover { color: var(--text-primary); }
 
         .brain-list { max-height: 40vh; overflow: auto; display: grid; gap: 10px; }
         .brain-item { padding: 10px; border: 1px solid var(--border);
@@ -413,8 +421,26 @@
         .modal-box textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border);
             border-radius: 8px; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary);
             font: inherit; resize: vertical; }
+        .project-note-text { white-space: pre-wrap; overflow-wrap: anywhere;
+            max-height: 240px; overflow-y: auto; background: var(--bg-tertiary);
+            border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+        .modal-box select { background: var(--bg-tertiary); color: var(--text-primary);
+            border: 1px solid var(--border); padding: 10px; border-radius: 8px; width: 100%; }
+        .project-actions { display: flex; gap: 8px; }
+        .project-actions button { flex: 1; }
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
+            .topbar { gap: 5px; padding: 8px 10px; min-height: 54px; }
+            .topbar-model { display: none; }
+            .topbar-title { font-size: 0.9rem; }
+            .topbar .toggle-sidebar-btn { flex-shrink: 0; font-size: 1rem; padding: 6px; }
+            #projectButton { max-width: 98px; overflow: hidden; text-overflow: ellipsis;
+                white-space: nowrap; font-size: 0.8rem; }
+            .messages-container { padding: 16px 12px; }
+            .message-row { gap: 9px; }
+            .message-content { font-size: 0.92rem; line-height: 1.5; min-width: 0; }
+            .message-row.user .message-content { max-width: calc(100% - 48px); }
+            .input-area { padding: 10px 10px max(12px, env(safe-area-inset-bottom)); }
             .sidebar { position: fixed; z-index: 100; height: 100%; }
             .sidebar.hidden { margin-left: calc(-1 * var(--sidebar-width)); }
             .conv-item .conv-delete { opacity: 1; }
@@ -445,6 +471,8 @@
         <div class="topbar">
             <button class="toggle-sidebar-btn" aria-label="Alternar conversas" onclick="toggleSidebar()">☰</button>
             <div class="topbar-title" id="topbarTitle">Menor</div>
+            <button class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
+                aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
             <button class="toggle-sidebar-btn" onclick="openBrain()" aria-label="Abrir conhecimentos salvos" title="Meu cérebro">🧠</button>
             <button class="toggle-sidebar-btn" onclick="exportChat()" aria-label="Exportar conversa em Markdown">↓</button>
             <div class="topbar-model" id="modelName">qwen2.5-coder:7b</div>
@@ -489,19 +517,6 @@
         </form>
     </section>
 
-    <section id="memoryPanel" class="modal-layer" aria-label="Confirmar memória" hidden>
-        <div class="modal-box">
-            <h2>Salvar no cérebro?</h2>
-            <p id="memoryText" class="memory-text"></p>
-            <p id="memoryQuestion">Como o Menor deve guardar isso?</p>
-            <button onclick="confirmMemory('preference')">Como preferência (aplicar nas próximas respostas)</button>
-            <button onclick="confirmMemory('knowledge')">Como conhecimento (guardar para recuperação futura)</button>
-            <button onclick="confirmMemory('project')">Como ideia de projeto (na pasta projetos)</button>
-            <button onclick="confirmMemory('tool')">Como proposta de ferramenta (na pasta ferramentas)</button>
-            <button class="secondary" onclick="cancelMemory()">Cancelar</button>
-            <p id="memoryError" class="modal-error" role="alert"></p>
-        </div>
-    </section>
     <section id="brainPanel" class="modal-layer" aria-label="Gerenciar conhecimentos" hidden>
         <div class="modal-box">
             <h2>Conhecimentos do Menor</h2>
@@ -526,6 +541,26 @@
             <button class="secondary" onclick="closeBrain()">Fechar</button>
         </div>
     </section>
+    <section id="projectsPanel" class="modal-layer" aria-label="Gerenciar projetos" hidden>
+        <div class="modal-box">
+            <h2>Meus projetos</h2>
+            <p>Selecione o projeto desta conversa para recuperar seu contexto.</p>
+            <select id="projectPicker" aria-label="Escolher projeto" onchange="previewProject()"></select>
+            <button onclick="selectProject()">Usar neste chat</button>
+            <p id="projectDescription" class="project-note-text"></p>
+            <p>Registrar uma atualização no projeto escolhido:</p>
+            <select id="projectNoteKind" aria-label="Tipo de anotação">
+                <option value="decision">Decisão</option>
+                <option value="task">Tarefa</option>
+                <option value="log">Diário</option>
+            </select>
+            <textarea id="projectNoteText" rows="3" maxlength="280"
+                aria-label="Texto da anotação" placeholder="O que mudou?"></textarea>
+            <button onclick="saveProjectNote()">Salvar no projeto</button>
+            <p id="projectError" class="modal-error" role="status"></p>
+            <button class="secondary" onclick="closeProjects()">Fechar</button>
+        </div>
+    </section>
     <script>
         // ========== STATE ==========
         let canSave = true;
@@ -533,14 +568,15 @@
         let activeConvId = null;
         let isGenerating = false;
         let authSetupNeeded = false;
-        let pendingMemory = null;
-        let savingMemory = false;
         let brainItems = [];
         let brainEditingId = null;
+        let pendingProjectSlug = '';
+        let availableProjects = [];
 
         // ========== INIT ==========
         renderConvList();
         showWelcome();
+        updateProjectBadge();
         checkAuth();
         refreshHealth();
         setInterval(refreshHealth, 30000);
@@ -590,62 +626,6 @@
         }
 
         // ========== MEMORIA CONFIRMADA PELO USUARIO ==========
-        function showMemoryConfirm(text, original, fromChat = false, question = '') {
-            pendingMemory = { text, original, fromChat };
-            document.getElementById('memoryText').textContent = text;
-            document.getElementById('memoryQuestion').textContent = question ||
-                'Você quer registrar isso? Escolha onde guardar.';
-            document.getElementById('memoryError').textContent = '';
-            document.getElementById('memoryPanel').hidden = false;
-        }
-
-        function cancelMemory() {
-            if (savingMemory) return;
-            const memory = pendingMemory;
-            document.getElementById('memoryPanel').hidden = true;
-            pendingMemory = null;
-            if (memory && memory.fromChat) {
-                const conv = getActiveConv();
-                conv.messages.push({ role: 'bot', content: 'Não registrei nenhuma memória.' });
-                save();
-                openConv(conv.id);
-            }
-        }
-
-        async function confirmMemory(kind) {
-            if (!pendingMemory || savingMemory) return;
-            savingMemory = true;
-            const memory = pendingMemory;
-            const error = document.getElementById('memoryError');
-            try {
-                const response = await fetch('/memory/remember', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: memory.text, kind }),
-                });
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(typeof data.detail === 'string' ? data.detail : 'Não foi possível salvar.');
-                }
-                const data = await response.json();
-                document.getElementById('memoryPanel').hidden = true;
-                pendingMemory = null;
-                if (!memory.fromChat && !activeConvId) createConversation(memory.original);
-                const conv = getActiveConv();
-                if (!memory.fromChat) conv.messages.push({ role: 'user', content: memory.original });
-                const reply = 'Registrei a memória em ' + (data.path || 'cérebro') + '.'
-                    + ((kind === 'tool' || kind === 'project')
-                        ? ' É uma proposta registrada, ainda não implementada.' : '');
-                conv.messages.push({ role: 'bot', content: reply });
-                save();
-                openConv(conv.id);
-            } catch (failure) {
-                error.textContent = failure.message;
-                if (failure.message.includes('Entre com a senha')) checkAuth();
-            } finally {
-                savingMemory = false;
-            }
-        }
-
         // ========== CONHECIMENTOS DO CEREBRO ==========
         async function brainRequest(path, body) {
             const options = body === undefined ? {} : {
@@ -766,6 +746,113 @@
             }
         }
 
+        // ========== PROJETOS ==========
+        function getActiveProject() {
+            const conv = getActiveConv();
+            return conv ? (conv.project || '') : pendingProjectSlug;
+        }
+
+        function updateProjectBadge() {
+            const slug = getActiveProject();
+            const project = availableProjects.find(p => p.slug === slug);
+            document.getElementById('projectButton').textContent =
+                project ? project.name.slice(0, 12) : (slug || 'Projetos');
+        }
+
+        async function projectRequest(path, body) {
+            const options = body === undefined ? {} : {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            };
+            const result = await fetch(path, options);
+            if (!result.ok) {
+                const data = await result.json();
+                throw new Error(typeof data.detail === 'string' ? data.detail : 'Não foi possível acessar o projeto.');
+            }
+            return result.json();
+        }
+
+        async function openProjects() {
+            document.getElementById('projectsPanel').hidden = false;
+            document.getElementById('projectError').textContent = '';
+            try {
+                const data = await projectRequest('/projects');
+                availableProjects = data.items;
+                const picker = document.getElementById('projectPicker');
+                picker.replaceChildren();
+                for (const item of [{ slug: '', name: 'Nenhum projeto' }, ...availableProjects]) {
+                    const option = document.createElement('option');
+                    option.value = item.slug;
+                    option.textContent = item.name;
+                    picker.appendChild(option);
+                }
+                picker.value = getActiveProject();
+                updateProjectBadge();
+                await previewProject();
+            } catch (error) {
+                document.getElementById('projectError').textContent = error.message;
+            }
+        }
+
+        function closeProjects() { document.getElementById('projectsPanel').hidden = true; }
+
+        async function previewProject() {
+            const slug = document.getElementById('projectPicker').value;
+            const area = document.getElementById('projectDescription');
+            if (!slug) {
+                area.textContent = 'Nenhum projeto selecionado.';
+                return;
+            }
+            try {
+                const details = await projectRequest('/projects/' + encodeURIComponent(slug));
+                area.textContent = details.name + '\n\n' +
+                    details.notes.context + '\n' + details.notes.decision +
+                    '\n' + details.notes.task + '\n' + details.notes.log;
+            } catch (error) {
+                area.textContent = error.message;
+            }
+        }
+
+        async function selectProject() {
+            const slug = document.getElementById('projectPicker').value;
+            if (isGenerating) return;
+            if (slug && !availableProjects.some(p => p.slug === slug)) {
+                document.getElementById('projectError').textContent = 'Projeto desconhecido.';
+                return;
+            }
+            const conv = getActiveConv();
+            if (conv) {
+                conv.project = slug;
+                save();
+            } else {
+                pendingProjectSlug = slug;
+            }
+            updateProjectBadge();
+            await previewProject();
+            document.getElementById('projectError').textContent = slug
+                ? 'Projeto selecionado para esta conversa.' : 'Conversa sem projeto ativo.';
+        }
+
+        async function saveProjectNote() {
+            const slug = document.getElementById('projectPicker').value;
+            const kind = document.getElementById('projectNoteKind').value;
+            const text = document.getElementById('projectNoteText').value.trim();
+            const error = document.getElementById('projectError');
+            if (!slug || !text || text.length > 280) {
+                error.textContent = 'Escolha um projeto e escreva até 280 caracteres.';
+                return;
+            }
+            try {
+                const result = await projectRequest('/projects/' + encodeURIComponent(slug) + '/notes',
+                    { kind, text });
+                error.textContent = 'Anotação salva em ' + result.path;
+                document.getElementById('projectNoteText').value = '';
+                await previewProject();
+            } catch (failure) {
+                error.textContent = failure.message;
+            }
+        }
+
         // ========== CONVERSATIONS ==========
         function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
@@ -846,6 +933,8 @@
         function newChat() {
             if (isGenerating) return;
             activeConvId = null;
+            pendingProjectSlug = '';
+            updateProjectBadge();
             showWelcome();
             renderConvList();
         }
@@ -855,11 +944,13 @@
                 id: genId(),
                 title: firstMsg.slice(0, 50) + (firstMsg.length > 50 ? '...' : ''),
                 messages: [],
+                project: pendingProjectSlug,
                 createdAt: Date.now(),
             };
             conversations.unshift(conv);
             activeConvId = conv.id;
             save();
+            updateProjectBadge();
             renderConvList();
             return conv;
         }
@@ -869,6 +960,7 @@
         function openConv(id) {
             if (isGenerating) return;
             activeConvId = id;
+            updateProjectBadge();
             const conv = getActiveConv();
             if (!conv) return;
             renderConvList();
@@ -884,7 +976,7 @@
             if (isGenerating) return;
             conversations = conversations.filter(c => c.id !== id);
             save();
-            if (activeConvId === id) { activeConvId = null; showWelcome(); }
+            if (activeConvId === id) { activeConvId = null; pendingProjectSlug = ''; updateProjectBadge(); showWelcome(); }
             renderConvList();
         }
 
@@ -957,24 +1049,6 @@
 
             row.innerHTML = `<div class="avatar ${avatarClass}">${avatarText}</div>`;
             row.appendChild(content);
-            if (role === 'user') {
-                const saveButton = document.createElement('button');
-                saveButton.className = 'save-memory-btn';
-                saveButton.type = 'button';
-                saveButton.textContent = 'Guardar memória';
-                saveButton.ariaLabel = 'Guardar esta mensagem na memória do Menor';
-                saveButton.onclick = () => {
-                    const value = text.trim();
-                    if (!value || value.length > 280) {
-                        document.getElementById('connectionStatus').textContent =
-                            'Para salvar, envie uma lembrança com até 280 caracteres.';
-                        return;
-                    }
-                    if (isGenerating || pendingMemory) return;
-                    showMemoryConfirm(value, text);
-                };
-                row.appendChild(saveButton);
-            }
             container.appendChild(row);
             scrollToBottom();
             return content;
@@ -1004,6 +1078,7 @@
 
             const conv = getActiveConv();
             const history = buildHistory(conv.messages, msg);
+            const project = getActiveProject() || null;
             conv.messages.push({ role: 'user', content: msg });
             save();
 
@@ -1011,24 +1086,83 @@
             const botContent = appendMessage('bot', '', true);
 
             try {
+                if (conv.pendingMemory) {
+                    const pending = conv.pendingMemory;
+                    const response = await fetch('/agent/resolve', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: msg, history, project,
+                            original: pending.text, question: pending.question,
+                            suggested_target: pending.target,
+                        }),
+                    });
+                    if (!response.ok) {
+                        if (response.status === 401) checkAuth();
+                        throw new Error('Não consegui interpretar sua resposta. Tente novamente.');
+                    }
+                    const result = await response.json();
+                    if (result.decision === 'ask') {
+                        const question = result.question || 'Pode me dizer em qual pasta devo salvar?';
+                        conv.pendingMemory.question = question;
+                        if (result.target && result.target !== 'none') {
+                            conv.pendingMemory.target = result.target;
+                        }
+                        botContent.textContent = question;
+                        conv.messages.push({ role: 'bot', content: question });
+                        save();
+                        return;
+                    }
+                    if (result.decision !== 'chat') {
+                        delete conv.pendingMemory;
+                        const notice = result.decision === 'cancel'
+                            ? 'Beleza, não registrei nada.'
+                            : 'Registrei em ' + (result.memory?.path || result.project_note?.path)
+                                + '. Podemos continuar.';
+                        botContent.textContent = notice;
+                        conv.messages.push({ role: 'bot', content: notice });
+                        save();
+                        return;
+                    }
+                    delete conv.pendingMemory;
+                    save();
+                }
                 let routeNotice = '';
                 try {
                     const routeResponse = await fetch('/agent/route', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: msg, history }),
+                        body: JSON.stringify({ message: msg, history, project }),
                     });
                     if (routeResponse.ok) {
                         const route = await routeResponse.json();
                         if (route.decision === 'ask') {
-                            const question = route.question || 'Quer que eu registre isso? Em qual pasta?';
+                            const question = route.question || 'Quer que eu anote essa ideia? Em qual pasta?';
+                            conv.pendingMemory = {
+                                text: route.text || msg.slice(0, 280),
+                                question: question.slice(0, 180),
+                                target: route.target || 'none',
+                            };
                             botContent.textContent = question;
-                            showMemoryConfirm(route.text, msg, true, question);
+                            conv.messages.push({ role: 'bot', content: question });
+                            save();
                             return;
                         }
                         if (route.decision === 'save' && route.memory && route.memory.path) {
                             routeNotice = 'Registrei no cérebro: ' + route.memory.path + '.';
                         }
+                        if (route.decision === 'select_project' && route.selected_project) {
+                            conv.project = route.selected_project.slug;
+                            save();
+                            updateProjectBadge();
+                            routeNotice = 'Vamos continuar no projeto ' + route.selected_project.name + '.';
+                        }
+                        if (route.decision === 'add_project_note'
+                                && route.project_note && route.project_note.path) {
+                            routeNotice = 'Anotei no projeto: ' + route.project_note.path + '.';
+                        }
                         if (route.decision === 'create_project' && route.project && route.project.path) {
+                            conv.project = route.project.slug;
+                            save();
+                            updateProjectBadge();
                             routeNotice = 'Criei o projeto ' + route.project.name + ' em '
                                 + route.project.path + ', com contexto, tarefas, decisões e diário.';
                         }
@@ -1050,7 +1184,7 @@
                 const response = await fetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg, history })
+                    body: JSON.stringify({ message: msg, history, project })
                 });
 
                 if (!response.ok) {

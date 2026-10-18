@@ -52,6 +52,16 @@ relacionados ao assunto, usando SQLite FTS5 local. Na interface, o ícone
 de **cérebro** permite consultar, pesquisar, corrigir e apagar anotações
 sem usar terminal. Consulte [o guia da busca](docs/busca_conhecimentos.md).
 
+## Projetos contextuais e diálogo natural (Fase 3)
+
+O Menor pergunta na própria conversa se você quer guardar uma ideia e
+onde, sem abrir um modal com botões grandes. Responda normalmente:
+"Sim, nos projetos" ou "Não, deixa".
+
+O painel compacto **Projetos** permite vincular uma conversa a um projeto
+existente; as decisões, tarefas e o diário desse projeto entram no contexto,
+sem misturar projetos diferentes. Veja [o guia da Fase 3](docs/projetos_contextuais.md).
+
 ## Deploy automático
 
 No Ubuntu, com o repositório em `~/menor-assistant`:

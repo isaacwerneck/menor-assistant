@@ -167,12 +167,18 @@ da Fase 2 depende de validação no servidor com o modelo real.
 
 ### Fase 3 — Gestor de projetos
 
-- [ ] Criar e listar projetos com nomes normalizados, pastas e templates Markdown.
+- [x] Criar e listar projetos com nomes normalizados, pastas e templates Markdown.
 - [ ] Registrar contexto, decisões, tarefas, diário e arquivos com referências de origem.
-- [ ] Identificar/selecionar projeto ativo e recuperar contexto antes de trabalhar.
+- [x] Selecionar projeto ativo por conversa e recuperar contexto antes de trabalhar.
 - [ ] Exportar e arquivar projetos com segurança.
 
 **Aceite:** pedido de novo projeto cria pasta e documentos; retomada após reinício preserva decisões e próximo passo.
+
+**Incremento do PR #5:** contexto de projeto por conversa, listagem,
+decisões/tarefas/diário no Markdown e perguntas de memória respondidas
+em linguagem natural, sem menu de categorias. Permanecem pendentes:
+desambiguação de nomes de projetos, exportação/arquivamento
+seguro, registro de arquivos com metadados e testes com o modelo real.
 
 ### Fase 4 — Ferramentas e execução agêntica
 
