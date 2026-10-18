@@ -4,10 +4,13 @@ A instalação baixa pesos somente de um repositório pré-aprovado e exige
 autorização do proprietário. Após o download, a inferência é offline.
 """
 
+import importlib
 import importlib.util
 import os
 import shutil
 import stat
+import subprocess
+import sys
 import threading
 from pathlib import Path
 
@@ -51,6 +54,28 @@ def status(store=None):
         "offline_inference": True,
         "requires_download_approval": not installed,
     }
+
+
+def ensure_runtime_approved():
+    """Instala apenas requisitos revisados no venv atual, sem shell e após aprovação."""
+    required = ("openvino_genai", "huggingface_hub")
+    if all(importlib.util.find_spec(name) is not None for name in required):
+        return
+    if sys.prefix == sys.base_prefix:
+        raise LocalImageUnavailable("Instalação bloqueada fora de um ambiente virtual.")
+    requirements = Path(__file__).resolve().parents[2] / "requirements-local-images.txt"
+    if not requirements.is_file():
+        raise LocalImageUnavailable("Requisitos do subagente não encontrados.")
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--disable-pip-version-check",
+         "-r", str(requirements)],
+        capture_output=True, text=True, timeout=1800, check=False,
+    )
+    if result.returncode != 0:
+        raise LocalImageUnavailable("Não foi possível instalar as dependências locais.")
+    importlib.invalidate_caches()
+    if not all(importlib.util.find_spec(name) is not None for name in required):
+        raise LocalImageUnavailable("Dependências instaladas não ficaram disponíveis.")
 
 
 def install_approved(store=None):
