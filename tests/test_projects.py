@@ -90,7 +90,10 @@ class ProjectWorkspaceTests(unittest.TestCase):
         )}}
         post.return_value = response
         self.assertEqual(classify("Temos que criar menu", [])["decision"], "chat")
-        self.assertEqual(classify("Temos que criar menu", [], project="cidade-noturna")["decision"], "ask")
+        self.assertEqual(
+            classify("Temos que criar menu", [], project="cidade-noturna")["decision"],
+            "add_project_note",
+        )
 
     @patch("src.agent.router.requests.post")
     def test_router_rejects_hallucinated_notes(self, post):
