@@ -47,6 +47,12 @@ Envie no chat:
 Menor, lembre disso: Prefiro respostas diretas.
 ```
 
+Também são aceitas frases naturais como `lembre se de sempre ser objetivo`,
+`lembre-se de...`, `anota aí: ...` e `guarda na memória: ...`.
+Se uma frase não for reconhecida, use **Guardar memória** junto à mensagem.
+O modelo não deve afirmar que uma memória foi gravada sem a confirmação
+visível do aplicativo.
+
 O Menor abre uma confirmação. Escolha:
 
 - **Preferência**: o texto é gravado em `identidade/preferencias.md` e incluído
