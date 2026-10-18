@@ -6,7 +6,6 @@ autorização do proprietário. Após o download, a inferência é offline.
 
 import importlib
 import importlib.util
-import os
 import shutil
 import stat
 import subprocess
