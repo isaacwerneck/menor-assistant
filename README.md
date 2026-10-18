@@ -62,6 +62,18 @@ O painel compacto **Projetos** permite vincular uma conversa a um projeto
 existente; as decisões, tarefas e o diário desse projeto entram no contexto,
 sem misturar projetos diferentes. Veja [o guia da Fase 3](docs/projetos_contextuais.md).
 
+## Robustez de decisões e ferramentas (v0.5 em desenvolvimento)
+
+O projeto mantém um [plano extra de refinamento](PLANO_REFINAMENTO.md).
+Respostas curtas a perguntas de memória ("sim", "simm", "ferramentas",
+"não") são resolvidas sem depender de nova inferência do Qwen.
+
+Também existe um catálogo inicial de ferramentas reais com endpoint
+autenticado `GET /tools` e execução controlada em
+`POST /tools/execute`. A execução usa **dry-run por padrão** e registra
+metadados locais de auditoria. O Menor ainda não cria/instala
+autonomamente ferramentas Python nem controla Git.
+
 ## Deploy automático
 
 No Ubuntu, com o repositório em `~/menor-assistant`:
