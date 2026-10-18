@@ -1,6 +1,7 @@
 # PLANO — Ecossistema Menor Assistant
 
 > Documento de referência do projeto (**fonte de verdade para os próximos passos**).
+> Plano complementar de estabilidade/autonomia: [PLANO_REFINAMENTO.md](PLANO_REFINAMENTO.md).
 > Versão inicial: 1.0 — 18/10/2026. Repositório: `isaacwerneck/menor-assistant`.
 > Status: **planejado**. Nenhuma fase abaixo está automaticamente concluída só por estar descrita aqui.
 
@@ -179,6 +180,13 @@ decisões/tarefas/diário no Markdown e perguntas de memória respondidas
 em linguagem natural, sem menu de categorias. Permanecem pendentes:
 desambiguação de nomes de projetos, exportação/arquivamento
 seguro, registro de arquivos com metadados e testes com o modelo real.
+
+**Incremento v0.5 em PR #6:** catálogo de ferramentas com validação,
+`dry-run`, autenticação de API, comprovante da execução e trilha de
+auditoria privada. O agente ainda não invoca automaticamente ferramentas
+arbitrárias, e o agente programador/integração Git/sandbox ficam pendentes.
+Também corrige regressões observadas nos prints do iPhone (confirmações
+curtas e overflow). Veja [PLANO_REFINAMENTO.md](PLANO_REFINAMENTO.md).
 
 ### Fase 4 — Ferramentas e execução agêntica
 

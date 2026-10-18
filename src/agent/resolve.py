@@ -9,6 +9,8 @@ import os
 
 import requests
 
+from src.agent.short_replies import simple_answer
+
 LOGGER = logging.getLogger(__name__)
 MODEL = os.environ.get("OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
@@ -44,6 +46,11 @@ def resolve(original, answer, suggested_target="none", project=None, question=""
         return fallback
     if suggested_target not in ("none", "preference", "knowledge", "project", "tool"):
         return fallback
+    # Confirmações curtas devem funcionar sem aguardar outra inferência do Qwen.
+    direct = simple_answer(answer, suggested_target, question, project)
+    if direct is not None:
+        return direct
+
     conversation = [
         {"role": m["role"], "content": m["content"][:1000]}
         for m in (history or [])[-4:]

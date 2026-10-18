@@ -28,6 +28,17 @@ class IntentRouterTests(unittest.TestCase):
         self.assertEqual(sent["options"]["temperature"], 0)
 
     @patch("src.agent.router.requests.post")
+    def test_request_to_build_tool_is_not_memorization(self, post):
+        post.return_value = mock_model({
+            "decision": "plan_tool", "target": "tool",
+            "text": "vamos criar uma ferramenta nova de criar imagens",
+            "confidence": 0.99, "question": "",
+        })
+        result = classify("vamos criar uma ferramenta nova de criar imagens?", [])
+        self.assertEqual(result["decision"], "plan_tool")
+        self.assertEqual(result["target"], "tool")
+
+    @patch("src.agent.router.requests.post")
     def test_ambiguous_idea_asks_before_writing(self, post):
         post.return_value = mock_model({
             "decision": "save", "target": "tool", "text": "um gerador de sprites",
