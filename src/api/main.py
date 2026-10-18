@@ -193,11 +193,15 @@ def _save_memory(kind, text):
 @app.post("/agent/route")
 def route_intent(body: IntentRequest, request: Request):
     auth.require_owner(request)
-    result = classify(body.message, [item.model_dump() for item in body.history])
-    if result["decision"] in ("save", "create_project"):
+    result = classify(body.message, [item.model_dump() for item in body.history], project=body.project)
+    if result["decision"] in ("save", "create_project", "add_project_note"):
         try:
             if result["decision"] == "create_project":
                 result["project"] = create_project(result["text"])
+            elif result["decision"] == "add_project_note":
+                result["project_note"] = ProjectWorkspace().append(
+                    body.project, result["note_kind"], result["text"], origin="chat",
+                )
             else:
                 result["memory"] = _save_memory(result["target"], result["text"])
         except (ValueError, OSError) as error:
