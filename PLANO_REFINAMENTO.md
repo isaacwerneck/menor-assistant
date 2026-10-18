@@ -106,3 +106,10 @@ com PR em rascunho após opt-in, e revisão humana continua obrigatória.
 
 **Não concluído:** sandbox de execução autônoma, cron de diagnóstico,
 rollback transacional e provedor local de imagens.
+
+## R8 — Missões e subagentes locais
+
+Testar aprovação antes de download, persistência após restart, isolamento dos
+arquivos, verificação da imagem antes de declarar pronto e uso sem API externa.
+A qualidade artística não é verificada pelo teste de integridade de pixels.
+Implantar e medir desempenho no hardware Intel real antes de aceitar a fase.
