@@ -86,11 +86,13 @@ def install_approved(store=None):
     return status(store)
 
 
-def generate(prompt, store=None):
+def generate(prompt, store=None, steps=20):
     """Inferência local com um modelo já instalado; nunca baixa durante a geração."""
     from src.tools.images import _prompt, _save
 
     prompt = _prompt(prompt)
+    if not isinstance(steps, int) or not 1 <= steps <= 40:
+        raise ValueError("Número de passos inválido.")
     detail = status(store)
     if not detail["ready"]:
         raise LocalImageUnavailable("Modelo local não instalado ou dependências ausentes.")
@@ -101,7 +103,7 @@ def generate(prompt, store=None):
     folder = model_directory(store)
     with _lock:
         pipeline = Text2ImagePipeline(str(folder), "CPU")
-        tensor = pipeline.generate(prompt, num_inference_steps=20)
+        tensor = pipeline.generate(prompt, num_inference_steps=steps)
         picture = Image.fromarray(tensor.data[0])
         output = io.BytesIO()
         picture.save(output, format="PNG")
