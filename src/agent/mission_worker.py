@@ -6,6 +6,7 @@ escolhidos pelo Qwen. Máximo de duas tentativas por missão.
 
 from src.agent.missions import MissionStore
 from src.agent.reviewer import review_image
+from src.agent.skills import document_verified_skill
 from src.tools import local_images
 
 
@@ -41,12 +42,15 @@ def run_once(store=None):
                 proof = local_images.generate("Uma esfera azul sobre fundo branco", steps=6)
                 verdict = review_image(proof)
                 if verdict["passed"]:
-                    return missions.transition(mission_id, "installing", "ready", {
+                    result = {
                         "worker": "openvino-sd15-int8",
                         "test_image": proof["url"],
                         "verified": True,
                         "review": verdict,
-                    })
+                    }
+                    ready = {**missions.get(mission_id), "status": "ready", "result": result}
+                    document_verified_skill(ready, missions.store)
+                    return missions.transition(mission_id, "installing", "ready", result)
             raise local_images.LocalImageUnavailable("Imagem não passou na revisão técnica.")
         except (OSError, ValueError, RuntimeError, ImportError) as error:
             return missions.transition(mission_id, "installing", "failed", {
