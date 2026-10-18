@@ -153,6 +153,22 @@ class MemoryChatTests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(result["decision"], "ask")
 
+    @patch("src.api.main.classify")
+    def test_tool_build_request_plans_spec_without_creating_executable(self, classifier):
+        cookie = self._setup()
+        classifier.return_value = {
+            "decision": "plan_tool", "target": "tool",
+            "text": "vamos criar uma ferramenta de gerar imagens",
+            "confidence": 0.99, "question": "",
+        }
+        code, result, _ = call("/agent/route", {
+            "message": "vamos criar uma ferramenta de gerar imagens",
+        }, cookie=cookie)
+        self.assertEqual(code, 200, result)
+        self.assertEqual(result["tool_plan"]["status"], "planned")
+        self.assertFalse(result["tool_plan"]["implemented"])
+        self.assertIn("ferramentas/propostas/", result["tool_plan"]["path"])
+
     def test_create_project_api_rejects_unsafe_names_and_unauthenticated_calls(self):
         payload = {"name": "Projeto Seguro"}
         self.assertEqual(call("/projects/create", payload)[0], 401)
