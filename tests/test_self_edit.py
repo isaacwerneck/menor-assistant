@@ -42,6 +42,7 @@ class SupervisedDevTests(unittest.TestCase):
         updated = "def fn():\n    return 2\n"
         model.return_value = (updated, {"reason": "bug", "tests": "pytest"})
         remote_calls = []
+
         def execute(method, url, **kwargs):
             remote_calls.append((method, url, kwargs.get("json")))
             response = MagicMock()
