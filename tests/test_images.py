@@ -36,7 +36,10 @@ class ImageProviderTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        env = patch.dict(os.environ, {"MENOR_DATA_DIR": tmp.name, "MENOR_IMAGE_API_KEY": "fake-key", "MENOR_IMAGE_PROVIDER": "openai"})
+        env = patch.dict(os.environ, {
+            "MENOR_DATA_DIR": tmp.name, "MENOR_IMAGE_API_KEY": "fake-key",
+            "MENOR_IMAGE_PROVIDER": "openai",
+        })
         env.start()
         self.addCleanup(env.stop)
         buffer = io.BytesIO()
@@ -94,7 +97,10 @@ class ImageEndpointTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        env = patch.dict(os.environ, {"MENOR_DATA_DIR": tmp.name, "MENOR_IMAGE_API_KEY": "", "MENOR_IMAGE_PROVIDER": "local"})
+        env = patch.dict(os.environ, {
+            "MENOR_DATA_DIR": tmp.name, "MENOR_IMAGE_API_KEY": "",
+            "MENOR_IMAGE_PROVIDER": "local",
+        })
         env.start()
         self.addCleanup(env.stop)
         from src.security import auth
