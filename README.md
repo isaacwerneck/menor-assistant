@@ -88,6 +88,17 @@ executar patches na máquina.
 Veja [configuração, custos, privacidade e limites](docs/imagens_autoedicao_v06.md).
 O motor de imagens e as credenciais não são configurados automaticamente.
 
+## Orquestrador e subagentes locais (incremento do PR #8)
+
+O Menor pode iniciar uma missão para construir uma capacidade que falta,
+perguntar requisitos, propor um modelo local e pedir autorização. A missão
+fica salva no cérebro e um worker systemd executa tarefas autorizadas.
+O primeiro subagente é de geração de imagens OpenVINO CPU, sem API de IA
+externa por padrão. O download inicial exige internet, alguns GB livres
+e o teste de desempenho no notebook.
+
+Veja [a arquitetura multiagente](docs/arquitetura_multiagente.md).
+
 ## Deploy automático
 
 No Ubuntu, com o repositório em `~/menor-assistant`:
