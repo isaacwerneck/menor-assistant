@@ -10,6 +10,9 @@ from src.memory.store import BrainStore, _write_lock
 def slugify(name):
     if not isinstance(name, str) or not 3 <= len(name.strip()) <= 64:
         raise ValueError("Nome de projeto precisa ter de 3 a 64 caracteres.")
+    if any(not (c.isalnum() or c in " -_") for c in name):
+        raise ValueError("Nome contém caracteres não permitidos.")
+    name = name.strip()
     folded = unicodedata.normalize("NFKD", name.casefold())
     ascii_name = "".join(c for c in folded if not unicodedata.combining(c))
     slug = re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
