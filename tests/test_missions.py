@@ -60,10 +60,12 @@ class MissionTests(unittest.TestCase):
             self.missions.get(obj["id"])
         self.assertEqual(target.read_text(), "private")
 
+    @patch("src.agent.mission_worker.review_image")
     @patch("src.agent.mission_worker.local_images.generate")
     @patch("src.agent.mission_worker.local_images.install_approved")
     @patch("src.agent.mission_worker.local_images.ensure_runtime_approved")
-    def test_approved_mission_runs_worker_then_smoke_test(self, ensure, install, generate):
+    def test_approved_mission_runs_worker_then_smoke_test(self, ensure, install, generate, reviewer):
+        reviewer.return_value = {"passed": True, "width": 512, "height": 512}
         install.return_value = {"ready": True}
         generate.return_value = {
             "status": "completed", "id": "a" * 32, "url": "/images/files/" + "a" * 32,
@@ -77,6 +79,7 @@ class MissionTests(unittest.TestCase):
         ensure.assert_called_once()
         install.assert_called_once()
         generate.assert_called_once()
+        reviewer.assert_called_once()
         self.assertEqual(run_once(self.missions)["status"], "idle")
 
     @patch("src.agent.mission_worker.local_images.ensure_runtime_approved")
