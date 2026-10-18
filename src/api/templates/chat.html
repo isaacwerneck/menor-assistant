@@ -446,7 +446,7 @@
             .topbar .toggle-sidebar-btn { flex-shrink: 0; font-size: 1rem; padding: 6px; }
             #projectButton { max-width: 98px; overflow: hidden; text-overflow: ellipsis;
                 white-space: nowrap; font-size: 0.8rem; }
-            .messages { padding: 16px 12px; }
+            .messages-container { padding: 16px 12px; }
             .message-row { gap: 9px; }
             .message-content { font-size: 0.92rem; line-height: 1.5; min-width: 0; }
             .message-row.user .message-content { max-width: calc(100% - 48px); }
@@ -1201,6 +1201,10 @@
                         }
                         if (route.decision === 'save' && route.memory && route.memory.path) {
                             routeNotice = 'Registrei no cérebro: ' + route.memory.path + '.';
+                        }
+                        if (route.decision === 'add_project_note'
+                                && route.project_note && route.project_note.path) {
+                            routeNotice = 'Anotei no projeto: ' + route.project_note.path + '.';
                         }
                         if (route.decision === 'create_project' && route.project && route.project.path) {
                             conv.project = route.project.slug;
