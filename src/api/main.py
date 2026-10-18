@@ -419,6 +419,11 @@ def route_intent(body: IntentRequest, request: Request):
         try:
             if result["decision"] == "plan_tool":
                 result["tool_plan"] = plan_tool(result["text"])
+                lowered = body.message.casefold()
+                capability = "images.generate" if (
+                    "imagem" in lowered or "foto" in lowered or "arte" in lowered
+                ) else "programming"
+                result["mission"] = MissionStore().begin(capability, body.message)
                 record("tool.plan", "planned", ["request"])
             elif result["decision"] == "create_project":
                 result["project"] = create_project(result["text"])
