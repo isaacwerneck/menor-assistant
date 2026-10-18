@@ -34,7 +34,12 @@ class ProjectWorkspace:
 
     def _check_project(self, slug):
         slug = self._slug(slug)
-        root = self.store.brain_dir / "projetos" / slug
+        projects = self.store.brain_dir / "projetos"
+        if self.store.data_dir.is_symlink() or self.store.brain_dir.is_symlink():
+            raise ValueError("Diretório privado inválido.")
+        if projects.is_symlink() or not projects.is_dir():
+            raise LookupError("Diretório de projetos indisponível.")
+        root = projects / slug
         if root.is_symlink() or not root.is_dir():
             raise LookupError("Projeto não encontrado.")
         for filename in FILES.values():
@@ -47,7 +52,7 @@ class ProjectWorkspace:
         root = self.store.brain_dir / "projetos"
         if not root.exists():
             return []
-        if root.is_symlink() or not root.is_dir():
+        if self.store.brain_dir.is_symlink() or root.is_symlink() or not root.is_dir():
             raise ValueError("Pasta de projetos inválida.")
         projects = []
         for child in root.iterdir():
