@@ -7,6 +7,10 @@ ensure_review_timer() {
     if [[ ! -f deploy/systemd/menor-review.timer ]]; then
         return 0
     fi
+    # Evita fazer daemon-reload e enable a cada verificação de 30 segundos.
+    if systemctl --user is-enabled --quiet menor-review.timer; then
+        return 0
+    fi
     local units
     units="$HOME/.config/systemd/user"
     mkdir -p "$units"
