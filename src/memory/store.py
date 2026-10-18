@@ -182,7 +182,11 @@ class BrainStore:
         line = "- " + datetime.now(timezone.utc).strftime("%Y-%m-%d") + " — " + value
         with _write_lock:
             current = self.read_note(relative)
-            if not any(row.casefold().strip() == line.casefold() for row in current.splitlines()):
+            known = [
+                row[2:].split(" — ", 1)[-1].casefold().strip()
+                for row in current.splitlines() if row.startswith("- ")
+            ]
+            if value.casefold() not in known:
                 self.write_note(relative, current.rstrip() + "\n" + line + "\n")
         return line
 

@@ -138,6 +138,49 @@ class MemoryChatTests(unittest.TestCase):
         self.assertEqual(call("/projects/create", payload, cookie=cookie)[0], 200)
         self.assertEqual(call("/projects/create", payload, cookie=cookie)[0], 422)
 
+    def test_knowledge_api_requires_login_and_supports_revisions(self):
+        self.assertEqual(call("/memory/knowledge")[0], 401)
+        self.assertEqual(call("/memory/search", {"query": "Godot"})[0], 401)
+        cookie = self._setup()
+        BrainStore().remember_knowledge("Meu jogo usa Godot")
+        code, listing, _ = call("/memory/knowledge", cookie=cookie)
+        self.assertEqual(code, 200, listing)
+        self.assertEqual(len(listing["items"]), 1)
+        entry = listing["items"][0]
+        self.assertEqual(entry["text"], "Meu jogo usa Godot")
+        code, matches, _ = call("/memory/search", {"query": "Godot"}, cookie=cookie)
+        self.assertEqual(code, 200)
+        self.assertIn("Godot", matches["items"][0]["content"])
+        bad_origin = "http://example.com:8000"
+        self.assertEqual(call("/memory/knowledge/delete", {"id": entry["id"]},
+                              cookie=cookie, origin=bad_origin)[0], 403)
+        code, updated, _ = call("/memory/knowledge/edit", {
+            "id": entry["id"], "text": "Meu jogo usa Unity",
+        }, cookie=cookie)
+        self.assertEqual(code, 200, updated)
+        self.assertIn("Unity", updated["entry"]["text"])
+        self.assertEqual(call("/memory/knowledge/delete", {"id": entry["id"]}, cookie=cookie)[0], 409)
+        refreshed = call("/memory/knowledge", cookie=cookie)[1]["items"][0]
+        self.assertEqual(call("/memory/knowledge/delete", {"id": refreshed["id"]}, cookie=cookie)[0], 200)
+        self.assertEqual(call("/memory/knowledge", cookie=cookie)[1]["items"], [])
+        self.assertEqual(call("/memory/search", {"query": "Unity"}, cookie=cookie)[1]["items"], [])
+
+    @patch("src.api.main.requests.post")
+    def test_chat_sends_relevant_saved_knowledge_to_ollama(self, post):
+        import unittest.mock
+        response = unittest.mock.MagicMock()
+        response.__enter__.return_value = response
+        response.status_code = 200
+        response.json.return_value = {"message": {"content": "Uso o Godot."}}
+        post.return_value = response
+        BrainStore().remember_knowledge("Godot permite cenas para o jogo")
+        code, reply, _ = call("/chat", {"message": "O que você sabe sobre Godot?"})
+        self.assertEqual(code, 200, reply)
+        prompt = post.call_args.kwargs["json"]["messages"][0]["content"]
+        self.assertIn("Godot permite cenas", prompt)
+        self.assertEqual(post.call_args.kwargs["json"]["messages"][-1]["content"],
+                         "O que você sabe sobre Godot?")
+
     def test_cookie_signature_is_verified(self):
         cookie = self._setup()
         self.assertTrue(call("/auth/status", cookie=cookie)[1]["authenticated"])
