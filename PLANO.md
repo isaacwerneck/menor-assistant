@@ -316,3 +316,15 @@ Consultar [arquitetura multiagente](docs/arquitetura_multiagente.md).
 - [ ] Programador genérico, pesquisador de novos modelos, edição local,
   música e ferramentas web em isolamento verificável.
 
+## 15. Operação isolada do primeiro subagente — PR #9
+
+- [x] Instalar dependências OpenVINO em ambiente virtual privado do worker,
+  separado da API principal do Menor.
+- [x] Executar download e inferência em processo filho com comandos predefinidos,
+  entradas validadas e limites de duração.
+- [x] Evitar repasse de tokens GitHub/API de imagem ao worker local.
+- [x] Conferir presença dos pesos principais, não apenas um XML vazio.
+- [x] Verificar espaço em disco antes de autorizar e registrar progresso da missão.
+- [ ] Confirmar download e geração real no notebook Intel (CI simula modelo pesado).
+- [ ] Benchmark CPU/GPU e edição local de fotos com modelo adequado.
+
