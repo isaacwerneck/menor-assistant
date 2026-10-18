@@ -28,14 +28,22 @@ Configuração opcional: `OLLAMA_URL`, `OLLAMA_MODEL` e `OLLAMA_KEEP_ALIVE`.
 Detalhes de contexto, erros e configuração em
 [organização do código](docs/arquitetura_codigo.md#estado-implementado).
 
-## Cérebro persistente (v0.3 em desenvolvimento)
+## Cérebro persistente e preferências pelo chat (v0.3)
 
-A branch de memória cria notas Markdown privadas em `~/menor-data/cerebro/` e injeta
-preferências explícitas no contexto do Ollama. A escrita ainda é feita somente
-pelo terminal do servidor, sem liberar operações de escrita pela API.
+Na primeira visita, a interface permite criar uma senha do proprietário
+(com pelo menos 12 caracteres), sem usar comandos do terminal. Configure-a
+somente na sua rede privada. Depois, envie uma mensagem como
+`Menor, lembre disso: Prefiro respostas objetivas` e escolha se será
+preferência ou conhecimento. O conteúdo é salvo em
+`~/menor-data/cerebro/`, fora do repositório.
 
-Consulte [como inicializar e registrar preferências](docs/memoria_v03.md).
-O plano completo está em [PLANO.md](PLANO.md).
+**Aviso:** ainda não há HTTPS integrado nem recuperação automática de senha.
+A configuração inicial pode ser reivindicada por outro dispositivo da
+mesma rede privada antes do dono configurá-la. Não publique a porta 8000
+na Internet e não use Wi-Fi público. Prefira VPN e HTTPS.
+
+Veja [como usar o cérebro com segurança](docs/memoria_v03.md) e o
+[PLANO.md](PLANO.md) para as próximas fases.
 
 ## Deploy automático
 
