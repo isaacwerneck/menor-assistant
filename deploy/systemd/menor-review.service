@@ -1,0 +1,12 @@
+[Unit]
+Description=Analisar falhas do Menor e preparar propostas supervisionadas
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/menor-assistant
+EnvironmentFile=-%h/.config/menor/environment
+ExecStart=%h/menor-assistant/.venv/bin/python -m src.agent.watch
+TimeoutStartSec=8min
+NoNewPrivileges=true
+UMask=0077

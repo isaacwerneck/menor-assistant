@@ -2,6 +2,25 @@
 set -Eeuo pipefail
 trap 'echo "Deploy falhou na linha $LINENO. Consulte journalctl --user -u menor-deploy.service." >&2' ERR
 
+# Instala o timer opcional apenas se os arquivos já existirem no checkout.
+ensure_review_timer() {
+    if [[ ! -f deploy/systemd/menor-review.timer ]]; then
+        return 0
+    fi
+    # Evita fazer daemon-reload e enable a cada verificação de 30 segundos.
+    if systemctl --user is-enabled --quiet menor-review.timer; then
+        return 0
+    fi
+    local units
+    units="$HOME/.config/systemd/user"
+    mkdir -p "$units"
+    for name in menor-review.service menor-review.timer; do
+        ln -sfn "$PWD/deploy/systemd/$name" "$units/$name"
+    done
+    systemctl --user daemon-reload
+    systemctl --user enable --now menor-review.timer
+}
+
 # O Bash lê a função inteira antes do pull que pode atualizar este arquivo.
 main() {
     cd "$(dirname "${BASH_SOURCE[0]}")/.."
@@ -32,6 +51,7 @@ main() {
     if [[ -f .git/menor-deployed-revision ]] &&
         [[ "$(cat .git/menor-deployed-revision)" == "$target" ]] &&
         systemctl --user is-active --quiet menor-api.service; then
+        ensure_review_timer
         echo "Sem mudanças: $target"
         return 0
     fi

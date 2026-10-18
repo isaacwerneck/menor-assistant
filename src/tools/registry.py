@@ -5,7 +5,9 @@ Nenhum caminho informado pelo modelo é repassado diretamente ao sistema.
 from dataclasses import dataclass
 
 from src.agent.diagnostics import analyze
+from src.agent.self_edit import propose
 from src.memory.store import BrainStore
+from src.tools import images
 from src.projects.manager import create_project
 from src.projects.workspace import ProjectWorkspace
 
@@ -22,6 +24,15 @@ class Tool:
 TOOLS = {
     "system.diagnose": Tool(
         "system.diagnose", "Resume falhas das ferramentas em auditoria local.", "read", False, (),
+    ),
+    "images.generate": Tool(
+        "images.generate", "Gera imagem com motor externo configurado.", "external", True, ("prompt",),
+    ),
+    "images.edit": Tool(
+        "images.edit", "Edita imagem já salva pelo Menor.", "external", True, ("image_id", "prompt"),
+    ),
+    "developer.propose": Tool(
+        "developer.propose", "Propõe correção em branch e draft PR; requer opt-in.", "review", True, ("issue",),
     ),
     "projects.list": Tool(
         "projects.list", "Lista projetos existentes no cérebro.", "read", False, (),
@@ -67,7 +78,14 @@ def perform(name, arguments, dry_run=True):
     if dry_run:
         return {"status": "planned", "tool": name, "writes": tool.writes,
                 "arguments": list(tool.arguments)}
-    if name == "system.diagnose":
+    if name == "images.generate":
+        output = images.generate(arguments["prompt"])
+    elif name == "images.edit":
+        image_path = images.file_path(arguments["image_id"])
+        output = images.edit(arguments["prompt"], image_path.read_bytes())
+    elif name == "developer.propose":
+        output = propose(arguments["issue"], dry_run=False)
+    elif name == "system.diagnose":
         output = analyze()
     elif name == "projects.list":
         output = ProjectWorkspace().list_projects()

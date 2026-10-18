@@ -11,6 +11,8 @@ import requests
 
 from src.agent.short_replies import simple_answer
 
+from src.tools.audit import record
+
 LOGGER = logging.getLogger(__name__)
 MODEL = os.environ.get("OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
@@ -81,6 +83,11 @@ def resolve(original, answer, suggested_target="none", project=None, question=""
             result = json.loads(response.json()["message"]["content"])
     except (requests.RequestException, TypeError, KeyError, ValueError) as error:
         LOGGER.warning("Resolução de intenção indisponível: %s", type(error).__name__)
+        try:
+            record("agent.resolve", "failed")
+        except (OSError, ValueError):
+            LOGGER.warning("Auditoria indisponível.")
+
         return fallback
     if not isinstance(result, dict):
         return fallback

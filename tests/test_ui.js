@@ -16,6 +16,8 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
     const downloads = [];
     const memories = [];
     const knowledgeActions = [];
+    const imageCalls = [];
+    const repairCalls = [];
     let knowledgeItems = [{ id: '3.0123456789abcdef', text: 'Meu jogo usa Godot', date: '2026-10-18',
         source: 'conhecimentos/aprendizados_gerais.md' }];
     let blob;
@@ -44,6 +46,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
             setItem: (key, value) => writes.push(JSON.parse(value)),
         },
         setInterval() {}, TextDecoder, Blob, console,
+        FormData: class { constructor() { this.values = {}; } append(k, v) { this.values[k] = v; } },
         URL: { createObjectURL(value) { blob = value; return 'blob:test'; }, revokeObjectURL() {} },
         fetch: async (url, options) => {
             if (url === '/auth/status') {
@@ -80,6 +83,48 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
                 resolved.push(JSON.parse(options.body));
                 return { ok: true, json: async () => resolution };
             }
+            if (url === '/images/intent') {
+                const body = JSON.parse(options.body);
+                imageCalls.push({ type: 'intent', body });
+                const text = body.message.toLowerCase();
+                if (text.includes('imagem') && text.includes('crie') && !text.includes(' de ')) {
+                    return { ok: true, json: async () => ({
+                        decision: 'image_ask', kind: 'generate',
+                        question: 'Que imagem você quer? Me descreve a cena e o estilo.',
+                    }) };
+                }
+                if (text.includes('cria uma imagem de')) {
+                    return { ok: true, json: async () => ({
+                        decision: 'image_generate', prompt: body.message,
+                    }) };
+                }
+                if (text.includes('edita essa foto')) {
+                    return { ok: true, json: async () => ({
+                        decision: body.has_attachment ? 'image_edit' : 'image_ask',
+                        kind: 'edit', prompt: body.message,
+                        question: 'Anexa a foto.',
+                    }) };
+                }
+                return { ok: true, json: async () => ({ decision: 'chat' }) };
+            }
+            if (url === '/images/generate') {
+                imageCalls.push({ type: 'generate', body: JSON.parse(options.body) });
+                return { ok: true, json: async () => ({
+                    status: 'completed', url: '/images/files/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                }) };
+            }
+            if (url === '/images/edit') {
+                imageCalls.push({ type: 'edit', body: options.body });
+                return { ok: true, json: async () => ({
+                    status: 'completed', url: '/images/files/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                }) };
+            }
+            if (url === '/agent/improve') {
+                repairCalls.push(JSON.parse(options.body));
+                return { ok: true, json: async () => ({
+                    status: 'pr_created', url: 'https://github.com/example/pull/10',
+                }) };
+            }
             if (url === '/agent/route') {
                 routed.push(JSON.parse(options.body));
                 return { ok: true, json: async () => intent };
@@ -96,7 +141,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions,
+    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, repairCalls,
         downloads, getBlob: () => blob };
 }
 
@@ -327,4 +372,75 @@ test('painel de conhecimentos permite consultar, pesquisar, editar e excluir', a
     assert.match(ui.elements.get('brainList').children[0].textContent, /Nenhum conhecimento/);
     ui.context.closeBrain();
     assert.equal(ui.elements.get('brainPanel').hidden, true);
+});
+
+
+test('pedido de imagem sem cena inicia conversa e aceita detalhe posterior', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'quero q vc crie uma imagem pra mim';
+    await ui.context.sendMsg();
+    const conv = ui.context.getActiveConv();
+    assert.equal(conv.pendingImage.kind, 'generate');
+    assert.match(conv.messages.at(-1).content, /Que imagem você quer/);
+    assert.equal(ui.requests.length, 0);
+    ui.elements.get('userInput').value = 'um gato cinza no parque, realista e vertical';
+    await ui.context.sendMsg();
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 1);
+    assert.equal(conv.pendingImage, undefined);
+    assert.equal(conv.messages.at(-1).image, '/images/files/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+});
+
+test('pedido de imagem completo gera resultado sem passar pelo chat textual', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de uma moto preta numa rua chuvosa';
+    await ui.context.sendMsg();
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 1);
+    assert.equal(ui.routed.length, 0);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Imagem gerada/);
+});
+
+test('editar foto usa anexo discreto e não envia arquivo ao Ollama textual', async () => {
+    const ui = browser();
+    const file = { name: 'foto.png', size: 1024 };
+    const input = ui.elements.get('imageAttachment');
+    input.files = [file];
+    ui.context.imageSelected(input);
+    ui.elements.get('userInput').value = 'edita essa foto e troca o fundo por azul';
+    await ui.context.sendMsg();
+    assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 1);
+    assert.equal(ui.routed.length, 0);
+    assert.equal(ui.context.getActiveConv().messages.at(-1).image,
+        '/images/files/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+    assert.equal(ui.elements.get('imageAttachmentName').hidden, true);
+});
+
+test('estado de imagem persiste na conversa e pode ser cancelado', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'quero q vc crie uma imagem pra mim';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'cancela';
+    await ui.context.sendMsg();
+    assert.equal(ui.context.getActiveConv().pendingImage, undefined);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 0);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /cancelei/);
+});
+
+
+test('pedido de corrigir bug abre PR supervisionado sem alegar merge', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'Menor, corrige esse bug no código do roteador';
+    await ui.context.sendMsg();
+    assert.equal(ui.repairCalls.length, 1);
+    assert.equal(ui.repairCalls[0].dry_run, false);
+    assert.equal(ui.requests.length, 0);
+    assert.equal(ui.routed.length, 0);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Precisa de revisão/);
+});
+
+test('pergunta sobre como corrigir um bug continua como conversa normal', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'como corrigir um bug no código?';
+    await ui.context.sendMsg();
+    assert.equal(ui.repairCalls.length, 0);
+    assert.equal(ui.requests.length, 1);
 });

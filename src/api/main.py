@@ -6,12 +6,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
 from src.agent.router import classify
+from src.agent.image_intent import image_intent
+from src.agent.self_edit import ImprovementUnavailable, propose, status as dev_status
 from src.agent.resolve import resolve
 from src.memory.store import BrainStore
 from src.memory.manage import KnowledgeManager
@@ -22,6 +24,7 @@ from src.security import auth
 from src.tools.audit import record
 from src.tools.registry import list_tools, perform
 from src.tools.design import plan_tool
+from src.tools import images
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +105,98 @@ def tool_execute(body: ToolRequest, request: Request):
         except (OSError, ValueError):
             logger.warning("Não foi possível registrar a falha na auditoria.")
         raise HTTPException(422, "Ferramenta não disponível ou argumentos inválidos.") from error
+
+
+class ImprovementRequest(BaseModel):
+    issue: str = Field(min_length=12, max_length=600)
+    dry_run: bool = True
+
+
+@app.get("/agent/improve/status")
+def improve_status(request: Request):
+    auth.require_owner(request)
+    return dev_status()
+
+
+@app.post("/agent/improve")
+def improve_issue(body: ImprovementRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return propose(body.issue, dry_run=body.dry_run)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    except ImprovementUnavailable as error:
+        raise HTTPException(503, str(error)) from error
+
+
+class ImageRequest(BaseModel):
+    prompt: str = Field(min_length=6, max_length=2000)
+
+
+class ImageIntentRequest(BaseModel):
+    message: MessageText
+    has_attachment: bool = False
+
+
+@app.post("/images/intent")
+def images_intent(body: ImageIntentRequest, request: Request):
+    auth.require_owner(request)
+    return image_intent(body.message, body.has_attachment)
+
+
+@app.get("/images/status")
+def images_status(request: Request):
+    auth.require_owner(request)
+    return {"configured": images.configured(), "provider": "openai" if images.configured() else "none"}
+
+
+def image_error(error):
+    if isinstance(error, images.ImageUnavailable):
+        raise HTTPException(503, str(error)) from error
+    if isinstance(error, (OSError, ValueError)):
+        raise HTTPException(422, str(error)) from error
+    raise HTTPException(502, "Não foi possível gerar imagem.") from error
+
+
+@app.post("/images/generate")
+def images_generate(body: ImageRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        result = images.generate(body.prompt)
+        record("images.generate", "executed", ["prompt"])
+        return result
+    except (images.ImageUnavailable, ValueError, OSError) as error:
+        record("images.generate", "failed", ["prompt"])
+        image_error(error)
+
+
+@app.post("/images/edit")
+async def images_edit(
+    request: Request,
+    prompt: str = Form(..., min_length=6, max_length=2000),
+    file: UploadFile = File(...),
+):
+    auth.require_owner(request)
+    try:
+        raw = await file.read(images.MAX_BYTES + 1)
+        result = images.edit(prompt, raw)
+        record("images.edit", "executed", ["prompt", "file"])
+        return result
+    except (images.ImageUnavailable, ValueError, OSError) as error:
+        record("images.edit", "failed", ["prompt", "file"])
+        image_error(error)
+    finally:
+        await file.close()
+
+
+@app.get("/images/files/{image_id}")
+def images_file(image_id: str, request: Request):
+    auth.require_owner(request)
+    try:
+        path = images.file_path(image_id)
+    except (ValueError, FileNotFoundError) as error:
+        raise HTTPException(404, "Imagem não encontrada.") from error
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "private, no-store"})
 
 
 class PasswordRequest(BaseModel):

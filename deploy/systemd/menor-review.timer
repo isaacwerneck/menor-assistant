@@ -1,0 +1,11 @@
+[Unit]
+Description=Revisao periodica de falhas e propostas do Menor
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=15min
+Unit=menor-review.service
+
+[Install]
+WantedBy=timers.target

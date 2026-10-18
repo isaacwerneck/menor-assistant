@@ -95,3 +95,14 @@ confirmar CI remoto e revisão estática; validação de desempenho/segurança
 no hardware fica pendente até evidência real do servidor.
 Memórias do usuário ficam fora do Git; backups devem ser gerados e testados
 com o mínimo de permissões, sem publicá-los como artefatos de CI.
+
+## R7 — Fluxo de imagem e autoedição (PR #7)
+
+Recebimento de pedido de imagem deve acionar geração/edição, pedir detalhes da cena
+ou indicar provedor ausente, sem resposta genérica do Qwen. O estado pertence à conversa
+no navegador; anexo discreto e resultado privado. Em desenvolvimento de código,
+o Qwen pode sugerir patch em arquivos permitidos, mas o GitHub só recebe branch
+com PR em rascunho após opt-in, e revisão humana continua obrigatória.
+
+**Não concluído:** sandbox de execução autônoma, cron de diagnóstico,
+rollback transacional e provedor local de imagens.
