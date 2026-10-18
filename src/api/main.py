@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
@@ -18,6 +19,8 @@ SYSTEM_PROMPT = (
     "Seu tom é parceiro, inteligente, direto e prestativo. Responda sempre em português brasileiro."
 )
 
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -31,105 +34,9 @@ class ChatResponse(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def serve_chat_ui():
-    """Interface visual com streaming em tempo real token-a-token."""
-    return """
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menor - Assistente IA</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0f19; color: #f8fafc; height: 100vh; display: flex; flex-direction: column; }
-        header { padding: 16px 24px; background: #111827; border-bottom: 1px solid #1f2937; display: flex; align-items: center; justify-content: space-between; }
-        .logo { font-size: 1.25rem; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
-        .status { font-size: 0.85rem; padding: 4px 10px; border-radius: 999px; background: #064e3b; color: #34d399; font-weight: 600; }
-        #chat-box { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-        .msg { max-width: 85%; padding: 14px 18px; border-radius: 12px; line-height: 1.6; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
-        .msg.user { align-self: flex-end; background: #2563eb; color: #fff; border-bottom-right-radius: 2px; }
-        .msg.bot { align-self: flex-start; background: #1f2937; border: 1px solid #374151; color: #e2e8f0; border-bottom-left-radius: 2px; }
-        .msg.cursor::after { content: '▋'; display: inline-block; animation: blink 1s infinite; color: #38bdf8; margin-left: 2px; }
-        @keyframes blink { 0%, 50% { opacity: 1; } 50.1%, 100% { opacity: 0; } }
-        footer { padding: 16px 24px; background: #111827; border-top: 1px solid #1f2937; display: flex; gap: 12px; }
-        input { flex: 1; padding: 14px 18px; border-radius: 8px; border: 1px solid #374151; background: #0b0f19; color: #f8fafc; font-size: 1rem; outline: none; }
-        input:focus { border-color: #38bdf8; }
-        button { padding: 14px 24px; border-radius: 8px; border: none; background: #38bdf8; color: #0b0f19; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #0284c7; color: #fff; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="logo">⚡ Menor Local Assistant</div>
-        <div class="status">● RAM Fixa (24h) | Streaming Ativo</div>
-    </header>
-    <div id="chat-box">
-        <div class="msg bot">Opa Isaac! Sou o Menor, seu assistente local. O que vamos programar ou planejar hoje?</div>
-    </div>
-    <footer>
-        <input type="text" id="userInput" placeholder="Mande uma mensagem para o Menor..." autofocus onkeydown="if(event.key==='Enter' && !isGenerating) sendMsg()">
-        <button id="sendBtn" onclick="sendMsg()">Enviar</button>
-    </footer>
-
-    <script>
-        let isGenerating = false;
-
-        async function sendMsg() {
-            if (isGenerating) return;
-            const input = document.getElementById('userInput');
-            const sendBtn = document.getElementById('sendBtn');
-            const chatBox = document.getElementById('chat-box');
-            const msg = input.value.trim();
-            if (!msg) return;
-
-            isGenerating = true;
-            sendBtn.disabled = true;
-
-            const userDiv = document.createElement('div');
-            userDiv.className = 'msg user';
-            userDiv.textContent = msg;
-            chatBox.appendChild(userDiv);
-            input.value = '';
-
-            const botDiv = document.createElement('div');
-            botDiv.className = 'msg bot cursor';
-            botDiv.textContent = '';
-            chatBox.appendChild(botDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            try {
-                const response = await fetch('/chat/stream', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
-                });
-
-                if (!response.ok) throw new Error('Falha no servidor');
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder('utf-8');
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    botDiv.textContent += decoder.decode(value, { stream: true });
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
-            } catch (err) {
-                botDiv.textContent = 'Erro ao se comunicar com o Menor: ' + err.message;
-            } finally {
-                botDiv.classList.remove('cursor');
-                isGenerating = false;
-                sendBtn.disabled = false;
-                input.focus();
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-        }
-    </script>
-</body>
-</html>
-"""
+    """Interface visual estilo ChatGPT para conversar com o Menor."""
+    html_file = TEMPLATES_DIR / "chat.html"
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 
 def stream_ollama_generator(message: str, model: str):
@@ -139,7 +46,7 @@ def stream_ollama_generator(message: str, model: str):
         "prompt": message,
         "system": SYSTEM_PROMPT,
         "stream": True,
-        "keep_alive": "24h",  # Mantém o modelo sempre carregado na RAM (sem recargas de disco)
+        "keep_alive": "24h",
     }
 
     try:
