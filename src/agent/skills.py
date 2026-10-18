@@ -5,6 +5,7 @@ com 'instalado'. O modelo de linguagem não pode marcar uma skill como pronta.
 """
 from src.agent.missions import CAPABILITIES, MissionStore
 from src.tools import local_images
+from src.memory.store import _write_lock
 
 DESCRIPTIONS = {
     "images.generate": "Gerar imagens locais a partir de um texto",
@@ -76,3 +77,35 @@ def capability_status(capability, missions=None):
     if capability not in CAPABILITIES:
         raise ValueError("Capacidade desconhecida.")
     return next(item for item in catalog(missions) if item["capability"] == capability)
+
+
+def document_verified_skill(mission, store):
+    """Só documenta uma skill após teste positivo do artefato local."""
+    if mission.get("capability") != "images.generate":
+        raise ValueError("Skill não suportada para documentação.")
+    if mission.get("status") != "ready" or not mission.get("approval"):
+        raise ValueError("Missão não foi aprovada e concluída.")
+    proof = mission.get("result")
+    if not isinstance(proof, dict) or proof.get("verified") is not True:
+        raise ValueError("Subagente não passou no teste.")
+    if proof.get("worker") != "openvino-sd15-int8":
+        raise ValueError("Worker desconhecido.")
+    relative = "ferramentas/imagens/geracao_local.md"
+    content = (
+        "# Skill: geração de imagens local\n\n"
+        "Estado: testada (arquivo gerado e tecnicamente verificado).\n"
+        "Subagente: OpenVINO Stable Diffusion 1.5 INT8, CPU.\n"
+        "Provedor: local (sem API de outra IA durante a inferência).\n"
+        f"Missão de origem: {mission['id']}\n\n"
+        "## Como usar\n\n"
+        "Peça uma imagem no chat e descreva a cena e o estilo.\n"
+        "O Menor chama o worker local e revisa tecnicamente o arquivo antes de entregar.\n\n"
+        "## Limitações\n\n"
+        "- Não há revisão estética ou semântica visual automática nesta versão.\n"
+        "- CPU pode ser lenta, principalmente com imagens maiores.\n"
+        "- Edição de fotos locais não faz parte desta skill.\n"
+        "- Se o runtime for removido, o catálogo indicará indisponibilidade.\n"
+    )
+    with _write_lock:
+        store.write_note(relative, content)
+    return relative
