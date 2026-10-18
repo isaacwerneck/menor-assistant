@@ -301,3 +301,18 @@ Ver [guia de imagens/autoedição](docs/imagens_autoedicao_v06.md).
 - [ ] Avaliação semântica dos artefatos, correção iterativa e limites de recursos.
 
 Consultar [arquitetura multiagente](docs/arquitetura_multiagente.md).
+
+### Consolidação do ciclo de subagentes (mesmo PR #8)
+
+- [x] Planejador Qwen local com validação e fallback seguro.
+- [x] Registro de skills com estado `missing/planning/ready/failed` e verificação
+  independente do modelo e da missão.
+- [x] Contrato de delegação da geração local com até duas tentativas e recibo
+  técnico de revisão.
+- [x] Anotação de como usar a skill no cérebro apenas após teste aprovado.
+- [x] Chat apresenta plano e critérios; autorização e disponibilidade são
+  estados separados.
+- [ ] Benchmark do OpenVINO no notebook e revisão da aderência visual.
+- [ ] Programador genérico, pesquisador de novos modelos, edição local,
+  música e ferramentas web em isolamento verificável.
+
