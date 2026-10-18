@@ -413,6 +413,13 @@
         .modal-box textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border);
             border-radius: 8px; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary);
             font: inherit; resize: vertical; }
+        .project-note-text { white-space: pre-wrap; overflow-wrap: anywhere;
+            max-height: 240px; overflow-y: auto; background: var(--bg-tertiary);
+            border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+        .modal-box select { background: var(--bg-tertiary); color: var(--text-primary);
+            border: 1px solid var(--border); padding: 10px; border-radius: 8px; width: 100%; }
+        .project-actions { display: flex; gap: 8px; }
+        .project-actions button { flex: 1; }
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
             .sidebar { position: fixed; z-index: 100; height: 100%; }
@@ -445,6 +452,8 @@
         <div class="topbar">
             <button class="toggle-sidebar-btn" aria-label="Alternar conversas" onclick="toggleSidebar()">☰</button>
             <div class="topbar-title" id="topbarTitle">Menor</div>
+            <button class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
+                aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
             <button class="toggle-sidebar-btn" onclick="openBrain()" aria-label="Abrir conhecimentos salvos" title="Meu cérebro">🧠</button>
             <button class="toggle-sidebar-btn" onclick="exportChat()" aria-label="Exportar conversa em Markdown">↓</button>
             <div class="topbar-model" id="modelName">qwen2.5-coder:7b</div>
@@ -526,6 +535,26 @@
             <button class="secondary" onclick="closeBrain()">Fechar</button>
         </div>
     </section>
+    <section id="projectsPanel" class="modal-layer" aria-label="Gerenciar projetos" hidden>
+        <div class="modal-box">
+            <h2>Meus projetos</h2>
+            <p>Selecione o projeto desta conversa para recuperar seu contexto.</p>
+            <select id="projectPicker" aria-label="Escolher projeto"></select>
+            <button onclick="selectProject()">Usar neste chat</button>
+            <p id="projectDescription" class="project-note-text"></p>
+            <p>Registrar uma atualização no projeto escolhido:</p>
+            <select id="projectNoteKind" aria-label="Tipo de anotação">
+                <option value="decision">Decisão</option>
+                <option value="task">Tarefa</option>
+                <option value="log">Diário</option>
+            </select>
+            <textarea id="projectNoteText" rows="3" maxlength="280"
+                aria-label="Texto da anotação" placeholder="O que mudou?"></textarea>
+            <button onclick="saveProjectNote()">Salvar no projeto</button>
+            <p id="projectError" class="modal-error" role="status"></p>
+            <button class="secondary" onclick="closeProjects()">Fechar</button>
+        </div>
+    </section>
     <script>
         // ========== STATE ==========
         let canSave = true;
@@ -537,10 +566,13 @@
         let savingMemory = false;
         let brainItems = [];
         let brainEditingId = null;
+        let pendingProjectSlug = '';
+        let availableProjects = [];
 
         // ========== INIT ==========
         renderConvList();
         showWelcome();
+        updateProjectBadge();
         checkAuth();
         refreshHealth();
         setInterval(refreshHealth, 30000);
@@ -766,6 +798,111 @@
             }
         }
 
+        // ========== PROJETOS ==========
+        function getActiveProject() {
+            const conv = getActiveConv();
+            return conv ? (conv.project || '') : pendingProjectSlug;
+        }
+
+        function updateProjectBadge() {
+            const slug = getActiveProject();
+            const project = availableProjects.find(p => p.slug === slug);
+            document.getElementById('projectButton').textContent =
+                project ? project.name.slice(0, 12) : (slug || 'Projetos');
+        }
+
+        async function projectRequest(path, body) {
+            const options = body === undefined ? {} : {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            };
+            const result = await fetch(path, options);
+            if (!result.ok) {
+                const data = await result.json();
+                throw new Error(typeof data.detail === 'string' ? data.detail : 'Não foi possível acessar o projeto.');
+            }
+            return result.json();
+        }
+
+        async function openProjects() {
+            document.getElementById('projectsPanel').hidden = false;
+            document.getElementById('projectError').textContent = '';
+            try {
+                const data = await projectRequest('/projects');
+                availableProjects = data.items;
+                const picker = document.getElementById('projectPicker');
+                picker.replaceChildren();
+                for (const item of [{ slug: '', name: 'Nenhum projeto' }, ...availableProjects]) {
+                    const option = document.createElement('option');
+                    option.value = item.slug;
+                    option.textContent = item.name;
+                    picker.appendChild(option);
+                }
+                picker.value = getActiveProject();
+                await previewProject();
+            } catch (error) {
+                document.getElementById('projectError').textContent = error.message;
+            }
+        }
+
+        function closeProjects() { document.getElementById('projectsPanel').hidden = true; }
+
+        async function previewProject() {
+            const slug = document.getElementById('projectPicker').value;
+            const area = document.getElementById('projectDescription');
+            if (!slug) {
+                area.textContent = 'Nenhum projeto selecionado.';
+                return;
+            }
+            try {
+                const details = await projectRequest('/projects/' + encodeURIComponent(slug));
+                area.textContent = details.name + '\n\n' +
+                    details.notes.context + '\n' + details.notes.task;
+            } catch (error) {
+                area.textContent = error.message;
+            }
+        }
+
+        async function selectProject() {
+            const slug = document.getElementById('projectPicker').value;
+            if (isGenerating) return;
+            if (slug && !availableProjects.some(p => p.slug === slug)) {
+                document.getElementById('projectError').textContent = 'Projeto desconhecido.';
+                return;
+            }
+            const conv = getActiveConv();
+            if (conv) {
+                conv.project = slug;
+                save();
+            } else {
+                pendingProjectSlug = slug;
+            }
+            updateProjectBadge();
+            await previewProject();
+            document.getElementById('projectError').textContent = slug
+                ? 'Projeto selecionado para esta conversa.' : 'Conversa sem projeto ativo.';
+        }
+
+        async function saveProjectNote() {
+            const slug = document.getElementById('projectPicker').value;
+            const kind = document.getElementById('projectNoteKind').value;
+            const text = document.getElementById('projectNoteText').value.trim();
+            const error = document.getElementById('projectError');
+            if (!slug || !text || text.length > 280) {
+                error.textContent = 'Escolha um projeto e escreva até 280 caracteres.';
+                return;
+            }
+            try {
+                const result = await projectRequest('/projects/' + encodeURIComponent(slug) + '/notes',
+                    { kind, text });
+                error.textContent = 'Anotação salva em ' + result.path;
+                document.getElementById('projectNoteText').value = '';
+                await previewProject();
+            } catch (failure) {
+                error.textContent = failure.message;
+            }
+        }
+
         // ========== CONVERSATIONS ==========
         function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
@@ -846,6 +983,8 @@
         function newChat() {
             if (isGenerating) return;
             activeConvId = null;
+            pendingProjectSlug = '';
+            updateProjectBadge();
             showWelcome();
             renderConvList();
         }
@@ -855,11 +994,13 @@
                 id: genId(),
                 title: firstMsg.slice(0, 50) + (firstMsg.length > 50 ? '...' : ''),
                 messages: [],
+                project: pendingProjectSlug,
                 createdAt: Date.now(),
             };
             conversations.unshift(conv);
             activeConvId = conv.id;
             save();
+            updateProjectBadge();
             renderConvList();
             return conv;
         }
@@ -869,6 +1010,7 @@
         function openConv(id) {
             if (isGenerating) return;
             activeConvId = id;
+            updateProjectBadge();
             const conv = getActiveConv();
             if (!conv) return;
             renderConvList();
@@ -884,7 +1026,7 @@
             if (isGenerating) return;
             conversations = conversations.filter(c => c.id !== id);
             save();
-            if (activeConvId === id) { activeConvId = null; showWelcome(); }
+            if (activeConvId === id) { activeConvId = null; pendingProjectSlug = ''; updateProjectBadge(); showWelcome(); }
             renderConvList();
         }
 
@@ -1004,6 +1146,7 @@
 
             const conv = getActiveConv();
             const history = buildHistory(conv.messages, msg);
+            const project = getActiveProject() || null;
             conv.messages.push({ role: 'user', content: msg });
             save();
 
@@ -1015,7 +1158,7 @@
                 try {
                     const routeResponse = await fetch('/agent/route', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: msg, history }),
+                        body: JSON.stringify({ message: msg, history, project }),
                     });
                     if (routeResponse.ok) {
                         const route = await routeResponse.json();
@@ -1029,6 +1172,9 @@
                             routeNotice = 'Registrei no cérebro: ' + route.memory.path + '.';
                         }
                         if (route.decision === 'create_project' && route.project && route.project.path) {
+                            conv.project = route.project.slug;
+                            save();
+                            updateProjectBadge();
                             routeNotice = 'Criei o projeto ' + route.project.name + ' em '
                                 + route.project.path + ', com contexto, tarefas, decisões e diário.';
                         }
@@ -1050,7 +1196,7 @@
                 const response = await fetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg, history })
+                    body: JSON.stringify({ message: msg, history, project })
                 });
 
                 if (!response.ok) {
