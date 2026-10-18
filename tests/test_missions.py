@@ -56,7 +56,7 @@ class MissionTests(unittest.TestCase):
         target = self.store.data_dir / "outside.txt"
         target.write_text("private")
         path.symlink_to(target)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(LookupError):
             self.missions.get(obj["id"])
         self.assertEqual(target.read_text(), "private")
 
