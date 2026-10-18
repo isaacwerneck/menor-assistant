@@ -869,8 +869,17 @@
                             return;
                         }
                         if (route.decision === 'save' && route.memory && route.memory.path) {
-                            routeNotice = 'Registrei em ' + route.memory.path + '.\n\n';
+                            routeNotice = 'Registrei no cérebro: ' + route.memory.path + '.';
+                        }
+                        if (route.decision === 'create_project' && route.project && route.project.path) {
+                            routeNotice = 'Criei o projeto ' + route.project.name + ' em '
+                                + route.project.path + ', com contexto, tarefas, decisões e diário.';
+                        }
+                        if (routeNotice) {
                             botContent.textContent = routeNotice;
+                            conv.messages.push({ role: 'bot', content: routeNotice });
+                            save();
+                            return;
                         }
                     } else if (routeResponse.status === 401) {
                         checkAuth();
