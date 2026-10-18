@@ -177,7 +177,7 @@ da Fase 2 depende de validação no servidor com o modelo real.
 **Incremento do PR #5:** contexto de projeto por conversa, listagem,
 decisões/tarefas/diário no Markdown e perguntas de memória respondidas
 em linguagem natural, sem menu de categorias. Permanecem pendentes:
-seleção automática de projeto em todas as frases, exportação/arquivamento
+desambiguação de nomes de projetos, exportação/arquivamento
 seguro, registro de arquivos com metadados e testes com o modelo real.
 
 ### Fase 4 — Ferramentas e execução agêntica
