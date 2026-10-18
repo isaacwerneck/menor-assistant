@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from src.agent.resolve import resolve
 from src.memory.store import BrainStore
 from src.projects.manager import create_project
-from tests.test_auth_memory import call
+from test_auth_memory import call
 
 
 def model_response(result):
