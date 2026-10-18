@@ -1216,6 +1216,31 @@
             return true;
         }
 
+        // ========== AUTOEDIÇÃO SUPERVISIONADA ==========
+        async function handleRepairTurn(conv, message, content) {
+            const text = message.toLowerCase().trim();
+            if (/^(como|por que|porque|me explica|explique)\b/.test(text)) return false;
+            if (!/\b(corrig\w*|consert\w*|refator\w*|melhor\w*|autocorrig\w*)\b/.test(text)
+                || !/\b(bug|erro|falha|c[oó]digo|roteador|assistente|menor)\b/.test(text)) {
+                return false;
+            }
+            content.textContent = 'Analisando a possibilidade de corrigir o código...';
+            try {
+                const response = await imageJson('/agent/improve', {
+                    issue: message, dry_run: false,
+                });
+                const answer = response.status === 'pr_created'
+                    ? 'Abri a proposta de correção no GitHub: ' + response.url
+                      + '. Precisa de revisão e testes antes do merge.'
+                    : 'Preparei o diagnóstico do código, sem alterar a main.';
+                imageReply(conv, content, answer);
+            } catch (failure) {
+                imageReply(conv, content,
+                    'Não consegui abrir uma correção automática: ' + failure.message);
+            }
+            return true;
+        }
+
         // ========== SEND MESSAGE ==========
         async function sendMsg() {
             if (isGenerating) return;
@@ -1244,6 +1269,7 @@
 
             try {
                 if (!conv.pendingMemory && (await handleImageTurn(conv, msg, botContent))) return;
+                if (!conv.pendingMemory && (await handleRepairTurn(conv, msg, botContent))) return;
                 if (conv.pendingMemory) {
                     const pending = conv.pendingMemory;
                     const response = await fetch('/agent/resolve', {
