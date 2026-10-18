@@ -139,3 +139,15 @@ bash tests/test_deploy.sh
 - [Hardware](docs/hardware_requisitos.md)
 - [Setup Linux](docs/setup_linux.md)
 - [Servidor doméstico e deploy](docs/guia_servidor_domestico.md)
+
+### Planejador e registro de skills
+
+O Menor agora pode organizar requisitos em etapas e critérios usando o Qwen
+local. `GET /agent/skills` mostra o estado verificado dos subagentes;
+pedidos de imagens só executam o worker local se missão e runtime estiverem
+aprovados e disponíveis. O resultado é tecnicamente revisado antes de
+ser exibido. A skill testada documenta seu uso no cérebro.
+
+Esta arquitetura ainda não substitui um sandbox programador nem prova
+qualidade artística. [Arquitetura e limites](docs/arquitetura_multiagente.md).
+
