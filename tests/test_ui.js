@@ -256,6 +256,21 @@ test('decisão clara confirmada pelo backend registra sem perguntar nem inventar
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /Registrei no cérebro/);
 });
 
+test('conversa natural seleciona projeto sem modal e envia contexto no próximo turno', async () => {
+    const ui = browser('[]', {
+        decision: 'select_project', target: 'project', text: 'Cidade Noturna',
+        selected_project: { name: 'Cidade Noturna', slug: 'cidade-noturna' },
+    });
+    ui.elements.get('userInput').value = 'Vamos continuar no projeto Cidade Noturna';
+    await ui.context.sendMsg();
+    assert.equal(ui.context.getActiveConv().project, 'cidade-noturna');
+    assert.equal(ui.requests.length, 0);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Cidade Noturna/);
+    ui.elements.get('userInput').value = 'Qual é nosso próximo passo?';
+    await ui.context.sendMsg();
+    assert.equal(ui.routed[1].project, 'cidade-noturna');
+});
+
 test('criação de projeto é ação real com confirmação do caminho criado', async () => {
     const ui = browser('[]', {
         decision: 'create_project', target: 'project', text: 'Cidade Noturna',
