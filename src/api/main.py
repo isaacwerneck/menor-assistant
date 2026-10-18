@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
-from src.memory import BrainStore
+from src.memory.store import BrainStore
 
 logger = logging.getLogger(__name__)
 
