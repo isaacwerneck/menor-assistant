@@ -5,12 +5,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
 from src.memory.store import BrainStore
+from src.security import auth
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ app = FastAPI(
     lifespan=app_lifespan,
     title="Menor - Assistente de IA Pessoal",
     description="Servidor de orquestração do Menor, assistente pessoal rodando em hardware doméstico.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
@@ -57,6 +58,67 @@ class ChatRequest(BaseModel):
         if len(self.message) + sum(len(item.content) for item in self.history) > 32000:
             raise ValueError("A conversa enviada deve conter no máximo 32000 caracteres.")
         return self
+
+
+class PasswordRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+
+
+class RememberRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=280)
+    kind: Literal["preference", "knowledge"]
+
+
+def require_chat_access(request: Request):
+    # A compatibilidade do chat anterior se mantém até a primeira configuração.
+    if auth.configured():
+        auth.require_owner(request)
+
+
+@app.get("/auth/status")
+def auth_status(request: Request):
+    return {"configured": auth.configured(), "authenticated": auth.is_authenticated(request)}
+
+
+@app.post("/auth/setup")
+def auth_setup(body: PasswordRequest, request: Request, response: Response):
+    config = auth.create_owner(request, body.password)
+    auth.set_session_cookie(response, request, auth.login(request, body.password))
+    return {"ok": bool(config)}
+
+
+@app.post("/auth/login")
+def auth_login(body: PasswordRequest, request: Request, response: Response):
+    auth.set_session_cookie(response, request, auth.login(request, body.password))
+    return {"ok": True}
+
+
+@app.post("/auth/logout")
+def auth_logout(request: Request, response: Response):
+    auth.check_origin(request)
+    response.delete_cookie(auth.COOKIE_NAME, path="/")
+    return {"ok": True}
+
+
+@app.post("/memory/remember")
+def remember_memory(body: RememberRequest, request: Request):
+    auth.require_owner(request)
+    store = BrainStore()
+    try:
+        if body.kind == "preference":
+            saved = store.remember_preference(body.text)
+        else:
+            saved = store.remember_knowledge(body.text)
+    except (ValueError, OSError) as error:
+        logger.warning("Falha ao registrar memoria: %s", type(error).__name__)
+        raise HTTPException(422, "Não foi possível salvar a memória solicitada.") from error
+    return {"saved": saved, "kind": body.kind}
+
+
+@app.get("/memory/preferences")
+def list_preferences(request: Request):
+    auth.require_owner(request)
+    return {"preferences": BrainStore().preference_context()}
 
 
 class ChatResponse(BaseModel):
@@ -150,7 +212,7 @@ def stream_ollama_generator(response):
 
 
 @app.post("/chat/stream")
-def chat_stream(req: ChatRequest):
+def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
     response = open_ollama(req, stream=True)
     return StreamingResponse(
         stream_ollama_generator(response),
@@ -160,7 +222,7 @@ def chat_stream(req: ChatRequest):
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat_sync(req: ChatRequest):
+def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
     with open_ollama(req, stream=False) as response:
         try:
             reply = chat_text(response.json())
@@ -190,7 +252,7 @@ def health_check():
 
 
 @app.get("/models")
-def list_models():
+def list_models(_access=Depends(require_chat_access)):
     try:
         with requests.get(f"{OLLAMA_URL}/api/tags", timeout=(3, 5)) as response:
             response.raise_for_status()
