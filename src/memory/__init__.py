@@ -1,5 +1,1 @@
-"""Armazenamento persistente e recuperacao de contexto do Menor."""
-
-from .store import BrainStore
-
-__all__ = ["BrainStore"]
+"""Módulos de memória persistente e recuperação de contexto do Menor."""
