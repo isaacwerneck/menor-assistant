@@ -810,7 +810,7 @@
                 saveButton.className = 'save-memory-btn';
                 saveButton.type = 'button';
                 saveButton.textContent = 'Guardar memória';
-                saveButton.setAttribute('aria-label', 'Guardar esta mensagem na memória do Menor');
+                saveButton.ariaLabel = 'Guardar esta mensagem na memória do Menor';
                 saveButton.onclick = () => {
                     const value = getRememberText(text) ?? text.trim();
                     if (!value || value.length > 280) {
