@@ -25,8 +25,18 @@ class ImageUnavailable(RuntimeError):
     pass
 
 
+def provider():
+    # Nunca usa uma API de IA sem escolha explícita do proprietário.
+    return os.environ.get("MENOR_IMAGE_PROVIDER", "local").strip().lower()
+
+
 def configured():
-    return bool(os.environ.get("MENOR_IMAGE_API_KEY", "").strip())
+    if provider() == "local":
+        from src.tools.local_images import status
+        return status()["ready"]
+    if provider() == "openai":
+        return bool(os.environ.get("MENOR_IMAGE_API_KEY", "").strip())
+    return False
 
 
 def _verify_image(data):
@@ -112,6 +122,14 @@ def _request(endpoint, **kwargs):
 
 def generate(prompt):
     prompt = _prompt(prompt)
+    if provider() == "local":
+        from src.tools.local_images import LocalImageUnavailable, generate as local_generate
+        try:
+            return local_generate(prompt)
+        except LocalImageUnavailable as error:
+            raise ImageUnavailable(str(error)) from error
+    if provider() != "openai":
+        raise ImageUnavailable("Provedor de imagens desconhecido.")
     result = _request(
         "generations", json={"model": os.environ.get("MENOR_IMAGE_MODEL", "gpt-image-1"),
                              "prompt": prompt, "size": "1024x1024", "n": 1},
@@ -122,6 +140,12 @@ def generate(prompt):
 def edit(prompt, raw):
     prompt = _prompt(prompt)
     raw = _verify_image(raw)
+    if provider() == "local":
+        raise ImageUnavailable(
+            "Edição local ainda não instalada; é preciso criar o subagente de edição."
+        )
+    if provider() != "openai":
+        raise ImageUnavailable("Provedor de imagens desconhecido.")
     # Enviar PNG de verdade, independentemente da origem JPEG/WEBP.
     with Image.open(io.BytesIO(raw)) as image:
         target = io.BytesIO()
