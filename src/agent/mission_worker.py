@@ -29,6 +29,7 @@ def run_once(store=None):
             continue
         missions.transition(mission_id, "queued", "installing")
         try:
+            local_images.ensure_runtime_approved()
             install = local_images.install_approved()
             if not install["ready"]:
                 raise local_images.LocalImageUnavailable(
