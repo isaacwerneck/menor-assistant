@@ -13,6 +13,7 @@ import uuid
 from datetime import datetime, timezone
 
 from src.agent.model_catalog import discover
+from src.agent.planner import plan
 from src.memory.store import BrainStore
 
 _LOCK = threading.RLock()
@@ -118,14 +119,9 @@ class MissionStore:
             capability = obj["capability"]
             candidates = discover(capability)
             obj["requirements"] = requirements.strip()
+            proposal = plan(obj["goal"], obj["requirements"], capability)
             obj["plan"] = {
-                "steps": [
-                    "Definir contrato da ferramenta e critérios de aceite",
-                    "Escolher um subagente/modelo compatível",
-                    "Instalar somente componentes autorizados e verificar integridade",
-                    "Testar com exemplos e revisar o resultado",
-                    "Disponibilizar a ferramenta somente após testes aprovados",
-                ],
+                **proposal,
                 "candidates": candidates,
                 "preferred": candidates[0]["id"] if candidates else None,
                 "requires_approval": True,
