@@ -176,3 +176,37 @@ test('cancelar memória não a salva e aprendizado permanece separado de prefer�
     assert.equal(ui.memories[0].kind, 'knowledge');
     assert.match(ui.context.getActiveConv().messages[1].content, /Conhecimento anotado/);
 });
+
+test('ditado informal e variacoes de lembre abrem confirmacao sem chamar Ollama', async () => {
+    const phrases = [
+        ['lembre se de sempre ser objetivo em suas respostas', 'sempre ser objetivo em suas respostas'],
+        ['lembre-se de resumir sem perder informação importante', 'resumir sem perder informação importante'],
+        ['lembre disso: prefiro respostas objetivas', 'prefiro respostas objetivas'],
+        ['Menor, lembre que prefiro mensagens curtas', 'prefiro mensagens curtas'],
+        ['eai menor, anota aí: eu estudo programação', 'eu estudo programação'],
+        ['guarda na memória: eu prefiro Godot', 'eu prefiro Godot'],
+        ['quero que você lembre de priorizar respostas concisas', 'priorizar respostas concisas'],
+    ];
+    for (const [phrase, expected] of phrases) {
+        const ui = browser();
+        ui.elements.get('userInput').value = phrase;
+        await ui.context.sendMsg();
+        assert.equal(ui.requests.length, 0, phrase);
+        assert.equal(ui.elements.get('memoryPanel').hidden, false, phrase);
+        assert.equal(ui.elements.get('memoryText').textContent, expected, phrase);
+    }
+});
+
+test('texto comum nao vira memoria; botao Guardar permite registrar sem frase especial', async () => {
+    const ui = browser();
+    const msg = 'Respostas objetivas sao importantes para mim';
+    assert.equal(ui.context.getRememberText(msg), null);
+    ui.context.appendMessage('user', msg);
+    const row = ui.elements.get('messagesContainer').children.at(-1);
+    const saveButton = row.children.at(-1);
+    assert.equal(saveButton.textContent, 'Guardar memória');
+    saveButton.onclick();
+    assert.equal(ui.elements.get('memoryText').textContent, msg);
+    ui.context.cancelMemory();
+    assert.equal(ui.memories.length, 0);
+});
