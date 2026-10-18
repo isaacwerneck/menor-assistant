@@ -1,6 +1,7 @@
 """Índice textual reconstruível de conhecimentos Markdown, sem cloud nem embeddings."""
 
 import hashlib
+from contextlib import closing
 import os
 import re
 import sqlite3
@@ -111,7 +112,7 @@ class KnowledgeIndex:
         expression = " OR ".join(f'"{term}"' for term in terms)
         minimum_overlap = 2 if len(terms) >= 5 else 1
         with _INDEX_LOCK:
-            with self._connect() as conn:
+            with closing(self._connect()) as conn:
                 self._sync(conn)
                 candidates = conn.execute(
                     "SELECT content, source, line FROM knowledge_fts "
