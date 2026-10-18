@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from src.agent.diagnostics import analyze
 from src.agent.self_edit import propose
+from src.agent.delegation import generate_image as delegate_image
 from src.memory.store import BrainStore
 from src.tools import images
 from src.projects.manager import create_project
@@ -79,7 +80,10 @@ def perform(name, arguments, dry_run=True):
         return {"status": "planned", "tool": name, "writes": tool.writes,
                 "arguments": list(tool.arguments)}
     if name == "images.generate":
-        output = images.generate(arguments["prompt"])
+        output = (
+            delegate_image(arguments["prompt"])
+            if images.provider() == "local" else images.generate(arguments["prompt"])
+        )
     elif name == "images.edit":
         image_path = images.file_path(arguments["image_id"])
         output = images.edit(arguments["prompt"], image_path.read_bytes())

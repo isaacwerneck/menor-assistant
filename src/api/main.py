@@ -13,6 +13,9 @@ import requests
 
 from src.agent.router import classify
 from src.agent.image_intent import image_intent
+from src.agent.missions import MissionStore
+from src.agent.skills import catalog as skill_catalog, capability_status
+from src.agent.delegation import generate_image as delegate_image
 from src.agent.self_edit import ImprovementUnavailable, propose, status as dev_status
 from src.agent.resolve import resolve
 from src.memory.store import BrainStore
@@ -24,7 +27,7 @@ from src.security import auth
 from src.tools.audit import record
 from src.tools.registry import list_tools, perform
 from src.tools.design import plan_tool
-from src.tools import images
+from src.tools import images, local_images
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +132,70 @@ def improve_issue(body: ImprovementRequest, request: Request):
         raise HTTPException(503, str(error)) from error
 
 
+class MissionStartRequest(BaseModel):
+    capability: Literal[
+        "images.generate", "images.edit", "programming", "design", "music", "web"
+    ]
+    goal: str = Field(min_length=8, max_length=600)
+
+
+class MissionDetailRequest(BaseModel):
+    requirements: str = Field(min_length=8, max_length=1200)
+
+
+class MissionApprovalRequest(BaseModel):
+    approved: bool
+
+
+@app.get("/agent/skills")
+def agent_skills(request: Request):
+    auth.require_owner(request)
+    return {"items": skill_catalog()}
+
+
+@app.get("/agent/missions")
+def missions_list(request: Request):
+    auth.require_owner(request)
+    return {"items": MissionStore().list()}
+
+
+@app.post("/agent/missions")
+def mission_start(body: MissionStartRequest, request: Request):
+    auth.require_owner(request)
+    return MissionStore().begin(body.capability, body.goal)
+
+
+@app.get("/agent/missions/{mission_id}")
+def mission_detail(mission_id: str, request: Request):
+    auth.require_owner(request)
+    try:
+        return MissionStore().get(mission_id)
+    except (ValueError, LookupError) as error:
+        raise HTTPException(404, "Missão não encontrada.") from error
+
+
+@app.post("/agent/missions/{mission_id}/requirements")
+def mission_requirements(mission_id: str, body: MissionDetailRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return MissionStore().detail(mission_id, body.requirements)
+    except LookupError as error:
+        raise HTTPException(404, "Missão não encontrada.") from error
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@app.post("/agent/missions/{mission_id}/approve")
+def mission_approve(mission_id: str, body: MissionApprovalRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return MissionStore().decide(mission_id, body.approved)
+    except LookupError as error:
+        raise HTTPException(404, "Missão não encontrada.") from error
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+
+
 class ImageRequest(BaseModel):
     prompt: str = Field(min_length=6, max_length=2000)
 
@@ -147,7 +214,14 @@ def images_intent(body: ImageIntentRequest, request: Request):
 @app.get("/images/status")
 def images_status(request: Request):
     auth.require_owner(request)
-    return {"configured": images.configured(), "provider": "openai" if images.configured() else "none"}
+    local = images.provider() == "local"
+    skill = capability_status("images.generate") if local else None
+    return {
+        "configured": skill["ready"] if local else images.configured(),
+        "provider": images.provider(),
+        "local_model": local_images.status() if local else None,
+        "skill": skill,
+    }
 
 
 def image_error(error):
@@ -162,7 +236,10 @@ def image_error(error):
 def images_generate(body: ImageRequest, request: Request):
     auth.require_owner(request)
     try:
-        result = images.generate(body.prompt)
+        result = (
+            delegate_image(body.prompt)
+            if images.provider() == "local" else images.generate(body.prompt)
+        )
         record("images.generate", "executed", ["prompt"])
         return result
     except (images.ImageUnavailable, ValueError, OSError) as error:
@@ -356,6 +433,11 @@ def route_intent(body: IntentRequest, request: Request):
         try:
             if result["decision"] == "plan_tool":
                 result["tool_plan"] = plan_tool(result["text"])
+                lowered = body.message.casefold()
+                capability = "images.generate" if (
+                    "imagem" in lowered or "foto" in lowered or "arte" in lowered
+                ) else "programming"
+                result["mission"] = MissionStore().begin(capability, body.message)
                 record("tool.plan", "planned", ["request"])
             elif result["decision"] == "create_project":
                 result["project"] = create_project(result["text"])

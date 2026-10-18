@@ -18,6 +18,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
     const knowledgeActions = [];
     const imageCalls = [];
     const repairCalls = [];
+    const missionCalls = [];
     let knowledgeItems = [{ id: '3.0123456789abcdef', text: 'Meu jogo usa Godot', date: '2026-10-18',
         source: 'conhecimentos/aprendizados_gerais.md' }];
     let blob;
@@ -125,6 +126,40 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
                     status: 'pr_created', url: 'https://github.com/example/pull/10',
                 }) };
             }
+            if (url === '/agent/missions') {
+                missionCalls.push({ type: 'begin', data: JSON.parse(options.body) });
+                return { ok: true, json: async () => ({
+                    id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    status: 'gathering', question: 'Como você quer essa ferramenta?',
+                }) };
+            }
+            if (url === '/agent/missions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/requirements') {
+                missionCalls.push({ type: 'requirements', data: JSON.parse(options.body) });
+                return { ok: true, json: async () => ({
+                    status: 'awaiting_approval',
+                    plan: {
+                        steps: ['Preparar o modelo local e validar entradas de texto'],
+                        acceptance: ['Imagem PNG testada com verificação de arquivo'],
+                        limitations: ['Pode ser lento na CPU'],
+                    },
+                    question: 'Posso instalar o modelo local?',
+                }) };
+            }
+            if (url === '/agent/missions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/approve') {
+                missionCalls.push({ type: 'approve', data: JSON.parse(options.body) });
+                return { ok: true, json: async () => ({
+                    status: 'queued', question: 'Aprovado. Aguardando o worker.',
+                }) };
+            }
+            if (url === '/agent/missions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') {
+                return { ok: true, json: async () => ({ status: 'ready' }) };
+            }
+            if (url === '/agent/skills') {
+                return { ok: true, json: async () => ({ items: [
+                    { capability: 'images.generate', ready: true,
+                        mission_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
+                ] }) };
+            }
             if (url === '/agent/route') {
                 routed.push(JSON.parse(options.body));
                 return { ok: true, json: async () => intent };
@@ -141,7 +176,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, repairCalls,
+    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, repairCalls, missionCalls,
         downloads, getBlob: () => blob };
 }
 
@@ -443,4 +478,47 @@ test('pergunta sobre como corrigir um bug continua como conversa normal', async 
     await ui.context.sendMsg();
     assert.equal(ui.repairCalls.length, 0);
     assert.equal(ui.requests.length, 1);
+});
+
+
+test('missão conversacional exibe plano, pede consentimento e registra aprovação', async () => {
+    const ui = browser('[]', {
+        decision: 'plan_tool',
+        mission: { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'gathering',
+            question: 'Como você quer essa ferramenta?' },
+    });
+    ui.elements.get('userInput').value = 'vamos criar uma ferramenta nova de imagens';
+    await ui.context.sendMsg();
+    const conv = ui.context.getActiveConv();
+    assert.equal(conv.activeMission.status, 'gathering');
+    ui.elements.get('userInput').value = 'Recebe texto e gera capa quadrada no meu servidor';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls[0].type, 'requirements');
+    assert.equal(conv.activeMission.status, 'awaiting_approval');
+    assert.match(conv.messages.at(-1).content, /Para considerar pronto/);
+    assert.match(conv.messages.at(-1).content, /Posso instalar/);
+    ui.elements.get('userInput').value = 'pode';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls[1].type, 'approve');
+    assert.equal(ui.missionCalls[1].data.approved, true);
+    assert.equal(conv.activeMission.status, 'queued');
+    ui.elements.get('userInput').value = 'status';
+    await ui.context.sendMsg();
+    assert.match(conv.messages.at(-1).content, /está disponível/);
+    assert.equal(ui.requests.length, 0);
+});
+
+test('missão não instala nada após recusa do usuário', async () => {
+    const ui = browser('[]', {
+        decision: 'plan_tool',
+        mission: { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'gathering',
+            question: 'Como você quer essa ferramenta?' },
+    });
+    ui.elements.get('userInput').value = 'vamos criar uma ferramenta nova de imagens';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'Aceita uma descrição e gera fotos locais';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'não';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.at(-1).data.approved, false);
 });

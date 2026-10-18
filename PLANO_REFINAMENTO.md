@@ -106,3 +106,23 @@ com PR em rascunho após opt-in, e revisão humana continua obrigatória.
 
 **Não concluído:** sandbox de execução autônoma, cron de diagnóstico,
 rollback transacional e provedor local de imagens.
+
+## R8 — Missões e subagentes locais
+
+Testar aprovação antes de download, persistência após restart, isolamento dos
+arquivos, verificação da imagem antes de declarar pronto e uso sem API externa.
+A qualidade artística não é verificada pelo teste de integridade de pixels.
+Implantar e medir desempenho no hardware Intel real antes de aceitar a fase.
+
+## R9 — Critérios de aceite de skills e prevenção de falsos sucessos
+
+- Quando a missão diz `ready` mas o runtime foi removido, a skill não pode
+  ser oferecida como disponível.
+- Critérios gerados pelo Qwen precisam aparecer no diálogo **antes** do aceite,
+  sem transformar o plano em execução implícita.
+- Se a geração retornar arquivo inválido, tentar novamente no máximo uma vez;
+  depois reportar falha, não um resultado inventado.
+- Salvar manual da skill apenas após prova real de teste; manter dados fora Git.
+- Testes automatizados cobrem estas invariantes com modelos simulados.
+- O modelo precisa ser testado no Ubuntu com Intel para aceite operacional.
+

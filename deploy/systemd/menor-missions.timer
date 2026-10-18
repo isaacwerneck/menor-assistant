@@ -1,0 +1,11 @@
+[Unit]
+Description=Verificar a fila de missões aprovadas do Menor
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+Persistent=true
+Unit=menor-missions.service
+
+[Install]
+WantedBy=timers.target

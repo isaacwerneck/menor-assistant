@@ -81,3 +81,12 @@ e não tenta alterar componentes críticos de autenticação ou deploy.
 - Backup/restauração e rollback transacional de deploy.
 - Monitoramento proativo agendado e redução de duplicações em ações externas.
 - Validação do comportamento e desempenho do Qwen no notebook real.
+
+## Mudança do PR #8: geração local como padrão
+
+O provedor padrão é **local**, com OpenVINO e modelo Stable Diffusion INT8.
+Configurar MENOR_IMAGE_PROVIDER=openai é um opt-in legado explícito; sem isso,
+o Menor não envia prompts ou imagens a uma API externa. Para preparar o
+subagente local, o próprio chat abre missão, coleta requisitos, pede autorização
+e agenda o download do modelo conhecido. Edição local permanece indisponível.
+Veja [o guia de subagentes](arquitetura_multiagente.md).

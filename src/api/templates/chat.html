@@ -1208,12 +1208,123 @@
                 clearImageAttachment();
                 imageReply(conv, content, kind === 'edit' ? 'Imagem editada.' : 'Imagem gerada.', result.url);
             } catch (failure) {
-                // Falha não vira sucesso; limpa a tarefa para não prender outros assuntos.
+                // Sem motor local, oferecer construir a habilidade em vez de rejeitar.
                 delete conv.pendingImage;
                 clearImageAttachment();
-                imageReply(conv, content, failure.message);
+                if (kind === 'generate' && /Modelo local não instalado|OpenVINO/i.test(failure.message)) {
+                    conv.pendingCapabilityOffer = {
+                        capability: 'images.generate', goal: 'Criar imagens localmente: ' + prompt,
+                    };
+                    imageReply(conv, content,
+                        'Ainda não tenho o subagente local de imagens pronto. '
+                        + 'Posso preparar essa ferramenta com você. Quer criar?');
+                } else {
+                    imageReply(conv, content, failure.message);
+                }
             }
             return true;
+        }
+
+        // ========== MISSÕES DE SUBAGENTES ==========
+        function isYes(text) {
+            return /^(sim+|simm+|pode|bora|vamos|claro|isso|fechou|confirmo)$/i.test(text.trim());
+        }
+
+        function isNo(text) {
+            return /^(não|nao|deixa|cancela|cancelar|não precisa|nao precisa)$/i.test(text.trim());
+        }
+
+        function missionPlanSummary(mission) {
+            const plan = mission.plan || {};
+            const steps = Array.isArray(plan.steps) ? plan.steps.slice(0, 4) : [];
+            const acceptance = Array.isArray(plan.acceptance) ? plan.acceptance.slice(0, 3) : [];
+            const lines = ['Planejei assim:'];
+            for (let i = 0; i < steps.length; i++) lines.push((i + 1) + '. ' + steps[i]);
+            if (acceptance.length) {
+                lines.push('Para considerar pronto: ' + acceptance.join('; ') + '.');
+            }
+            lines.push(mission.question);
+            return lines.join('\n');
+        }
+
+        async function handleMissionTurn(conv, message, content) {
+            const offer = conv.pendingCapabilityOffer;
+            if (offer) {
+                if (isNo(message)) {
+                    delete conv.pendingCapabilityOffer;
+                    imageReply(conv, content, 'Tudo bem. Não instalei nada.');
+                    return true;
+                }
+                if (!isYes(message)) {
+                    imageReply(conv, content, 'Quer que eu comece a criar o subagente local?');
+                    return true;
+                }
+                const mission = await imageJson('/agent/missions', {
+                    capability: offer.capability, goal: offer.goal,
+                });
+                delete conv.pendingCapabilityOffer;
+                conv.activeMission = { id: mission.id, status: mission.status };
+                imageReply(conv, content, mission.question);
+                return true;
+            }
+            const active = conv.activeMission;
+            if (!active) return false;
+            if (isNo(message) && active.status === 'gathering') {
+                delete conv.activeMission;
+                imageReply(conv, content, 'Certo. Não vou continuar essa missão.');
+                return true;
+            }
+            if (active.status === 'gathering') {
+                if (message.length < 8) {
+                    imageReply(conv, content, 'Me explica um pouco mais como a ferramenta deve funcionar.');
+                    return true;
+                }
+                const result = await imageJson('/agent/missions/' + active.id + '/requirements', {
+                    requirements: message,
+                });
+                active.status = result.status;
+                imageReply(conv, content, missionPlanSummary(result));
+                return true;
+            }
+            if (active.status === 'awaiting_approval') {
+                if (!isYes(message) && !isNo(message)) {
+                    imageReply(conv, content, 'Posso prosseguir? Responde sim ou não.');
+                    return true;
+                }
+                const result = await imageJson('/agent/missions/' + active.id + '/approve', {
+                    approved: isYes(message),
+                });
+                active.status = result.status;
+                imageReply(conv, content, result.question);
+                if (result.status === 'cancelled') delete conv.activeMission;
+                return true;
+            }
+            if (/^(como (est[aá]|ta)|status|andamento|ficou pronta|j[aá] terminou)/i.test(message)) {
+                const response = await fetch('/agent/missions/' + active.id);
+                if (!response.ok) throw new Error('Não consegui consultar a missão.');
+                const mission = await response.json();
+                active.status = mission.status;
+                let verifiedReady = mission.status === 'ready';
+                if (verifiedReady) {
+                    const skillsResponse = await fetch('/agent/skills');
+                    if (!skillsResponse.ok) throw new Error('Não consegui verificar a skill.');
+                    const skills = await skillsResponse.json();
+                    verifiedReady = skills.items.some(item =>
+                        item.mission_id === active.id && item.ready === true);
+                }
+                const state = verifiedReady
+                    ? 'O subagente local passou no teste e está disponível.'
+                    : mission.status === 'ready'
+                        ? 'O teste anterior passou, mas o runtime não está disponível agora.'
+                    : mission.status === 'failed'
+                        ? 'A preparação falhou. Confira as dependências ou o disco; a skill não está pronta.'
+                        : mission.status === 'blocked'
+                            ? 'Ainda falta um executor seguro para essa habilidade.'
+                            : 'Estado atual: ' + mission.status + '. Ainda não está pronta.';
+                imageReply(conv, content, state);
+                return true;
+            }
+            return false;
         }
 
         // ========== AUTOEDIÇÃO SUPERVISIONADA ==========
@@ -1268,6 +1379,7 @@
             const botContent = appendMessage('bot', '', true);
 
             try {
+                if (!conv.pendingMemory && (await handleMissionTurn(conv, msg, botContent))) return;
                 if (!conv.pendingMemory && (await handleImageTurn(conv, msg, botContent))) return;
                 if (!conv.pendingMemory && (await handleRepairTurn(conv, msg, botContent))) return;
                 if (conv.pendingMemory) {
@@ -1338,11 +1450,9 @@
                             save();
                             return;
                         }
-                        if (route.decision === 'plan_tool' && route.tool_plan && route.tool_plan.path) {
-                            routeNotice = 'Iniciei o planejamento da ferramenta em '
-                                + route.tool_plan.path
-                                + '. Ainda preciso implementar e testar o código. '
-                                + 'Podemos definir agora os requisitos e o motor de execução.';
+                        if (route.decision === 'plan_tool' && route.mission) {
+                            conv.activeMission = { id: route.mission.id, status: route.mission.status };
+                            routeNotice = route.mission.question;
                         }
                         if (route.decision === 'save' && route.memory && route.memory.path) {
                             routeNotice = 'Registrei no cérebro: ' + route.memory.path + '.';

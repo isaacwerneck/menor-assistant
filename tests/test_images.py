@@ -36,7 +36,10 @@ class ImageProviderTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        env = patch.dict(os.environ, {"MENOR_DATA_DIR": tmp.name, "MENOR_IMAGE_API_KEY": "fake-key"})
+        env = patch.dict(os.environ, {
+            "MENOR_DATA_DIR": tmp.name, "MENOR_IMAGE_API_KEY": "fake-key",
+            "MENOR_IMAGE_PROVIDER": "openai",
+        })
         env.start()
         self.addCleanup(env.stop)
         buffer = io.BytesIO()
@@ -94,7 +97,10 @@ class ImageEndpointTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        env = patch.dict(os.environ, {"MENOR_DATA_DIR": tmp.name, "MENOR_IMAGE_API_KEY": ""})
+        env = patch.dict(os.environ, {
+            "MENOR_DATA_DIR": tmp.name, "MENOR_IMAGE_API_KEY": "",
+            "MENOR_IMAGE_PROVIDER": "local",
+        })
         env.start()
         self.addCleanup(env.stop)
         from src.security import auth
@@ -110,7 +116,7 @@ class ImageEndpointTests(unittest.TestCase):
         self.assertFalse(result["configured"])
         code, result, _ = call("/images/generate", {"prompt": "Um gato no jardim"}, cookie=self.cookie)
         self.assertEqual(code, 503)
-        self.assertIn("não configurado", result["detail"])
+        self.assertIn("não instalado", result["detail"])
 
     def test_intent_requires_login_and_recognizes_exact_report(self):
         self.assertEqual(call("/images/intent", {"message": "cria uma foto"})[0], 401)

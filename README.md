@@ -88,6 +88,17 @@ executar patches na máquina.
 Veja [configuração, custos, privacidade e limites](docs/imagens_autoedicao_v06.md).
 O motor de imagens e as credenciais não são configurados automaticamente.
 
+## Orquestrador e subagentes locais (incremento do PR #8)
+
+O Menor pode iniciar uma missão para construir uma capacidade que falta,
+perguntar requisitos, propor um modelo local e pedir autorização. A missão
+fica salva no cérebro e um worker systemd executa tarefas autorizadas.
+O primeiro subagente é de geração de imagens OpenVINO CPU, sem API de IA
+externa por padrão. O download inicial exige internet, alguns GB livres
+e o teste de desempenho no notebook.
+
+Veja [a arquitetura multiagente](docs/arquitetura_multiagente.md).
+
 ## Deploy automático
 
 No Ubuntu, com o repositório em `~/menor-assistant`:
@@ -128,3 +139,15 @@ bash tests/test_deploy.sh
 - [Hardware](docs/hardware_requisitos.md)
 - [Setup Linux](docs/setup_linux.md)
 - [Servidor doméstico e deploy](docs/guia_servidor_domestico.md)
+
+### Planejador e registro de skills
+
+O Menor agora pode organizar requisitos em etapas e critérios usando o Qwen
+local. `GET /agent/skills` mostra o estado verificado dos subagentes;
+pedidos de imagens só executam o worker local se missão e runtime estiverem
+aprovados e disponíveis. O resultado é tecnicamente revisado antes de
+ser exibido. A skill testada documenta seu uso no cérebro.
+
+Esta arquitetura ainda não substitui um sandbox programador nem prova
+qualidade artística. [Arquitetura e limites](docs/arquitetura_multiagente.md).
+
