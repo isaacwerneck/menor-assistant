@@ -12,6 +12,7 @@ function browser(saved = '[]') {
     const writes = [];
     const requests = [];
     const downloads = [];
+    const memories = [];
     let blob;
     function element() {
         return {
@@ -40,6 +41,13 @@ function browser(saved = '[]') {
         setInterval() {}, TextDecoder, Blob, console,
         URL: { createObjectURL(value) { blob = value; return 'blob:test'; }, revokeObjectURL() {} },
         fetch: async (url, options) => {
+            if (url === '/auth/status') {
+                return { ok: true, json: async () => ({ configured: true, authenticated: true }) };
+            }
+            if (url === '/memory/remember') {
+                memories.push(JSON.parse(options.body));
+                return { ok: true, json: async () => ({ saved: true }) };
+            }
             if (url === '/health') {
                 return { ok: true, json: async () => ({ default_model: 'test-model', ollama_status: 'online' }) };
             }
@@ -52,7 +60,7 @@ function browser(saved = '[]') {
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, downloads, getBlob: () => blob };
+    return { context, elements, writes, requests, memories, downloads, getBlob: () => blob };
 }
 
 test('histórico mantém ordem, converte bot e respeita orçamento de contexto', () => {
@@ -137,4 +145,34 @@ test('falha ao salvar permanece visível depois do health check', async () => {
     await ui.context.refreshHealth();
     assert.match(ui.elements.get('storageStatus').textContent, /QuotaExceeded/);
     assert.equal(ui.elements.get('modelName').textContent, 'test-model');
+});
+
+test('lembre disso exige confirmação e grava no cérebro sem chamar Ollama', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'Menor, lembre disso: Prefiro respostas objetivas';
+    await ui.context.sendMsg();
+    assert.equal(ui.requests.length, 0);
+    assert.equal(ui.memories.length, 0);
+    assert.equal(ui.elements.get('memoryPanel').hidden, false);
+    assert.equal(ui.elements.get('memoryText').textContent, 'Prefiro respostas objetivas');
+    await ui.context.confirmMemory('preference');
+    assert.equal(ui.memories.length, 1);
+    assert.equal(ui.memories[0].kind, 'preference');
+    assert.equal(ui.memories[0].text, 'Prefiro respostas objetivas');
+    assert.equal(ui.elements.get('memoryPanel').hidden, true);
+    assert.equal(ui.context.getActiveConv().messages.length, 2);
+    assert.match(ui.context.getActiveConv().messages[1].content, /Preferência salva/);
+});
+
+test('cancelar memória não a salva e aprendizado permanece separado de preferência', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'lembre disso: Meu jogo usa Godot';
+    await ui.context.sendMsg();
+    ui.context.cancelMemory();
+    assert.equal(ui.memories.length, 0);
+    ui.elements.get('userInput').value = 'lembre disso: Meu jogo usa Godot';
+    await ui.context.sendMsg();
+    await ui.context.confirmMemory('knowledge');
+    assert.equal(ui.memories[0].kind, 'knowledge');
+    assert.match(ui.context.getActiveConv().messages[1].content, /Conhecimento anotado/);
 });
