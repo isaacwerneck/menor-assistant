@@ -18,6 +18,16 @@ Abra `http://IP_DO_SERVIDOR:8000`. A API oferece `/health`, `/models`,
 `/chat`, `/chat/stream` e a documentação interativa em `/docs`.
 O serviço ainda não possui autenticação: mantenha-o na rede privada/VPN.
 
+O chat envia o histórico recente ao modelo (até 20 mensagens e 32000 caracteres
+junto com a mensagem atual). As conversas ficam no navegador e podem ser
+exportadas pelo botão ↓ em Markdown. Mensagens novas aceitam até 8000 caracteres.
+O rodapé mostra a conexão com Ollama; falhas de armazenamento aparecem em aviso
+separado. Histórico corrompido é preservado sem sobrescrita.
+
+Configuração opcional: `OLLAMA_URL`, `OLLAMA_MODEL` e `OLLAMA_KEEP_ALIVE`.
+Detalhes de contexto, erros e configuração em
+[organização do código](docs/arquitetura_codigo.md#estado-implementado).
+
 ## Deploy automático
 
 No Ubuntu, com o repositório em `~/menor-assistant`:
@@ -42,6 +52,7 @@ Instalação, fluxo, limites e recuperação:
 
 ```bash
 python -m unittest discover -s tests -v
+node --test tests/test_ui.js  # apenas desenvolvimento/CI, sem dependências npm
 # Flake8 é uma ferramenta de desenvolvimento, fora das dependências da API.
 python -m pip install flake8
 python -m flake8 src tests --max-line-length=119

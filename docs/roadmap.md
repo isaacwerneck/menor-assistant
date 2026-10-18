@@ -14,10 +14,19 @@
 - [x] Primeiro teste de geração e chat validado via terminal.
 
 ## Fase 3: Servidor & Acesso Remoto
-- [ ] Criar ambiente virtual Python (`.venv`) no repositório `~/menor-assistant`.
-- [ ] Criar API base com FastAPI conectando diretamente ao Ollama.
+- [x] Criar ambiente virtual Python (`.venv`) no repositório `~/menor-assistant` (diretório confirmado via SSH).
+- [x] Criar API base com FastAPI conectando diretamente ao Ollama.
 - [ ] Configurar Tailscale no notebook, PC e celular para conexão segura fora de casa.
-- [ ] Criar interface web/chat para testes pelo navegador.
+- [x] Criar interface web/chat para testes pelo navegador.
+- [x] Enviar histórico recente ao modelo e validar mensagens/contexto.
+- [x] Tratar indisponibilidade, timeout e falhas no streaming.
+- [x] Adicionar status de conexão, exportação Markdown e refinamentos para celular/teclado.
+- [x] Implementar deploy por consulta periódica à main, serviços systemd e testes no GitHub Actions.
+- [ ] Ativar os serviços no servidor e habilitar linger; SSH deixou de responder antes da instalação.
+
+A API e a interface foram verificadas localmente com Ollama simulado nos testes.
+Inferência real, instalação dos serviços e continuidade após reboot ainda exigem
+validação no servidor. Instruções em [guia do servidor](guia_servidor_domestico.md#deploy-automático-do-menor).
 
 ## Fase 4: Pipeline de Áudio (Voz Bidirecional)
 - [ ] Integrar `faster-whisper` para transcrição de áudio do microfone.
@@ -25,6 +34,7 @@
 - [ ] Implementar wake word local ("Jarvis").
 
 ## Fase 5: Gestor de Projetos & Memória Markdown
+- [x] Exportar a conversa atual do navegador em Markdown (não é memória persistente no servidor).
 - [ ] Implementar sistema de leitura e escrita de arquivos `.md`.
 - [ ] Criar estrutura de pastas: `/memoria`, `/projetos`, `/logs`.
 - [ ] Adicionar embeddings locais para busca semântica em notas e documentações.

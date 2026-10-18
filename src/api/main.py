@@ -1,31 +1,50 @@
 import json
+import logging
+import os
 from pathlib import Path
+from typing import Annotated, Literal
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Menor - Assistente de IA Pessoal",
     description="Servidor de orquestração do Menor, assistente pessoal rodando em hardware doméstico.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
-OLLAMA_URL = "http://127.0.0.1:11434"
-DEFAULT_MODEL = "qwen2.5-coder:7b"
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
+KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "24h")
 SYSTEM_PROMPT = (
     "Você é o Menor, o assistente pessoal de inteligência artificial criado e hospedado localmente pelo Isaac. "
     "Você é altamente competente em programação, desenvolvimento de jogos, "
     "planejamento de projetos e tarefas do dia a dia. "
     "Seu tom é parceiro, inteligente, direto e prestativo. Responda sempre em português brasileiro."
 )
-
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+MessageText = Annotated[str, StringConstraints(min_length=1, max_length=8000, pattern=r"\S")]
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: MessageText
 
 
 class ChatRequest(BaseModel):
-    message: str
-    model: str = DEFAULT_MODEL
+    message: MessageText
+    model: str = Field(default=DEFAULT_MODEL, min_length=1, max_length=200, pattern=r"^\S+$")
+    history: list[ChatMessage] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def limit_context(self):
+        if len(self.message) + sum(len(item.content) for item in self.history) > 32000:
+            raise ValueError("A conversa enviada deve conter no máximo 32000 caracteres.")
+        return self
 
 
 class ChatResponse(BaseModel):
@@ -35,77 +54,107 @@ class ChatResponse(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def serve_chat_ui():
-    """Interface visual estilo ChatGPT para conversar com o Menor."""
     html_file = TEMPLATES_DIR / "chat.html"
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
 
 
-def stream_ollama_generator(message: str, model: str):
-    """Gera tokens sob demanda do Ollama com modelo fixado na memória RAM."""
-    payload = {
-        "model": model,
-        "prompt": message,
-        "system": SYSTEM_PROMPT,
-        "stream": True,
-        "keep_alive": "24h",
-    }
+def ollama_error(error):
+    if isinstance(error, requests.Timeout):
+        return HTTPException(status_code=504, detail="O Ollama demorou demais para responder. Tente novamente.")
+    if isinstance(error, requests.ConnectionError):
+        return HTTPException(status_code=503, detail="O Ollama está indisponível. Verifique o serviço no servidor.")
+    if isinstance(error, requests.HTTPError) and error.response is not None and error.response.status_code == 404:
+        return HTTPException(status_code=404, detail="Modelo não encontrado no Ollama. Confira /models.")
+    return HTTPException(status_code=502, detail="O Ollama retornou uma resposta inválida ou uma falha de inferência.")
 
+
+def open_ollama(req: ChatRequest, stream: bool):
+    payload = {
+        "model": req.model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            *[item.model_dump() for item in req.history],
+            {"role": "user", "content": req.message},
+        ],
+        "stream": stream,
+        "keep_alive": KEEP_ALIVE,
+    }
     try:
-        with requests.post(f"{OLLAMA_URL}/api/generate", json=payload, stream=True, timeout=120) as r:
-            r.raise_for_status()
-            for line in r.iter_lines():
-                if line:
-                    data = json.loads(line)
-                    token = data.get("response", "")
-                    if token:
-                        yield token
-    except Exception as e:
-        yield f"\n[Erro de conexão: {str(e)}]"
+        response = requests.post(
+            f"{OLLAMA_URL}/api/chat", json=payload, stream=stream, timeout=(5, 120),
+        )
+        response.raise_for_status()
+        return response
+    except requests.RequestException as error:
+        if error.response is not None:
+            error.response.close()
+        logger.warning("Falha ao chamar Ollama: %s", type(error).__name__)
+        raise ollama_error(error) from error
+
+
+def chat_text(data):
+    if not isinstance(data, dict) or data.get("error"):
+        raise ValueError("Falha no protocolo do Ollama.")
+    message = data.get("message")
+    if not isinstance(message, dict) or not isinstance(message.get("content"), str):
+        raise ValueError("Mensagem inválida do Ollama.")
+    return message["content"]
+
+
+def stream_ollama_generator(response):
+    # Após enviar os headers, interromper o stream permite ao navegador detectar falhas.
+    with response:
+        try:
+            for line in response.iter_lines(chunk_size=1):
+                if not line:
+                    continue
+                data = json.loads(line)
+                token = chat_text(data)
+                if token:
+                    yield token
+                if data.get("done"):
+                    return
+            raise ValueError("Stream do Ollama terminou antes da conclusão.")
+        except (requests.RequestException, ValueError) as error:
+            logger.warning("Stream do Ollama interrompido: %s", type(error).__name__)
+            raise RuntimeError("A resposta do Ollama foi interrompida. Tente novamente.") from error
 
 
 @app.post("/chat/stream")
 def chat_stream(req: ChatRequest):
-    """Endpoint de streaming em tempo real token-a-token."""
+    response = open_ollama(req, stream=True)
     return StreamingResponse(
-        stream_ollama_generator(req.message, req.model),
+        stream_ollama_generator(response),
         media_type="text/plain",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
 @app.post("/chat", response_model=ChatResponse)
 def chat_sync(req: ChatRequest):
-    """Endpoint tradicional síncrono para scripts e chamadas de API."""
-    payload = {
-        "model": req.model,
-        "prompt": req.message,
-        "system": SYSTEM_PROMPT,
-        "stream": False,
-        "keep_alive": "24h",
-    }
-
-    try:
-        res = requests.post(f"{OLLAMA_URL}/api/generate", json=payload, timeout=90)
-        res.raise_for_status()
-        data = res.json()
-        return ChatResponse(reply=data.get("response", ""), model=req.model)
-    except requests.exceptions.ConnectionError:
-        raise HTTPException(status_code=503, detail="Motor do Ollama não está rodando na porta 11434.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro durante a inferência: {str(e)}")
+    with open_ollama(req, stream=False) as response:
+        try:
+            reply = chat_text(response.json())
+            if not reply.strip():
+                raise ValueError("Ollama retornou uma resposta vazia.")
+            return ChatResponse(reply=reply, model=req.model)
+        except ValueError as error:
+            logger.warning("Resposta inválida do Ollama: %s", type(error).__name__)
+            raise ollama_error(error) from error
 
 
 @app.get("/health")
 def health_check():
-    """Verifica a integridade do servidor e se o Ollama está online."""
     try:
-        res = requests.get(f"{OLLAMA_URL}/api/tags", timeout=3)
-        ollama_status = "online" if res.status_code == 200 else "degraded"
-    except Exception:
+        with requests.get(f"{OLLAMA_URL}/api/tags", timeout=(3, 3)) as response:
+            ollama_status = "online" if response.status_code == 200 else "degraded"
+    except requests.RequestException as error:
+        logger.warning("Ollama indisponível no health check: %s", type(error).__name__)
         ollama_status = "offline"
-
     return {
         "status": "online",
         "service": "Menor API",
+        "version": app.version,
         "ollama_status": ollama_status,
         "default_model": DEFAULT_MODEL,
     }
@@ -113,13 +162,16 @@ def health_check():
 
 @app.get("/models")
 def list_models():
-    """Retorna os modelos instalados no Ollama."""
     try:
-        res = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
-        res.raise_for_status()
-        return res.json()
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Erro ao conectar com Ollama: {str(e)}")
+        with requests.get(f"{OLLAMA_URL}/api/tags", timeout=(3, 5)) as response:
+            response.raise_for_status()
+            data = response.json()
+            if not isinstance(data, dict) or not isinstance(data.get("models"), list):
+                raise ValueError("Lista de modelos inválida do Ollama.")
+            return data
+    except (requests.RequestException, ValueError) as error:
+        logger.warning("Falha ao listar modelos: %s", type(error).__name__)
+        raise ollama_error(error) from error
 
 
 if __name__ == "__main__":

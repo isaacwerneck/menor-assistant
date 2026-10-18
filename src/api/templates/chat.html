@@ -27,7 +27,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
-            height: 100vh;
+            height: 100dvh;
             display: flex;
             overflow: hidden;
         }
@@ -106,7 +106,9 @@
         .conv-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
         .conv-item.active { background: var(--bg-tertiary); color: var(--text-primary); }
 
+        .conv-item button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
         .conv-item .conv-title {
+            text-align: left;
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -121,7 +123,8 @@
             transition: 0.15s;
         }
 
-        .conv-item:hover .conv-delete { opacity: 1; }
+        .conv-item:hover .conv-delete, .conv-item:focus-within .conv-delete { opacity: 1; }
+        button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
         .conv-item .conv-delete:hover { color: #ef4444; }
 
         .sidebar-footer {
@@ -282,6 +285,10 @@
 
         .message-row.user .message-content { text-align: right; }
 
+        @media (prefers-reduced-motion: reduce) {
+            *, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+        }
+
         .message-content.cursor::after {
             content: '▋';
             display: inline;
@@ -358,6 +365,7 @@
         @media (max-width: 768px) {
             .sidebar { position: fixed; z-index: 100; height: 100%; }
             .sidebar.hidden { margin-left: calc(-1 * var(--sidebar-width)); }
+            .conv-item .conv-delete { opacity: 1; }
             .welcome-suggestions { flex-direction: column; }
         }
     </style>
@@ -376,16 +384,17 @@
         </div>
         <div class="sidebar-footer">
             <div class="dot"></div>
-            <span>Menor v0.1 · Qwen 2.5 7B · CPU · 32GB RAM</span>
+            <span>Menor v0.2 · IA local</span>
         </div>
     </aside>
 
     <!-- MAIN -->
     <div class="main">
         <div class="topbar">
-            <button class="toggle-sidebar-btn" onclick="toggleSidebar()">☰</button>
+            <button class="toggle-sidebar-btn" aria-label="Alternar conversas" onclick="toggleSidebar()">☰</button>
             <div class="topbar-title" id="topbarTitle">Menor</div>
-            <div class="topbar-model">qwen2.5-coder:7b</div>
+            <button class="toggle-sidebar-btn" onclick="exportChat()" aria-label="Exportar conversa em Markdown">↓</button>
+            <div class="topbar-model" id="modelName">qwen2.5-coder:7b</div>
         </div>
 
         <div class="chat-area" id="chatArea">
@@ -394,10 +403,10 @@
                 <div class="welcome-title">Menor</div>
                 <div class="welcome-subtitle">Seu assistente pessoal de IA rodando localmente. Programação, projetos, jogos e o que mais precisar.</div>
                 <div class="welcome-suggestions">
-                    <div class="suggestion-chip" onclick="useSuggestion(this)">Me ajude a planejar meu próximo projeto</div>
-                    <div class="suggestion-chip" onclick="useSuggestion(this)">Escreva um código em Python pra...</div>
-                    <div class="suggestion-chip" onclick="useSuggestion(this)">Quais são seus módulos e capacidades?</div>
-                    <div class="suggestion-chip" onclick="useSuggestion(this)">Me explique como funciona uma rede neural</div>
+                    <button type="button" class="suggestion-chip" onclick="useSuggestion(this)">Me ajude a planejar meu próximo projeto</button>
+                    <button type="button" class="suggestion-chip" onclick="useSuggestion(this)">Escreva um código em Python pra...</button>
+                    <button type="button" class="suggestion-chip" onclick="useSuggestion(this)">Quais são seus módulos e capacidades?</button>
+                    <button type="button" class="suggestion-chip" onclick="useSuggestion(this)">Me explique como funciona uma rede neural</button>
                 </div>
             </div>
             <div class="messages-container" id="messagesContainer" style="display:none;"></div>
@@ -405,30 +414,107 @@
 
         <div class="input-area">
             <div class="input-wrapper">
-                <textarea id="userInput" rows="1" placeholder="Mande uma mensagem para o Menor..."
+                <textarea id="userInput" rows="1" maxlength="8000" aria-label="Mensagem para o Menor" placeholder="Mande uma mensagem para o Menor..."
                     onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-                <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+                <button class="send-btn" id="sendBtn" aria-label="Enviar mensagem" onclick="sendMsg()">➤</button>
             </div>
         </div>
-        <div class="input-footer">Menor pode cometer erros. Considere verificar informações importantes.</div>
+        <div class="input-footer" id="storageStatus" role="alert" hidden></div>
+        <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
     </div>
 
     <script>
         // ========== STATE ==========
-        let conversations = JSON.parse(localStorage.getItem('menor_convs') || '[]');
+        let canSave = true;
+        let conversations = loadConversations();
         let activeConvId = null;
         let isGenerating = false;
 
         // ========== INIT ==========
         renderConvList();
-        if (conversations.length === 0) showWelcome();
+        showWelcome();
+        refreshHealth();
+        setInterval(refreshHealth, 30000);
 
         // ========== CONVERSATIONS ==========
         function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-        function save() { localStorage.setItem('menor_convs', JSON.stringify(conversations)); }
+        function loadConversations() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('menor_convs') || '[]');
+                if (!Array.isArray(saved) || saved.some(c =>
+                    !c || typeof c.id !== 'string' || !/^[a-z0-9]+$/.test(c.id) ||
+                    typeof c.title !== 'string' || !Array.isArray(c.messages) ||
+                    c.messages.some(m => !m || !['user', 'bot'].includes(m.role) ||
+                        typeof m.content !== 'string'))) {
+                    throw new Error('Formato de conversas inválido.');
+                }
+                return saved;
+            } catch (error) {
+                canSave = false;
+                const status = document.getElementById('storageStatus');
+                status.hidden = false;
+                status.textContent = 'Conversas salvas não puderam ser carregadas e foram preservadas. ' +
+                    'Novas conversas só ficam na memória; exporte-as. ' + error.message;
+                return [];
+            }
+        }
+
+        function save() {
+            if (!canSave) return;
+            try {
+                localStorage.setItem('menor_convs', JSON.stringify(conversations));
+            } catch (error) {
+                const status = document.getElementById('storageStatus');
+                status.hidden = false;
+                status.textContent = 'Não foi possível salvar no navegador. Exporte a conversa: ' + error.message;
+            }
+        }
+
+        async function refreshHealth() {
+            const status = document.getElementById('connectionStatus');
+            try {
+                const response = await fetch('/health');
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const health = await response.json();
+                document.getElementById('modelName').textContent = health.default_model;
+                status.textContent = health.ollama_status === 'online'
+                    ? 'Ollama conectado · As conversas ficam neste navegador.'
+                    : 'Ollama indisponível. Verifique o serviço no servidor.';
+            } catch (error) {
+                status.textContent = 'API indisponível: ' + error.message;
+            }
+        }
+
+        function buildHistory(messages, message) {
+            const history = [];
+            let remaining = 32000 - message.length;
+            for (let i = messages.length - 1; i >= 0 && history.length < 20; i--) {
+                const content = messages[i].content.slice(-8000);
+                if (!content.trim()) continue;
+                if (content.length > remaining) break;
+                history.unshift({ role: messages[i].role === 'bot' ? 'assistant' : 'user', content });
+                remaining -= content.length;
+            }
+            return history;
+        }
+
+        function exportChat() {
+            const conv = getActiveConv();
+            if (!conv) return;
+            const markdown = '# ' + conv.title + '\n\n' + conv.messages.map(m =>
+                '## ' + (m.role === 'user' ? 'Você' : 'Menor') + '\n\n' + m.content
+            ).join('\n\n');
+            const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'menor-' + conv.id + '.md';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
 
         function newChat() {
+            if (isGenerating) return;
             activeConvId = null;
             showWelcome();
             renderConvList();
@@ -451,6 +537,7 @@
         function getActiveConv() { return conversations.find(c => c.id === activeConvId); }
 
         function openConv(id) {
+            if (isGenerating) return;
             activeConvId = id;
             const conv = getActiveConv();
             if (!conv) return;
@@ -464,6 +551,7 @@
 
         function deleteConv(id, e) {
             e.stopPropagation();
+            if (isGenerating) return;
             conversations = conversations.filter(c => c.id !== id);
             save();
             if (activeConvId === id) { activeConvId = null; showWelcome(); }
@@ -476,9 +564,9 @@
             conversations.forEach(c => {
                 const active = c.id === activeConvId ? 'active' : '';
                 html += `
-                    <div class="conv-item ${active}" onclick="openConv('${c.id}')">
-                        <span class="conv-title">${escHtml(c.title)}</span>
-                        <span class="conv-delete" onclick="deleteConv('${c.id}', event)">✕</span>
+                    <div class="conv-item ${active}">
+                        <button class="conv-title" onclick="openConv('${c.id}')">${escHtml(c.title)}</button>
+                        <button class="conv-delete" aria-label="Excluir conversa" onclick="deleteConv('${c.id}', event)">✕</button>
                     </div>`;
             });
             if (conversations.length === 0) {
@@ -489,12 +577,18 @@
 
         // ========== UI HELPERS ==========
         function showWelcome() {
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                document.getElementById('sidebar').classList.add('hidden');
+            }
             document.getElementById('welcomeScreen').style.display = 'flex';
             document.getElementById('messagesContainer').style.display = 'none';
             document.getElementById('topbarTitle').textContent = 'Menor';
         }
 
         function showMessages() {
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                document.getElementById('sidebar').classList.add('hidden');
+            }
             document.getElementById('welcomeScreen').style.display = 'none';
             document.getElementById('messagesContainer').style.display = 'flex';
             const conv = getActiveConv();
@@ -548,7 +642,7 @@
             if (isGenerating) return;
             const input = document.getElementById('userInput');
             const msg = input.value.trim();
-            if (!msg) return;
+            if (!msg || msg.length > 8000) return;
 
             isGenerating = true;
             document.getElementById('sendBtn').disabled = true;
@@ -558,8 +652,11 @@
             // Create conversation if needed
             if (!activeConvId) { createConversation(msg); }
             showMessages();
+            document.getElementById('messagesContainer').replaceChildren();
+            getActiveConv().messages.forEach(m => appendMessage(m.role, m.content));
 
             const conv = getActiveConv();
+            const history = buildHistory(conv.messages, msg);
             conv.messages.push({ role: 'user', content: msg });
             save();
 
@@ -570,10 +667,14 @@
                 const response = await fetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
+                    body: JSON.stringify({ message: msg, history })
                 });
 
-                if (!response.ok) throw new Error('Servidor retornou erro ' + response.status);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(typeof error.detail === 'string'
+                        ? error.detail : 'Mensagem inválida ou contexto muito grande (HTTP ' + response.status + ').');
+                }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
@@ -588,6 +689,9 @@
                     scrollToBottom();
                 }
 
+                fullReply += decoder.decode();
+                botContent.textContent = fullReply;
+                if (!fullReply.trim()) throw new Error('O modelo retornou uma resposta vazia.');
                 conv.messages.push({ role: 'bot', content: fullReply });
                 save();
             } catch (err) {
