@@ -170,12 +170,18 @@
         .toggle-sidebar-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 
         .topbar-title {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             font-size: 1rem;
             font-weight: 600;
             color: var(--text-primary);
         }
 
         .topbar-model {
+            flex-shrink: 0;
             margin-left: auto;
             font-size: 0.8rem;
             color: var(--text-muted);
@@ -283,7 +289,19 @@
             max-width: 720px;
         }
 
-        .message-row.user .message-content { text-align: right; }
+        .message-row.user .message-content {
+            flex: 0 1 auto;
+            max-width: min(80%, 620px);
+            text-align: left;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+        .message-row.user { flex-wrap: wrap; }
+        .message-row.user .save-memory-btn {
+            flex: 0 0 auto;
+            margin: 2px 46px 0 auto;
+        }
 
         @media (prefers-reduced-motion: reduce) {
             *, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -422,6 +440,17 @@
         .project-actions button { flex: 1; }
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
+            .topbar { gap: 5px; padding: 8px 10px; min-height: 54px; }
+            .topbar-model { display: none; }
+            .topbar-title { font-size: 0.9rem; }
+            .topbar .toggle-sidebar-btn { flex-shrink: 0; font-size: 1rem; padding: 6px; }
+            #projectButton { max-width: 98px; overflow: hidden; text-overflow: ellipsis;
+                white-space: nowrap; font-size: 0.8rem; }
+            .messages { padding: 16px 12px; }
+            .message-row { gap: 9px; }
+            .message-content { font-size: 0.92rem; line-height: 1.5; min-width: 0; }
+            .message-row.user .message-content { max-width: calc(100% - 48px); }
+            .input-area { padding: 10px 10px max(12px, env(safe-area-inset-bottom)); }
             .sidebar { position: fixed; z-index: 100; height: 100%; }
             .sidebar.hidden { margin-left: calc(-1 * var(--sidebar-width)); }
             .conv-item .conv-delete { opacity: 1; }
@@ -539,7 +568,7 @@
         <div class="modal-box">
             <h2>Meus projetos</h2>
             <p>Selecione o projeto desta conversa para recuperar seu contexto.</p>
-            <select id="projectPicker" aria-label="Escolher projeto"></select>
+            <select id="projectPicker" aria-label="Escolher projeto" onchange="previewProject()"></select>
             <button onclick="selectProject()">Usar neste chat</button>
             <p id="projectDescription" class="project-note-text"></p>
             <p>Registrar uma atualização no projeto escolhido:</p>
@@ -839,6 +868,7 @@
                     picker.appendChild(option);
                 }
                 picker.value = getActiveProject();
+                updateProjectBadge();
                 await previewProject();
             } catch (error) {
                 document.getElementById('projectError').textContent = error.message;
@@ -857,7 +887,8 @@
             try {
                 const details = await projectRequest('/projects/' + encodeURIComponent(slug));
                 area.textContent = details.name + '\n\n' +
-                    details.notes.context + '\n' + details.notes.task;
+                    details.notes.context + '\n' + details.notes.decision +
+                    '\n' + details.notes.task + '\n' + details.notes.log;
             } catch (error) {
                 area.textContent = error.message;
             }
