@@ -28,7 +28,7 @@ class NaturalDialogTests(unittest.TestCase):
                          suggested_target="none", question="Onde quer guardar?")
         self.assertEqual(result["decision"], "save")
         self.assertEqual(result["target"], "tool")
-        self.assertIn("Ferramenta de sprites", post.call_args.kwargs["json"]["messages"][-1]["content"])
+        post.assert_not_called()  # Frase curta com destino explícito é resolvida localmente.
 
     @patch("src.agent.resolve.requests.post")
     def test_ambiguous_reply_asks_again_without_writing(self, post):
