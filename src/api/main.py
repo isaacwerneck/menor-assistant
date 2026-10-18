@@ -12,6 +12,7 @@ import requests
 
 from src.agent.router import classify
 from src.memory.store import BrainStore
+from src.projects.manager import create_project
 from src.security import auth
 
 logger = logging.getLogger(__name__)
@@ -95,13 +96,16 @@ def _save_memory(kind, text):
 def route_intent(body: IntentRequest, request: Request):
     auth.require_owner(request)
     result = classify(body.message, [item.model_dump() for item in body.history])
-    if result["decision"] == "save":
+    if result["decision"] in ("save", "create_project"):
         try:
-            result["memory"] = _save_memory(result["target"], result["text"])
+            if result["decision"] == "create_project":
+                result["project"] = create_project(result["text"])
+            else:
+                result["memory"] = _save_memory(result["target"], result["text"])
         except (ValueError, OSError) as error:
-            logger.warning("Falha ao salvar proposta do classificador: %s", type(error).__name__)
+            logger.warning("Não foi possível executar ação classificada: %s", type(error).__name__)
             result["decision"] = "ask"
-            result["question"] = "Não consegui salvar automaticamente. Quer revisar esta anotação?"
+            result["question"] = "Não consegui criar ou salvar. Quer revisar o nome e destino?"
     return result
 
 
