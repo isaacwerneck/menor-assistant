@@ -287,3 +287,17 @@ Ver [guia de imagens/autoedição](docs/imagens_autoedicao_v06.md).
 ---
 
 **Direção acordada:** *Você ensina → Menor registra → Menor recupera → Menor aplica → Menor avalia → Menor propõe melhorias.*
+
+## 14. Sistema multiagente local — incremento PR #8
+
+- [x] Orquestrador de missões persistentes com requisitos e aprovação.
+- [x] Catálogo auditável de candidatos locais; sem downloads arbitrários.
+- [x] Worker OpenVINO de imagem em CPU e prova técnica de geração real.
+- [x] Provider padrão local sem API externa nem chave de terceiros.
+- [x] Worker agendado por systemd para instalações aprovadas.
+- [ ] Pesquisa aberta e auditoria de novos modelos locais.
+- [ ] Edição de imagens local, áudio, design, navegação e visão multimodal.
+- [ ] Programador autônomo em sandbox com testes de regressão e PR.
+- [ ] Avaliação semântica dos artefatos, correção iterativa e limites de recursos.
+
+Consultar [arquitetura multiagente](docs/arquitetura_multiagente.md).
