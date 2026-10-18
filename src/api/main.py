@@ -21,6 +21,7 @@ from src.projects.workspace import ProjectWorkspace
 from src.security import auth
 from src.tools.audit import record
 from src.tools.registry import list_tools, perform
+from src.tools.design import plan_tool
 
 logger = logging.getLogger(__name__)
 
@@ -256,9 +257,12 @@ def _save_memory(kind, text):
 def route_intent(body: IntentRequest, request: Request):
     auth.require_owner(request)
     result = classify(body.message, [item.model_dump() for item in body.history], project=body.project)
-    if result["decision"] in ("save", "create_project", "select_project", "add_project_note"):
+    if result["decision"] in ("save", "create_project", "select_project", "add_project_note", "plan_tool"):
         try:
-            if result["decision"] == "create_project":
+            if result["decision"] == "plan_tool":
+                result["tool_plan"] = plan_tool(result["text"])
+                record("tool.plan", "planned", ["request"])
+            elif result["decision"] == "create_project":
                 result["project"] = create_project(result["text"])
             elif result["decision"] == "select_project":
                 name = result["text"].casefold()
