@@ -31,13 +31,16 @@ def run_once(store=None):
             continue
         missions.transition(mission_id, "queued", "installing")
         try:
+            missions.stage(mission_id, "preparing")
             local_images.ensure_runtime_approved()
+            missions.stage(mission_id, "downloading")
             install = local_images.install_approved()
             if not install["ready"]:
                 raise local_images.LocalImageUnavailable(
                     "Runtime OpenVINO indisponível; instale as dependências opcionais."
                 )
             # Um agente revisor independente testa o artefato; no máximo 2 tentativas.
+            missions.stage(mission_id, "testing")
             for _ in range(2):
                 proof = local_images.generate("Uma esfera azul sobre fundo branco", steps=6)
                 verdict = review_image(proof)
