@@ -19,6 +19,8 @@ from src.memory.search import KnowledgeIndex, contextual_knowledge
 from src.projects.manager import create_project
 from src.projects.workspace import ProjectWorkspace
 from src.security import auth
+from src.tools.audit import record
+from src.tools.registry import list_tools, perform
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,34 @@ class ChatRequest(BaseModel):
         if len(self.message) + sum(len(item.content) for item in self.history) > 32000:
             raise ValueError("A conversa enviada deve conter no máximo 32000 caracteres.")
         return self
+
+
+class ToolRequest(BaseModel):
+    tool: str = Field(min_length=3, max_length=80)
+    arguments: dict[str, str] = Field(default_factory=dict)
+    dry_run: bool = True
+
+
+@app.get("/tools")
+def tool_catalog(request: Request):
+    auth.require_owner(request)
+    return {"items": list_tools()}
+
+
+@app.post("/tools/execute")
+def tool_execute(body: ToolRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        receipt = perform(body.tool, body.arguments, dry_run=body.dry_run)
+        record(body.tool, receipt["status"], body.arguments.keys())
+        return receipt
+    except (ValueError, LookupError, OSError) as error:
+        logger.warning("Ferramenta indisponível: %s", type(error).__name__)
+        try:
+            record(body.tool, "failed", body.arguments.keys())
+        except (OSError, ValueError):
+            logger.warning("Não foi possível registrar a falha na auditoria.")
+        raise HTTPException(422, "Ferramenta não disponível ou argumentos inválidos.") from error
 
 
 class PasswordRequest(BaseModel):
