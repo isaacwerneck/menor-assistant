@@ -50,7 +50,10 @@ class ProjectWorkspaceTests(unittest.TestCase):
         self.assertIn("projetos/cidade-noturna/decisoes.md", context)
         self.assertIn("Godot", context)
         self.assertLessEqual(len(context), 2400)
-        self.assertEqual(self.manager.context("cidade-noturna", max_chars=10), "Projeto ativo: Cidade Noturna (projetos/cidade-noturna/)")
+        self.assertEqual(
+            self.manager.context("cidade-noturna", max_chars=10),
+            "Projeto ativo: Cidade Noturna (projetos/cidade-noturna/)",
+        )
 
     def test_reject_symlinked_project_root(self):
         other = self.store.brain_dir / "segredo"
