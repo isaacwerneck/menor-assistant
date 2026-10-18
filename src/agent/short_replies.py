@@ -40,7 +40,7 @@ def simple_answer(answer, suggested_target="none", question="", project=None):
         "anota", "anote", "salva", "salve", "guarda", "guarde", "registra",
         "registre", "coloca", "coloque", "isso", "essa", "a", "ideia", "em",
         "na", "no", "nas", "nos", "para", "pra", "pasta", "de", "do", "da",
-        "por", "favor",
+        "por", "favor", "sim", "simm", "simmm", "ss", "pode", "la", "ai",
     }
     chosen_words = set().union(*(CATEGORIES[k] for k in mentioned)) if mentioned else set()
     # Não transforme menções incidentais a "projeto" em confirmação de escrita.
