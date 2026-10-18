@@ -5,7 +5,7 @@ After=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=%h/menor-assistant
-EnvironmentFile=-%h/.config/menor-assistant/agent.env
+EnvironmentFile=-%h/.config/menor/environment
 ExecStart=%h/menor-assistant/.venv/bin/python -m src.agent.watch
 TimeoutStartSec=8min
 NoNewPrivileges=true
