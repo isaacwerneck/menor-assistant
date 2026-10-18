@@ -5,6 +5,8 @@ pelo operador. O chat apenas le preferências explicitamente registradas.
 """
 
 import argparse
+import threading
+from datetime import datetime, timezone
 import os
 import stat
 import tempfile
@@ -13,6 +15,7 @@ from pathlib import Path, PurePosixPath
 
 MAX_NOTE_BYTES = 64 * 1024
 MAX_PREFERENCE_CHARS = 280
+_write_lock = threading.RLock()
 
 FOLDERS = (
     "identidade",
@@ -150,19 +153,37 @@ class BrainStore:
                 os.unlink(temporary)
         return target
 
-    def remember_preference(self, preference):
-        """Registra uma preferência explícita, sem inferir preferências por conta própria."""
-        if not isinstance(preference, str):
-            raise ValueError("Preferência deve ser texto.")
-        value = " ".join(preference.split()).strip()
+    @staticmethod
+    def _memory_text(text):
+        if not isinstance(text, str):
+            raise ValueError("A memória deve ser texto.")
+        value = " ".join(text.split()).strip()
         if not value or len(value) > MAX_PREFERENCE_CHARS or any(ord(c) < 32 for c in value):
-            raise ValueError("Preferência inválida ou grande demais.")
+            raise ValueError("Memória inválida ou grande demais.")
+        return value
+
+    def remember_preference(self, preference):
+        """Registra somente uma preferência explicitamente confirmada."""
+        value = self._memory_text(preference)
         self.initialize()
         relative = "identidade/preferencias.md"
-        current = self.read_note(relative)
         line = "- " + value
-        if not any(row.casefold().strip() == line.casefold() for row in current.splitlines()):
-            self.write_note(relative, current.rstrip() + "\n" + line + "\n")
+        with _write_lock:
+            current = self.read_note(relative)
+            if not any(row.casefold().strip() == line.casefold() for row in current.splitlines()):
+                self.write_note(relative, current.rstrip() + "\n" + line + "\n")
+        return line
+
+    def remember_knowledge(self, knowledge):
+        """Guarda aprendizado explícito sem tratá-lo como preferência pessoal."""
+        value = self._memory_text(knowledge)
+        self.initialize()
+        relative = "conhecimentos/aprendizados_gerais.md"
+        line = "- " + datetime.now(timezone.utc).strftime("%Y-%m-%d") + " — " + value
+        with _write_lock:
+            current = self.read_note(relative)
+            if not any(row.casefold().strip() == line.casefold() for row in current.splitlines()):
+                self.write_note(relative, current.rstrip() + "\n" + line + "\n")
         return line
 
     def preference_context(self, max_chars=4000):
