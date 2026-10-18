@@ -403,6 +403,16 @@
         }
         .save-memory-btn:hover { color: var(--text-primary); }
 
+        .brain-list { max-height: 40vh; overflow: auto; display: grid; gap: 10px; }
+        .brain-item { padding: 10px; border: 1px solid var(--border);
+            border-radius: 8px; background: var(--bg-tertiary); }
+        .brain-item p { color: var(--text-primary); white-space: pre-wrap; overflow-wrap: anywhere; }
+        .brain-item button { margin-top: 6px; font-size: 0.85rem; padding: 7px 12px; }
+        .brain-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .brain-actions button { flex: 1; }
+        .modal-box textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary);
+            font: inherit; resize: vertical; }
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
             .sidebar { position: fixed; z-index: 100; height: 100%; }
@@ -435,6 +445,7 @@
         <div class="topbar">
             <button class="toggle-sidebar-btn" aria-label="Alternar conversas" onclick="toggleSidebar()">☰</button>
             <div class="topbar-title" id="topbarTitle">Menor</div>
+            <button class="toggle-sidebar-btn" onclick="openBrain()" aria-label="Abrir conhecimentos salvos" title="Meu cérebro">🧠</button>
             <button class="toggle-sidebar-btn" onclick="exportChat()" aria-label="Exportar conversa em Markdown">↓</button>
             <div class="topbar-model" id="modelName">qwen2.5-coder:7b</div>
         </div>
@@ -491,6 +502,30 @@
             <p id="memoryError" class="modal-error" role="alert"></p>
         </div>
     </section>
+    <section id="brainPanel" class="modal-layer" aria-label="Gerenciar conhecimentos" hidden>
+        <div class="modal-box">
+            <h2>Conhecimentos do Menor</h2>
+            <p>Consulte, corrija ou apague o que foi salvo no cérebro.</p>
+            <input id="brainSearchInput" type="search" maxlength="2000"
+                placeholder="Pesquisar conhecimento..." aria-label="Pesquisar conhecimento">
+            <div class="brain-actions">
+                <button onclick="searchBrain()">Pesquisar</button>
+                <button class="secondary" onclick="loadBrain()">Mostrar todos</button>
+            </div>
+            <div id="brainList" class="brain-list" aria-live="polite"></div>
+            <div id="brainEditor" hidden>
+                <p>Corrigir o conhecimento selecionado:</p>
+                <textarea id="brainEditText" rows="3" maxlength="280"
+                    aria-label="Editar conhecimento"></textarea>
+                <div class="brain-actions">
+                    <button onclick="saveBrainEdit()">Salvar correção</button>
+                    <button class="secondary" onclick="cancelBrainEdit()">Cancelar</button>
+                </div>
+            </div>
+            <p id="brainError" class="modal-error" role="status"></p>
+            <button class="secondary" onclick="closeBrain()">Fechar</button>
+        </div>
+    </section>
     <script>
         // ========== STATE ==========
         let canSave = true;
@@ -500,6 +535,8 @@
         let authSetupNeeded = false;
         let pendingMemory = null;
         let savingMemory = false;
+        let brainItems = [];
+        let brainEditingId = null;
 
         // ========== INIT ==========
         renderConvList();
@@ -606,6 +643,126 @@
                 if (failure.message.includes('Entre com a senha')) checkAuth();
             } finally {
                 savingMemory = false;
+            }
+        }
+
+        // ========== CONHECIMENTOS DO CEREBRO ==========
+        async function brainRequest(path, body) {
+            const options = body === undefined ? {} : {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            };
+            const response = await fetch(path, options);
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(typeof data.detail === 'string' ? data.detail
+                    : 'Não foi possível consultar o cérebro.');
+            }
+            return response.json();
+        }
+
+        function renderBrain(items, searchable = false) {
+            const list = document.getElementById('brainList');
+            list.replaceChildren();
+            if (!items.length) {
+                const empty = document.createElement('p');
+                empty.textContent = 'Nenhum conhecimento encontrado.';
+                list.appendChild(empty);
+                return;
+            }
+            for (const item of items) {
+                const card = document.createElement('div');
+                card.className = 'brain-item';
+                const body = document.createElement('p');
+                body.textContent = item.text || item.content;
+                card.appendChild(body);
+                if (item.date || searchable) {
+                    const meta = document.createElement('p');
+                    meta.textContent = item.date || (item.source + ':' + item.line);
+                    card.appendChild(meta);
+                }
+                if (!searchable) {
+                    const edit = document.createElement('button');
+                    edit.textContent = 'Editar';
+                    edit.onclick = () => editBrainItem(item.id);
+                    card.appendChild(edit);
+                    const remove = document.createElement('button');
+                    remove.className = 'secondary';
+                    remove.textContent = 'Excluir';
+                    remove.onclick = () => deleteBrainItem(item.id);
+                    card.appendChild(remove);
+                }
+                list.appendChild(card);
+            }
+        }
+
+        async function openBrain() {
+            document.getElementById('brainPanel').hidden = false;
+            await loadBrain();
+        }
+
+        function closeBrain() {
+            document.getElementById('brainPanel').hidden = true;
+            cancelBrainEdit();
+        }
+
+        async function loadBrain() {
+            document.getElementById('brainError').textContent = '';
+            try {
+                const data = await brainRequest('/memory/knowledge');
+                brainItems = data.items;
+                renderBrain(brainItems);
+            } catch (error) {
+                document.getElementById('brainError').textContent = error.message;
+                if (error.message.includes('Entre com a senha')) checkAuth();
+            }
+        }
+
+        async function searchBrain() {
+            document.getElementById('brainError').textContent = '';
+            const query = document.getElementById('brainSearchInput').value.trim();
+            if (!query) { await loadBrain(); return; }
+            try {
+                const result = await brainRequest('/memory/search', { query, limit: 5 });
+                renderBrain(result.items, true);
+            } catch (error) {
+                document.getElementById('brainError').textContent = error.message;
+            }
+        }
+
+        function editBrainItem(id) {
+            const entry = brainItems.find(item => item.id === id);
+            if (!entry) return;
+            brainEditingId = id;
+            document.getElementById('brainEditText').value = entry.text;
+            document.getElementById('brainEditor').hidden = false;
+        }
+
+        function cancelBrainEdit() {
+            brainEditingId = null;
+            document.getElementById('brainEditor').hidden = true;
+        }
+
+        async function saveBrainEdit() {
+            if (!brainEditingId) return;
+            try {
+                const text = document.getElementById('brainEditText').value.trim();
+                await brainRequest('/memory/knowledge/edit', { id: brainEditingId, text });
+                cancelBrainEdit();
+                await loadBrain();
+            } catch (error) {
+                document.getElementById('brainError').textContent = error.message;
+            }
+        }
+
+        async function deleteBrainItem(id) {
+            if (!window.confirm('Excluir esse conhecimento do cérebro?')) return;
+            try {
+                await brainRequest('/memory/knowledge/delete', { id });
+                await loadBrain();
+            } catch (error) {
+                document.getElementById('brainError').textContent = error.message;
             }
         }
 
