@@ -1172,6 +1172,12 @@
                             save();
                             return;
                         }
+                        if (route.decision === 'plan_tool' && route.tool_plan && route.tool_plan.path) {
+                            routeNotice = 'Iniciei o planejamento da ferramenta em '
+                                + route.tool_plan.path
+                                + '. Ainda preciso implementar e testar o código. '
+                                + 'Podemos definir agora os requisitos e o motor de execução.';
+                        }
                         if (route.decision === 'save' && route.memory && route.memory.path) {
                             routeNotice = 'Registrei no cérebro: ' + route.memory.path + '.';
                         }
