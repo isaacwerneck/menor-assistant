@@ -5,6 +5,7 @@ escolhidos pelo Qwen. Máximo de duas tentativas por missão.
 """
 
 from src.agent.missions import MissionStore
+from src.agent.reviewer import review_image
 from src.tools import local_images
 
 
@@ -35,15 +36,18 @@ def run_once(store=None):
                 raise local_images.LocalImageUnavailable(
                     "Runtime OpenVINO indisponível; instale as dependências opcionais."
                 )
-            # Teste com pixels reais, não marca o modelo como pronto sem executar.
-            proof = local_images.generate("Uma esfera azul sobre fundo branco", steps=6)
-            if proof["status"] != "completed" or not proof.get("id"):
-                raise local_images.LocalImageUnavailable("O modelo não gerou imagem no teste.")
-            return missions.transition(mission_id, "installing", "ready", {
-                "worker": "openvino-sd15-int8",
-                "test_image": proof["url"],
-                "verified": True,
-            })
+            # Um agente revisor independente testa o artefato; no máximo 2 tentativas.
+            for _ in range(2):
+                proof = local_images.generate("Uma esfera azul sobre fundo branco", steps=6)
+                verdict = review_image(proof)
+                if verdict["passed"]:
+                    return missions.transition(mission_id, "installing", "ready", {
+                        "worker": "openvino-sd15-int8",
+                        "test_image": proof["url"],
+                        "verified": True,
+                        "review": verdict,
+                    })
+            raise local_images.LocalImageUnavailable("Imagem não passou na revisão técnica.")
         except (OSError, ValueError, RuntimeError, ImportError) as error:
             return missions.transition(mission_id, "installing", "failed", {
                 "error": type(error).__name__,
