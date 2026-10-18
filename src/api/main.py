@@ -14,6 +14,7 @@ from src.memory.store import BrainStore
 
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def app_lifespan(_app):
     # Nenhum dado mutável é escrito dentro do checkout Git do servidor.
