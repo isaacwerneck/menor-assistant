@@ -151,3 +151,13 @@ ser exibido. A skill testada documenta seu uso no cérebro.
 Esta arquitetura ainda não substitui um sandbox programador nem prova
 qualidade artística. [Arquitetura e limites](docs/arquitetura_multiagente.md).
 
+### Preparação segura do subagente de imagens (PR #9)
+
+O OpenVINO roda em um ambiente virtual isolado do chat, instalado somente após
+autorização da missão. Download e inferência ocorrem em subprocessos com
+limites de duração. O chat mostra preparo, download, teste e bloqueio por
+espaço em disco; o modelo fica fora do Git. Consulte
+[a documentação do subagente local](docs/arquitetura_multiagente.md).
+
+A validação efetiva no notebook continua pendente.
+
