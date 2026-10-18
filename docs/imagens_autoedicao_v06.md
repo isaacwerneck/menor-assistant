@@ -45,6 +45,31 @@ Não executa o patch no servidor, não altera a main nem faz auto-merge.
 A validação estática é parcial e NÃO substitui revisão humana e CI.
 `GET /agent/improve/status` mostra se o opt-in está ativo sem revelar segredos.
 
+## Revisão automática diária e integração no Ubuntu
+
+O timer systemd `menor-review.timer` executa diariamente
+`python -m src.agent.watch`. Ele é instalado automaticamente pelo
+próximo ciclo de deploy com a revisão do repositório, sem exigir novo
+comando de `git pull`. Procura falhas repetidas nos classificadores
+registradas em `~/menor-data/cerebro/memoria/execucoes.jsonl` e registra
+em Markdown o dia da revisão para não criar PR repetido. Falhas de API
+de imagens ou configurações externas NÃO disparam edição de código.
+
+Sem opt-in, o monitor só aponta que a configuração está pendente.
+A API do Menor e a revisão systemd já consultam o mesmo arquivo opcional
+`~/.config/menor/environment`; ele deve ser privado e conter somente
+as chaves configuradas pelo proprietário:
+
+- `MENOR_IMAGE_API_KEY`: chave de API para imagens.
+- `MENOR_AUTODEV_ENABLED=1`: autoriza propostas automáticas em PR.
+- `MENOR_GITHUB_TOKEN`: token de escopo mínimo para escrita em branch
+  e Pull Requests no repositório; não habilite auto-merge.
+
+Estas credenciais NÃO são fornecidas pelo GitHub Connector do ChatGPT ao
+servidor local. Não é possível gerar ou publicar sem configurar serviços
+e credenciais correspondentes. O monitor não abre um PR para cada mensagem
+e não tenta alterar componentes críticos de autenticação ou deploy.
+
 ## Pendências explícitas do plano completo
 
 - Motor local de imagens e reconhecimento visual da foto pelo modelo.
