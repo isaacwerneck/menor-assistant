@@ -13,6 +13,7 @@ import requests
 
 from src.agent.router import classify
 from src.agent.image_intent import image_intent
+from src.agent.self_edit import ImprovementUnavailable, propose, status as dev_status
 from src.agent.resolve import resolve
 from src.memory.store import BrainStore
 from src.memory.manage import KnowledgeManager
@@ -104,6 +105,28 @@ def tool_execute(body: ToolRequest, request: Request):
         except (OSError, ValueError):
             logger.warning("Não foi possível registrar a falha na auditoria.")
         raise HTTPException(422, "Ferramenta não disponível ou argumentos inválidos.") from error
+
+
+class ImprovementRequest(BaseModel):
+    issue: str = Field(min_length=12, max_length=600)
+    dry_run: bool = True
+
+
+@app.get("/agent/improve/status")
+def improve_status(request: Request):
+    auth.require_owner(request)
+    return dev_status()
+
+
+@app.post("/agent/improve")
+def improve_issue(body: ImprovementRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return propose(body.issue, dry_run=body.dry_run)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    except ImprovementUnavailable as error:
+        raise HTTPException(503, str(error)) from error
 
 
 class ImageRequest(BaseModel):
