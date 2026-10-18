@@ -558,7 +558,7 @@
                 .replace(/^menor[,!]?\s+/i, '');
             const patterns = [
                 /^(?:lembre(?:[-\s]?se)?|lembra(?:[-\s]?se)?|se lembre)\s+(?:(?:de|do|da)\s+)?(?:(?:disso|disto|que|seguinte)\s*[:;,]?\s*)?(.+)$/i,
-                /^(?:anota|anote|guarda|guarde|registra|registre|salva|salve)\s+(?:a[ií]\s+)?(?:(?:isso|na mem[oó]ria|que)\s*[:;,]?\s*)?(.+)$/i,
+                /^(?:anota|anote|guarda|guarde|registra|registre|salva|salve)\s+(?:a[ií]\s*[:;,]?\s*)?(?:(?:isso|na mem[oó]ria|que)\s*[:;,]?\s*)?(.+)$/i,
                 /^quero que (?:voc[eê]|vc) (?:lembre|anote|guarde|registre)\s+(?:(?:de|que)\s+)?(.+)$/i,
             ];
             for (const pattern of patterns) {
@@ -601,8 +601,8 @@
                 const conv = getActiveConv();
                 conv.messages.push({ role: 'user', content: memory.original });
                 const reply = kind === 'preference'
-                    ? 'Memória salva em identidade/preferencias.md. Vou considerar essa preferência nas próximas respostas.'
-                    : 'Conhecimento salvo em conhecimentos/aprendizados_gerais.md. A recuperação automática ainda será implementada.';
+                    ? 'Preferência salva no cérebro (identidade/preferencias.md). Vou considerá-la nas próximas respostas.'
+                    : 'Conhecimento anotado no cérebro (conhecimentos/aprendizados_gerais.md). A recuperação automática ainda será implementada.';
                 conv.messages.push({ role: 'bot', content: reply });
                 save();
                 openConv(conv.id);
