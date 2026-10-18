@@ -1149,6 +1149,12 @@
                         if (route.decision === 'save' && route.memory && route.memory.path) {
                             routeNotice = 'Registrei no cérebro: ' + route.memory.path + '.';
                         }
+                        if (route.decision === 'select_project' && route.selected_project) {
+                            conv.project = route.selected_project.slug;
+                            save();
+                            updateProjectBadge();
+                            routeNotice = 'Vamos continuar no projeto ' + route.selected_project.name + '.';
+                        }
                         if (route.decision === 'add_project_note'
                                 && route.project_note && route.project_note.path) {
                             routeNotice = 'Anotei no projeto: ' + route.project_note.path + '.';
