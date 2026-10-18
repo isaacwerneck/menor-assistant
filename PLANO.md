@@ -273,4 +273,17 @@ Implementação incremental: [roteamento contextual](docs/roteamento_contextual.
 
 ---
 
+## 13. Entrega integrada de imagens e autoedição supervisionada — PR #7
+
+- [x] Roteamento independente de imagens (criar/editar/pedir detalhes).
+- [x] Estado de imagem pendente por conversa e anexo discreto no celular.
+- [x] Provedor externo opcional de imagem, protegido por autenticação; sem chaves, nenhum sucesso inventado.
+- [x] Motor de proposta de correção restrito a arquivos permitidos, com branch e PR rascunho após opt-in.
+- [ ] Provedor local sem dependência de nuvem; execução autônoma de programação em sandbox.
+- [ ] Web/voz e observabilidade proativa, backups, rollback e testes reais no notebook.
+
+Ver [guia de imagens/autoedição](docs/imagens_autoedicao_v06.md).
+
+---
+
 **Direção acordada:** *Você ensina → Menor registra → Menor recupera → Menor aplica → Menor avalia → Menor propõe melhorias.*
