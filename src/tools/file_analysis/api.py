@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.security import auth
 from src.tools.file_analysis import service
@@ -66,6 +66,13 @@ def file_capabilities(request: Request):
 class FileQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=500)
 
+    @field_validator("question")
+    @classmethod
+    def nonempty(cls, value):
+        if not value.strip():
+            raise ValueError("A pergunta não pode ser vazia.")
+        return value.strip()
+
 
 def _valid_id(file_id):
     if FILE_ID.fullmatch(file_id) is None:
@@ -88,6 +95,8 @@ async def file_context(file_id: str, body: FileQuestion, request: Request):
         output = await asyncio.to_thread(retrieve_context, file_id, body.question)
     except FileRejected as exc:
         raise HTTPException(404, "Arquivo não encontrado ou inválido.") from exc
+    except ValueError as exc:
+        raise HTTPException(422, "Pergunta documental inválida.") from exc
     except OSError as exc:
         logger.warning("Contexto documental indisponível: %s", type(exc).__name__)
         raise HTTPException(503, "Leitor documental indisponível.") from exc
