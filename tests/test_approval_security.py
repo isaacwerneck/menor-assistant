@@ -52,7 +52,7 @@ class ApprovalTests(unittest.TestCase):
                 with patch("src.agent.runner.MissionStore", return_value=missions):
                     _, progress = runner._mission_turn(state, "conseguimos fazer cara?")
                 self.assertTrue(progress["handled"])
-                self.assertIn("aguardando o worker", progress["reply"])
+                self.assertIn("aguardando o executor", progress["reply"])
                 self.assertEqual(missions.get(mission["id"])["status"], "queued")
                 with self.assertRaises(ValueError):
                     missions.decide(mission["id"], True)
