@@ -77,6 +77,7 @@ class SmokeTests(unittest.TestCase):
     def test_invalid_health_skips_private_requests(self, conn):
         for payload in (b"{}", b"[]", b"not json", b'{"status":"online"}', b"x" * 8200):
             with self.subTest(payload=payload[:10]):
+                conn.reset_mock()
                 conn.side_effect = [fake_http(200, payload)]
                 report = smoke.run_smoke()
                 self.assertEqual(report["checks"][0]["status"], "critical")
