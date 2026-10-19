@@ -203,7 +203,7 @@ def _advance(state, message, history):
             return _answer("Ação cancelada, sem executar a ferramenta.")
         if choice != "approve":
             return _answer(
-                "Esta ação específica ainda espera autorização. "
+                "Esta ação específica está pendente de autorização. "
                 "Diga 'eu aprovo' ou 'não autorizo'; fazer perguntas não a executa.", **state,
             )
         receipt = perform(state["tool"], state["arguments"], dry_run=False)
