@@ -1166,6 +1166,15 @@ test('Chat E: refresh concorrente usa uma consulta e evita cartões duplicados',
     assert.equal(calls.length, 2); // apenas um GET de missões e um da sessão
     assert.equal(elements.get('goals').children.length, 1);
     assert.equal(elements.get('refresh').disabled, false);
+
+    // Uma falha parcial não pode ser apresentada como consulta bem-sucedida.
+    context.fetch = async url => {
+        if (url.includes('/agent/runs/')) throw new Error('offline');
+        return { ok: true, status: 200, json: async () => ({ items: [] }) };
+    };
+    await context.refresh();
+    assert.match(elements.get('status').textContent, /Consulta parcial/i);
+    assert.match(elements.get('goals').children[0].textContent, /não foi possível consultar/i);
 });
 
 test('D01: confirmação solta não cria autorização nem execução supervisionada', async () => {
