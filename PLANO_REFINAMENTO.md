@@ -430,3 +430,15 @@ candidato sem integrador auditado e autorização.
 
 A cobertura de CI usa mocks; a qualidade de personagens e sprites ainda
 precisa de imagem real e avaliador visual confiável no hardware.
+
+
+## R19 — Regressões de planejamento em vários assuntos
+
+Verificar transições entre documentos, música, robótica e dúvidas incidentais,
+sem prefixos de comando. Testar retomada com IDs reais e recusar IDs falsos.
+Confirmar que uma pergunta paralela não apaga o plano, que o modelo offline
+não cria estado incorreto e que uma aprovação de escrita não executa antes
+do consentimento. Verificar duplicação de turnos e logs sem segredos.
+
+Métricas de falhas são observabilidade, não prova de melhoria cognitiva;
+a avaliação qualitativa real do Ollama segue pendente no hardware.
