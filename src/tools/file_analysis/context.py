@@ -7,7 +7,6 @@ import re
 import unicodedata
 
 from src.tools.file_analysis import service
-from src.tools.file_analysis.contracts import FileRejected
 
 VERSION = "1.0.0"
 STOPWORDS = frozenset({
