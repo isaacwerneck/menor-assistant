@@ -643,3 +643,18 @@ test('pergunta apos autorizacao consulta missao e nao promete nada via Qwen', as
     assert.equal(ui.routed.length, 0);
     assert.match(conv.messages.at(-1).content, /subagente local/);
 });
+
+test('recibo de imagem permanece no histórico e nunca equivale a qualidade aprovada', () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('imagem criada');
+    conv.messages.push({
+        role: 'bot', content: 'Imagem gerada.', image: '/images/files/' + 'a'.repeat(32),
+        artifact: {
+            kind: 'image', prompt: 'mago 32x32 com capa roxa',
+            actual_size: [32, 32], file_verified: true, content_verified: false,
+        },
+    });
+    const history = ui.context.buildHistory(conv.messages, 'o que acabou de gerar?');
+    assert.match(history.at(-1).content, /mago 32x32/);
+    assert.match(history.at(-1).content, /NÃO verificado/);
+});
