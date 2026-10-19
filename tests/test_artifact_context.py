@@ -58,6 +58,15 @@ class ArtifactTests(unittest.TestCase):
         self.assertFalse(receipt["content_verified"])
         self.assertIn("não", artifacts.describe_artifact(receipt))
 
+    def test_other_image_entrypoint_persists_the_same_receipt(self):
+        image = self._saved()
+        proof = artifacts.artifact_receipt({
+            **image, "prompt": "mago com capa roxa", "worker": "openvino-sd15-int8",
+            "review": {"passed": True, "width": 32, "height": 32},
+        })
+        TaskStore().record_artifact("imgSessionDirect", proof)
+        self.assertEqual(TaskStore().inspect("imgSessionDirect")["last_result"], proof)
+
     @patch("src.agent.runner.capability_status", return_value={"ready": True})
     @patch("src.agent.runner.generate_image")
     def test_followup_uses_persisted_tool_receipt_even_after_restart(self, generate, capability):
