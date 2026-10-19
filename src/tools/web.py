@@ -3,6 +3,7 @@ import http.client
 import ipaddress
 import logging
 import os
+import re
 import socket
 import ssl
 import time
@@ -18,6 +19,32 @@ MAX_TEXT = 12000
 
 class WebUnavailable(RuntimeError):
     pass
+
+
+PRIVATE_QUERY = re.compile(
+    r"(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"
+    r"|\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|github_pat_[A-Za-z0-9_]{12,})\b"
+    r"|\b(?:minha|meu|nossa|nosso)\s+(?:senha|token|chave|arquivo|documento|"
+    r"projeto|repositorio|memoria|historico|conversa|dados?)\b"
+    r"|(?:/home/|~/|C:\\\\Users\\\\|\.env\b|BEGIN PRIVATE KEY)"
+    r"|\b(?:password|api[_ -]?key|access[_ -]?token|bearer)\s*[:=]\s*\S+)",
+    re.I,
+)
+
+
+def public_query(query):
+    """Bloqueia dados privados antes de qualquer envio a buscadores públicos."""
+    if not isinstance(query, str) or not 3 <= len(query.strip()) <= 280:
+        raise ValueError("Pesquisa deve ter entre 3 e 280 caracteres.")
+    if PRIVATE_QUERY.search(query):
+        raise ValueError("Consulta contém contexto privado; reformule usando termos públicos.")
+    for match in re.finditer(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", query):
+        try:
+            if not ipaddress.ip_address(match.group()).is_global:
+                raise ValueError("Consulta contém endereço de rede privada.")
+        except ipaddress.AddressValueError:
+            raise ValueError("Consulta contém endereço inválido.") from None
+    return query.strip()
 
 
 def public_url(url):
@@ -185,6 +212,7 @@ def _search_html(query):
 
 
 def search(query):
+    query = public_query(query)
     try:
         return _search_html(query)
     except (WebUnavailable, OSError, http.client.HTTPException) as error:
