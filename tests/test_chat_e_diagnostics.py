@@ -64,6 +64,21 @@ class DiagnosticsEndpointTests(unittest.TestCase):
         self.assertEqual(status, 503)
         self.assertEqual(reply, {"status": "unavailable", "error": "diagnostics_unavailable"})
 
+    def test_busy_probe_slots_refuse_extra_request(self):
+        # O limite protege inclusive threads que continuem após timeout HTTP.
+        from src.api.private_diagnostics import _SLOTS
+        self.assertTrue(_SLOTS.acquire(blocking=False))
+        self.assertTrue(_SLOTS.acquire(blocking=False))
+        try:
+            with patch("src.api.private_diagnostics.run_checks") as probe:
+                status, answer = request("GET", "/ops/diagnostics", cookie=self.cookie)
+            self.assertEqual(status, 503)
+            self.assertEqual(answer["error"], "diagnostics_unavailable")
+            probe.assert_not_called()
+        finally:
+            _SLOTS.release()
+            _SLOTS.release()
+
     def test_probes_have_no_client_supplied_commands(self):
         with patch("src.api.private_diagnostics.run_checks",
                    return_value={"read_only": True, "checks": []}) as probe:
