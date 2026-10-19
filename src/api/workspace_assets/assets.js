@@ -119,6 +119,8 @@ function drawMissions() {
 }
 
 async function loadMissions() {
+  // Dados de consulta anterior não sobrevivem a erro na atualização.
+  latestMissions = [];
   const data = await readJson("/agent/missions");
   if (!Array.isArray(data.items)) throw new Error("Lista de missões inválida.");
   latestMissions = data.items.filter(x => x && typeof x === "object").slice(0, 20);
