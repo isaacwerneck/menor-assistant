@@ -76,17 +76,23 @@ def _strings(items, limit):
 
 
 def _bounded_evidence(value, budget=2400):
-    """Compacta recibos como dados não confiáveis, sem serialização ilimitada."""
+    """Mantém metadados verificáveis e descarta conteúdo bruto não confiável."""
     if not isinstance(value, dict):
         return None
-    # Apenas metadados de um recibo e excertos pequenos; nunca enviar payload bruto.
     allowed = ("tool", "status", "phase", "file_id", "page", "line", "sheet",
-               "source", "citation", "url", "mime", "error", "summary", "excerpt")
+               "source", "citation", "url", "mime", "error", "summary", "excerpt",
+               "kind", "id", "actual_size", "requested_size", "worker",
+               "file_verified", "content_verified", "limitation")
     compact = {}
     for key in allowed:
         item = value.get(key)
-        if isinstance(item, (str, int, float, bool)) and not isinstance(item, complex):
-            compact[key] = str(item)[:360] if isinstance(item, str) else item
+        if isinstance(item, str):
+            compact[key] = item[:360]
+        elif type(item) in (int, float, bool):
+            compact[key] = item
+        elif key in ("actual_size", "requested_size") and isinstance(item, (list, tuple)):
+            if len(item) == 2 and all(type(n) is int and 0 < n <= 8192 for n in item):
+                compact[key] = list(item)
     if not compact:
         return {"evidence": "metadata_unavailable"}
     encoded = json.dumps(compact, ensure_ascii=False)
