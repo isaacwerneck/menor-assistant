@@ -151,8 +151,17 @@ def handle(message, history, automatic=False):
     explicit = bool(RESEARCH.search(message))
     if not explicit and not automatic:
         return None
+    # Não exportar assuntos privados ou histórico para um buscador público.
     try:
-        decision = plan(message, history)
+        web.public_query(message[:280])
+    except ValueError:
+        if not explicit:
+            return None
+        return {"reply": "Essa consulta parece conter dados privados ou de projetos. "
+                "Reformule apenas com termos públicos para pesquisar.",
+                "sources": [], "saved": None}
+    try:
+        decision = plan(message, [] if automatic and not explicit else history)
         if decision["action"] == "chat" and not explicit:
             return None
         query = decision.get("query") or message[:280]
