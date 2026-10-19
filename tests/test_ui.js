@@ -724,3 +724,14 @@ test('Chat D: aprovações de ação sensível não são confundidas com refinam
     assert.equal(ui.agentCalls.length, 1);
     assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
 });
+
+
+test('Chat D: pedido para corrigir bug de software não edita imagem recém-gerada', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'corrige esse bug no código do aplicativo';
+    await ui.context.sendMsg();
+    assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
+    assert.equal(ui.agentCalls.length, 1);
+});
