@@ -1,5 +1,4 @@
 """Chat E E5: API local consultiva deve ser autenticada e minimizada."""
-import asyncio
 import json
 import os
 import tempfile
@@ -52,8 +51,8 @@ class DiagnosticsEndpointTests(unittest.TestCase):
         self.assertNotIn("details", dumped)
 
     def test_unknown_states_are_not_upgraded_to_green(self):
-        with patch("src.api.private_diagnostics.run_checks", return_value={
-            "read_only": True, "checks": []}):
+        with patch("src.api.private_diagnostics.run_checks",
+                   return_value={"read_only": True, "checks": []}):
             status, answer = request("GET", "/ops/diagnostics", cookie=self.cookie)
         self.assertEqual(status, 200)
         self.assertEqual(answer["components"]["service"]["status"], "unknown")
@@ -66,8 +65,8 @@ class DiagnosticsEndpointTests(unittest.TestCase):
         self.assertEqual(reply, {"status": "unavailable", "error": "diagnostics_unavailable"})
 
     def test_probes_have_no_client_supplied_commands(self):
-        with patch("src.api.private_diagnostics.run_checks", return_value={
-            "read_only": True, "checks": []}) as probe:
+        with patch("src.api.private_diagnostics.run_checks",
+                   return_value={"read_only": True, "checks": []}) as probe:
             status, _ = request("GET", "/ops/diagnostics?command=rm%20-rf%20--%20%2F",
                                 cookie=self.cookie)
         self.assertEqual(status, 200)
