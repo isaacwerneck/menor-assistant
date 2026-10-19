@@ -212,6 +212,14 @@ def _tool_loop(message, history):
                 "approval", tool=name, arguments=arguments,
             )
         receipt = perform(name, arguments, dry_run=False)
+        if receipt.get("status") != "executed":
+            state, result = _answer(
+                "A consulta à ferramenta " + name + " não retornou evidência utilizável. "
+                "Não vou concluir com conteúdo inventado ou repetir automaticamente.",
+                "blocked",
+            )
+            result["events"] = [{"tool": name, "status": "failed"}]
+            return state, result
         observations.append({**receipt, "result": json.dumps(receipt["result"], ensure_ascii=False)[:6000]})
     return _answer("Atingi o limite de quatro passos. Consulte as operações antes de continuar.", "blocked")
 
@@ -230,6 +238,14 @@ def _selected_tool(name, arguments):
             "approval", tool=name, arguments=arguments,
         )
     receipt = perform(name, arguments, dry_run=False)
+    if receipt.get("status") != "executed":
+        current, answer = _answer(
+            "A ferramenta " + name + " não apresentou resultado comprovado. "
+            "Verifique a disponibilidade do arquivo ou do modelo e tente novamente depois.",
+            "blocked",
+        )
+        answer["events"] = [{"tool": name, "status": "failed"}]
+        return current, answer
     result = json.dumps(receipt["result"], ensure_ascii=False)[:6000]
     current, answer = _answer(
         "Resultado verificado da ferramenta " + name + ":\n" + result,
