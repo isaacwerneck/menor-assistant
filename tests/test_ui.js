@@ -19,6 +19,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
     const imageCalls = [];
     const agentCalls = [];
     const repairCalls = [];
+    const feedbackCalls = [];
     const missionCalls = [];
     let knowledgeItems = [{ id: '3.0123456789abcdef', text: 'Meu jogo usa Godot', date: '2026-10-18',
         source: 'conhecimentos/aprendizados_gerais.md' }];
@@ -51,6 +52,10 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         FormData: class { constructor() { this.values = {}; } append(k, v) { this.values[k] = v; } },
         URL: { createObjectURL(value) { blob = value; return 'blob:test'; }, revokeObjectURL() {} },
         fetch: async (url, options) => {
+            if (url === '/agent/feedback') {
+                feedbackCalls.push(JSON.parse(options.body));
+                return { ok: true, json: async () => ({ status: 'saved', id: 'approved-example' }) };
+            }
             if (url === '/agent/run') {
                 agentCalls.push(JSON.parse(options.body));
                 return { ok: true, json: async () => ({ handled: false }) };
@@ -190,9 +195,31 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, agentCalls, repairCalls, missionCalls,
+    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, agentCalls, repairCalls, missionCalls, feedbackCalls,
         downloads, getBlob: () => blob };
 }
+
+test('aprendizado supervisionado: só salva exemplo após consentimento explícito', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'Qual é o sistema operacional do servidor?';
+    await ui.context.sendMsg();
+    ui.context.openFeedback();
+    assert.match(ui.elements.get('feedbackPrompt').value, /sistema operacional/);
+    assert.equal(ui.elements.get('feedbackConsent').checked, false);
+    ui.elements.get('feedbackPreferred').value = 'O sistema do servidor é Ubuntu.';
+    await ui.context.saveFeedback();
+    assert.equal(ui.feedbackCalls.length, 0);
+    assert.match(ui.elements.get('feedbackResult').textContent, /autoriza/);
+    ui.elements.get('feedbackConsent').checked = true;
+    await ui.context.saveFeedback();
+    assert.equal(ui.feedbackCalls.length, 1);
+    assert.equal(ui.feedbackCalls[0].consent, true);
+    assert.equal(ui.feedbackCalls[0].desired_reply, 'O sistema do servidor é Ubuntu.');
+    assert.match(ui.elements.get('feedbackResult').textContent, /aprovado/i);
+    assert.equal(ui.elements.get('feedbackConsent').checked, false);
+    ui.context.closeFeedback();
+    assert.equal(ui.elements.get('feedbackPanel').hidden, true);
+});
 
 test('núcleo do servidor assume tarefa e mostra recibo sem chamar roteadores antigos', async () => {
     const ui = browser();

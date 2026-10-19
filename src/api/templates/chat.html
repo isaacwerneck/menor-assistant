@@ -657,6 +657,7 @@
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
             <button type="button" onclick="openBrain()">Conhecimentos</button>
+            <button type="button" onclick="openFeedback()">Ensinar uma resposta</button>
         </nav>
         <div class="sidebar-conversations" id="convList">
             <div class="sidebar-section-title">Conversas Recentes</div>
@@ -755,6 +756,24 @@
         </form>
     </section>
 
+    <section id="feedbackPanel" class="modal-layer" aria-label="Ensinar resposta ao Menor" hidden>
+        <div class="modal-box">
+            <h2>Ensinar ao Menor</h2>
+            <p>Corrija uma resposta para orientar conversas futuras. A correção só será
+                salva quando você confirmar. Isso não treina o modelo nem autoriza ferramentas.</p>
+            <label for="feedbackPrompt">Pedido original</label>
+            <textarea id="feedbackPrompt" rows="3" maxlength="1200"
+                aria-label="Pedido original"></textarea>
+            <label for="feedbackPreferred">Resposta que você prefere</label>
+            <textarea id="feedbackPreferred" rows="4" maxlength="1200"
+                aria-label="Resposta preferida" placeholder="Escreva como o Menor deveria responder."></textarea>
+            <label><input id="feedbackConsent" type="checkbox">
+                Autorizo salvar este exemplo no servidor privado do Menor.</label>
+            <p id="feedbackResult" role="status"></p>
+            <button type="button" onclick="saveFeedback()">Salvar exemplo aprovado</button>
+            <button type="button" class="secondary" onclick="closeFeedback()">Fechar</button>
+        </div>
+    </section>
     <section id="brainPanel" class="modal-layer" aria-label="Gerenciar conhecimentos" hidden>
         <div class="modal-box">
             <h2>Conhecimentos do Menor</h2>
@@ -813,6 +832,7 @@
             const current = activeGeneration;
             generationSequence += 1;
             if (current.controller) current.controller.abort();
+            if (current.timer && typeof clearInterval === 'function') clearInterval(current.timer);
             const notice = 'Resposta interrompida no navegador. O servidor pode continuar ' +
                 'processando; nenhuma operação será repetida automaticamente.';
             if (current.content) {
@@ -903,6 +923,58 @@
                 authSetupNeeded = false;
             } catch (failure) {
                 error.textContent = failure.message;
+            }
+        }
+
+        // ========== APRENDIZADO CONTEXTUAL COM CONSENTIMENTO ==========
+        function openFeedback() {
+            const conv = getActiveConv();
+            const messages = conv ? conv.messages : [];
+            const lastBot = messages.findLastIndex(m => m.role === 'bot');
+            const preceding = lastBot >= 0
+                ? messages.slice(0, lastBot).findLast(m => m.role === 'user') : null;
+            document.getElementById('feedbackPrompt').value =
+                preceding ? preceding.content.slice(0, 1200) : '';
+            document.getElementById('feedbackPreferred').value = '';
+            document.getElementById('feedbackConsent').checked = false;
+            document.getElementById('feedbackResult').textContent = '';
+            document.getElementById('feedbackPanel').hidden = false;
+        }
+
+        function closeFeedback() {
+            document.getElementById('feedbackPanel').hidden = true;
+            document.getElementById('feedbackConsent').checked = false;
+        }
+
+        async function saveFeedback() {
+            const result = document.getElementById('feedbackResult');
+            const prompt = document.getElementById('feedbackPrompt').value.trim();
+            const desiredReply = document.getElementById('feedbackPreferred').value.trim();
+            const consent = document.getElementById('feedbackConsent').checked;
+            if (!consent) {
+                result.textContent = 'Confirme a autorização antes de salvar.';
+                return;
+            }
+            if (prompt.length < 8 || desiredReply.length < 8) {
+                result.textContent = 'Escreva o pedido e uma resposta aprovada com pelo menos 8 caracteres.';
+                return;
+            }
+            try {
+                const response = await fetch('/agent/feedback', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, desired_reply: desiredReply, consent: true }),
+                });
+                if (!response.ok) {
+                    throw new Error('Não foi possível salvar o exemplo. Nenhuma aprendizagem foi confirmada.');
+                }
+                const receipt = await response.json();
+                result.textContent = receipt.status === 'duplicate'
+                    ? 'Essa correção já estava aprovada.'
+                    : 'Exemplo aprovado e salvo. Ele poderá orientar respostas futuras.';
+                document.getElementById('feedbackConsent').checked = false;
+            } catch (error) {
+                result.textContent = error.message;
             }
         }
 
@@ -1453,7 +1525,9 @@
             };
             conv.pendingAgentRequest = payload;
             save();
-            content.textContent = 'Consultando capacidades e planejando a próxima ação...';
+            content.textContent = 'Interpretando contexto e escolhendo a próxima ação...';
+            document.getElementById('generationStatus').textContent =
+                'Analisando a intenção com o modelo local…';
             const response = await turnFetch('/agent/run', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -1814,6 +1888,13 @@
                 conv: null, content: null,
             };
             activeGeneration = generation;
+            generation.timer = setInterval(() => {
+                if (activeGeneration === generation) {
+                    const seconds = Math.floor((Date.now() - generation.started) / 1000);
+                    document.getElementById('generationStatus').textContent =
+                        'Menor está processando há ' + seconds + 's. Você pode parar ou trocar de chat.';
+                }
+            }, 1000);
             document.getElementById('cancelBtn').hidden = false;
             document.getElementById('generationStatus').hidden = false;
             document.getElementById('generationStatus').textContent = 'Processando mensagem…';
@@ -1981,6 +2062,8 @@
                 }
 
                 assertLiveTurn(conv);
+                document.getElementById('generationStatus').textContent =
+                    'Aguardando o início da resposta do Ollama…';
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
                 let fullReply = '';
@@ -1990,6 +2073,11 @@
                     assertLiveTurn(conv);
                     if (done) break;
                     const chunk = decoder.decode(value, { stream: true });
+                    if (!fullReply && chunk) {
+                        const elapsed = ((Date.now() - generation.started) / 1000).toFixed(1);
+                        document.getElementById('generationStatus').textContent =
+                            'Primeiro texto recebido em ' + elapsed + 's.';
+                    }
                     fullReply += chunk;
                     botContent.textContent = routeNotice + fullReply;
                     scrollToBottom();
@@ -2009,6 +2097,9 @@
                     botContent.classList.remove('cursor');
                     isGenerating = false;
                     activeGeneration = null;
+                    if (generation.timer && typeof clearInterval === 'function') {
+                        clearInterval(generation.timer);
+                    }
                     document.getElementById('sendBtn').disabled = false;
                     document.getElementById('cancelBtn').hidden = true;
                     document.getElementById('generationStatus').hidden = true;
