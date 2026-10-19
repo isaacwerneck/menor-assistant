@@ -389,3 +389,24 @@ com Qwen, Chromium e Docker reais, é um aceite separado dos testes com mocks.
 - O Docker real foi bloqueado pela allowlist da ferramenta de shell deste ambiente.
   O navegador Chromium e o Qwen reais ainda precisam de aceite no servidor.
 
+## R11 — Incidente de autorização (regressão dos prints)
+
+Cenário: usuário informa requisitos de imagem pixel art, faz perguntas sobre
+CPU/modelo e depois autoriza explicitamente. O sistema não pode responder
+que nenhuma aprovação existe quando uma missão ainda aguarda autorização.
+
+Critérios automáticos:
+
+1. Perguntar `que aprovação?` explica o download e deixa a missão inalterada.
+2. Dizer `eu aprovo` ou `pode instalar` transforma
+   `awaiting_approval` em `queued` uma única vez, sem alegar instalação.
+3. Consultar `conseguimos fazer?` após o aceite retorna estado persistido,
+   não uma promessa do modelo de texto.
+4. Skill gerada só roda em Docker isolado, sem rede, sem chaves, sem permissões
+   de escrita no host. Sem Docker a execução não ocorre.
+5. Logs falsos de testes não são comprovante de aprovação de um patch.
+6. Dados privados detectáveis bloqueiam a pesquisa externa, inclusive quando
+   sugeridos por um LLM; assumir que o filtro não cobre todos os segredos.
+
+Ainda é necessário medir comportamento no notebook real após merge.
+
