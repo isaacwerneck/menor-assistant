@@ -442,3 +442,14 @@ do consentimento. Verificar duplicação de turnos e logs sem segredos.
 
 Métricas de falhas são observabilidade, não prova de melhoria cognitiva;
 a avaliação qualitativa real do Ollama segue pendente no hardware.
+
+## R21 — Revisor de plano independente, sem confiança cega
+
+A revisão com segundo modelo local é um parecer, não uma garantia. A saída é
+validada por contrato estruturado e não pode selecionar ferramenta ou liberar
+aprovação. Na divergência, permite UMA reformulação sem efeitos colaterais;
+se persistir dúvida, a proposta é identificada como preliminar.
+
+Próximos testes: criar benchmarks inéditos de mudança de domínio, qualidade
+factual, latência no i7, consumo de RAM e risco de crítico superconfiante.
+Manter revisão desabilitada por padrão até essa validação real.

@@ -123,3 +123,17 @@ avaliação separada, em vez de inferência automática baseada na existência d
   sem liberar alterações automáticas irrestritas.
 
 Detalhes: docs/chat_a_objetivos_contextuais.md.
+
+## I3 — Revisão independente de planos (Chat A, PR #29)
+
+- [x] Um segundo julgamento Ollama, opcional, compara pedido atual com objetivo,
+  etapas e critérios, sem classificação rígida por gênero.
+- [x] Divergência produz no máximo uma reformulação. Ausência de informações
+  essenciais produz pergunta; modelo indisponível preserva resposta preliminar.
+- [x] Parecer nunca concede permissão de ferramenta, instalação ou publicação.
+- [x] Testes isolados para erro de domínio, resposta inválida, indisponibilidade
+  e impossibilidade de executar operações pela crítica.
+- [ ] Medir tempo e qualidade do segundo julgamento no servidor i7 antes de
+  ativá-lo para todos os pedidos. Por padrão fica desligado por custo de CPU.
+
+Detalhes: [revisão de planos](docs/chat_a_revisao_de_planos.md).

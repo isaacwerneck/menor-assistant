@@ -273,3 +273,14 @@ adapta prompts em português com Ollama local. Uma revisão visual opcional
 requer configurar MENOR_VISION_MODEL com modelo multimodal local instalado;
 sem isso, a qualidade do conteúdo não é considerada verificada. Compare
 alternativas e limites em [ciclo de capacidades](docs/ciclo_capacidades.md).
+
+### Revisão independente de planos (opcional)
+
+O Chat A pode avaliar planos complexos usando uma segunda chamada ao modelo
+local do Ollama, que verifica correspondência com o pedido, etapas específicas
+e critérios de aceite. Ativa-se com `MENOR_PLAN_REVIEW_ENABLED=1` e pode usar
+um modelo já instalado configurado por `MENOR_PLAN_REVIEW_MODEL`.
+
+Por padrão fica desligada até medirmos desempenho na CPU. Ela nunca concede
+permissões e pode devolver uma pergunta, uma reformulação única ou um plano
+marcado como preliminar. Veja [detalhes](docs/chat_a_revisao_de_planos.md).
