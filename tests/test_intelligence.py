@@ -154,9 +154,8 @@ class FeedbackTests(unittest.TestCase):
         self.assertEqual(self.store.stats()["approved_examples"], 0)
 
     def test_lab_scores_many_domains_without_executing_any_tool(self):
-        fake = lambda message, history, pending=None, capabilities=None: {
-            "move": "clarify",
-        }
+        def fake(message, history, pending=None, capabilities=None):
+            return {"move": "clarify"}
         report = lab.evaluate(fake)
         self.assertEqual(report["cases"], len(lab.CASES))
         self.assertGreater(report["passed"], 0)
