@@ -269,4 +269,77 @@ suportada (por exemplo, criar de verdade um projeto e seus arquivos).
 - Falhas na interpretação não devem resultar em gravação silenciosa nem em
   promessas falsas. A conversa deve continuar ou pedir esclarecimento.
 
-[… truncated at ~4144 of 5141 tokens — use ctx_read with lines= parameter to see specific sections]
+Implementação incremental: [roteamento contextual](docs/roteamento_contextual.md).
+
+---
+
+## 13. Entrega integrada de imagens e autoedição supervisionada — PR #7
+
+- [x] Roteamento independente de imagens (criar/editar/pedir detalhes).
+- [x] Estado de imagem pendente por conversa e anexo discreto no celular.
+- [x] Provedor externo opcional de imagem, protegido por autenticação; sem chaves, nenhum sucesso inventado.
+- [x] Motor de proposta de correção restrito a arquivos permitidos, com branch e PR rascunho após opt-in.
+- [ ] Provedor local sem dependência de nuvem; execução autônoma de programação em sandbox.
+- [ ] Web/voz e observabilidade proativa, backups, rollback e testes reais no notebook.
+
+Ver [guia de imagens/autoedição](docs/imagens_autoedicao_v06.md).
+
+---
+
+**Direção acordada:** *Você ensina → Menor registra → Menor recupera → Menor aplica → Menor avalia → Menor propõe melhorias.*
+
+## 14. Sistema multiagente local — incremento PR #8
+
+- [x] Orquestrador de missões persistentes com requisitos e aprovação.
+- [x] Catálogo auditável de candidatos locais; sem downloads arbitrários.
+- [x] Worker OpenVINO de imagem em CPU e prova técnica de geração real.
+- [x] Provider padrão local sem API externa nem chave de terceiros.
+- [x] Worker agendado por systemd para instalações aprovadas.
+- [ ] Pesquisa aberta e auditoria de novos modelos locais.
+- [ ] Edição de imagens local, áudio, design, navegação e visão multimodal.
+- [ ] Programador autônomo em sandbox com testes de regressão e PR.
+- [ ] Avaliação semântica dos artefatos, correção iterativa e limites de recursos.
+
+Consultar [arquitetura multiagente](docs/arquitetura_multiagente.md).
+
+### Consolidação do ciclo de subagentes (mesmo PR #8)
+
+- [x] Planejador Qwen local com validação e fallback seguro.
+- [x] Registro de skills com estado `missing/planning/ready/failed` e verificação
+  independente do modelo e da missão.
+- [x] Contrato de delegação da geração local com até duas tentativas e recibo
+  técnico de revisão.
+- [x] Anotação de como usar a skill no cérebro apenas após teste aprovado.
+- [x] Chat apresenta plano e critérios; autorização e disponibilidade são
+  estados separados.
+- [ ] Benchmark do OpenVINO no notebook e revisão da aderência visual.
+- [ ] Programador genérico, pesquisador de novos modelos, edição local,
+  música e ferramentas web em isolamento verificável.
+
+## 15. Operação isolada do primeiro subagente — PR #9
+
+- [x] Instalar dependências OpenVINO em ambiente virtual privado do worker,
+  separado da API principal do Menor.
+- [x] Executar download e inferência em processo filho com comandos predefinidos,
+  entradas validadas e limites de duração.
+- [x] Evitar repasse de tokens GitHub/API de imagem ao worker local.
+- [x] Conferir presença dos pesos principais, não apenas um XML vazio.
+- [x] Verificar espaço em disco antes de autorizar e registrar progresso da missão.
+- [ ] Confirmar download e geração real no notebook Intel (CI simula modelo pesado).
+- [ ] Benchmark CPU/GPU e edição local de fotos com modelo adequado.
+
+## 16. Pesquisa, estudo e autoevolução supervisionada
+
+O objetivo é receber pedidos, investigar como cumpri-los, responder com evidências,
+aprender em memória por assunto, construir e reutilizar ferramentas e propor
+melhorias do próprio Menor em branch revisável pelo proprietário.
+A mensagem anterior com as opções e o fluxo foi preservada integralmente em
+[PLANO_REFINAMENTO.md, R12](PLANO_REFINAMENTO.md#r12--assistente-autônomo-de-pesquisa-estudo-construção-e-autoevolução).
+
+Incremento no código: busca/leitura web, navegador opcional, estudos com fontes
+indexados no cérebro, proposta de ferramentas puras com testes em container e
+PR rascunho, e conexão da autoanálise ao fluxo do chat.
+Aceites ainda pendentes: Chromium/Qwen/Docker no servidor, programador geral,
+pesquisa iterativa, estudo progressivo e avaliação mensurável da qualidade.
+Uma capacidade só é concluída depois de teste real; aprender notas não treina os pesos.
+
