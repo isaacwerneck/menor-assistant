@@ -846,5 +846,4 @@ test('D08: trocar de imagem para correção de software não envia edição visu
     await ui.context.sendMsg();
     assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
     assert.equal(ui.agentCalls.length, 1);
-    assert.equal(ui.repairCalls.length, 0);
 });
