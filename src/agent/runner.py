@@ -35,7 +35,7 @@ def _begin_mission(message, history):
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") != "1":
         # Compatibilidade do fluxo legado; nunca usado pelo planejador universal.
         context = message + " " + " ".join(item["content"] for item in history[-4:])
-        capability = ("images.generate" if re.search(rf"\\b{IMAGE_TERMS}\\b", _normalize(context))
+        capability = ("images.generate" if re.search(rf"\b{IMAGE_TERMS}\b", _normalize(context))
                       else "programming")
     else:
         capability = ("images.generate" if image_intent(message)["decision"] == "image_generate"
