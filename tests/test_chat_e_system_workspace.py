@@ -26,6 +26,9 @@ class SystemWorkspaceTests(unittest.TestCase):
         self.assertNotIn("innerHTML", SCRIPT)
         self.assertIn("textContent", SCRIPT)
         self.assertIn("Sem telemetria de deploy", PAGE)
+        self.assertIn('id="diagnostics"', PAGE)
+        self.assertIn("menor.ops.observability", SCRIPT)
+        self.assertIn("/ops/diagnostics", SCRIPT)
         self.assertIn("não confirma o código implantado", PAGE)
         self.assertIn("env(safe-area-inset-bottom)", STYLE)
 

@@ -17,3 +17,6 @@ Autenticação do proprietário no documento e nos assets, `Cache-Control: priva
 
 ## Próximo
 Disponibilizar navegação a partir do chat sem duplicar links de E3; consolidar estilos compartilhados e rever acessibilidade. A futura ponte E5 exigirá canal remoto autenticado real e testes no notebook; o painel não equivale a conexão do ChatGPT com o servidor.
+
+## Diagnósticos privados (integração opt-in pela API)
+Quando o PR E5 oferecer `GET /ops/diagnostics`, este painel renderiza somente os componentes permitidos `api`, `ollama`, `service`, `disk` e `memory`, com estados enumerados e `collected_at`. Resposta ausente, erro 401/403/404 ou contrato incompatível nunca vira indicador de sucesso. Sem E5 integrado, a sessão mostra fonte indisponível. A rota não fornece revisão implantada ou histórico de reinícios.

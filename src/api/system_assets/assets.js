@@ -1,9 +1,10 @@
 "use strict";
 // Consultas GET no mesmo servidor; nenhum resultado define permissão de execução.
 const ids = ["api-state", "api-details", "ollama-state", "ollama-explain", "models",
-  "images", "skills", "tools", "updated", "refresh"];
+  "images", "skills", "tools", "diagnostics", "updated", "refresh"];
 const ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
-const sourcePaths = ["/health", "/models", "/images/status", "/agent/skills", "/tools"];
+const sourcePaths = ["/health", "/models", "/images/status", "/agent/skills", "/tools",
+  "/ops/diagnostics"];
 
 function el(tag, className, value) {
   const item = document.createElement(tag);
@@ -105,12 +106,35 @@ function renderTools(data) {
     ]));
   }
 }
+function renderDiagnostics(data) {
+  if (data.contract !== "menor.ops.observability" || data.read_only !== true ||
+      !data.components || typeof data.components !== "object") {
+    clear(ui.diagnostics, "Contrato de diagnósticos indisponível ou incompatível.", true);
+    return;
+  }
+  ui.diagnostics.replaceChildren();
+  const names = [
+    ["api", "API (loopback)"], ["ollama", "Ollama (declaração da API)"],
+    ["service", "API no systemd"], ["disk", "Disco"], ["memory", "Memória"],
+  ];
+  for (const [key, label] of names) {
+    const entry = data.components[key];
+    const allowed = ["ok", "warning", "critical", "skipped", "unknown"];
+    const value = entry && allowed.includes(entry.status) ? entry.status : "unknown";
+    ui.diagnostics.append(card(label, "Estado: " + value, [
+      "Evidência: " + (typeof entry?.evidence === "string" ? entry.evidence : "não coletada"),
+      "Coletado no servidor: " + (typeof data.collected_at === "string" ?
+        data.collected_at : "horário não informado"),
+    ]));
+  }
+}
+
 function failFor(index, error) {
   const message = error instanceof Error ? error.message : "Consulta não concluída.";
   if (index === 0) { ui["api-state"].textContent = "API não verificada";
     ui["ollama-state"].textContent = "Indisponível"; ui["api-details"].replaceChildren();
     ui["ollama-explain"].textContent = message; return; }
-  const target = [null, ui.models, ui.images, ui.skills, ui.tools][index];
+  const target = [null, ui.models, ui.images, ui.skills, ui.tools, ui.diagnostics][index];
   clear(target, message, true);
 }
 async function refresh() {
@@ -119,7 +143,8 @@ async function refresh() {
   try {
     const responses = await Promise.allSettled(sourcePaths.map(get));
     let errors = 0;
-    const renders = [renderHealth, renderModels, renderImages, renderSkills, renderTools];
+    const renders = [renderHealth, renderModels, renderImages, renderSkills, renderTools,
+      renderDiagnostics];
     responses.forEach((result, i) => {
       if (result.status === "fulfilled") renders[i](result.value);
       else { errors += 1; failFor(i, result.reason); }
