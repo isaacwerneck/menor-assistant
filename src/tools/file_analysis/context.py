@@ -7,6 +7,8 @@ import re
 import unicodedata
 
 from src.tools.file_analysis import service
+from src.tools.file_analysis.contracts import MAX_PAGES
+from src.tools.file_analysis.ocr import LANGUAGES, MAX_OCR_CHARS
 
 VERSION = "1.0.0"
 STOPWORDS = frozenset({
@@ -115,9 +117,9 @@ def retrieve(file_id, question, *, max_chars=6000, max_items=8, root=None,
     if (type(max_chars) is not int or type(max_items) is not int
             or not 200 <= max_chars <= 12000 or not 1 <= max_items <= 12):
         raise ValueError("Limites de contexto inválidos.")
-    if ocr_page is not None and (type(ocr_page) is not int or not 1 <= ocr_page <= 40):
+    if ocr_page is not None and (type(ocr_page) is not int or not 1 <= ocr_page <= MAX_PAGES):
         raise ValueError("Página OCR inválida.")
-    if ocr_language not in ("por", "eng", "por+eng"):
+    if not isinstance(ocr_language, str) or ocr_language not in LANGUAGES:
         raise ValueError("Idioma OCR inválido.")
     receipt = service.inspect(file_id, root=root)
     if receipt.get("status") != "executed":
@@ -140,6 +142,10 @@ def retrieve(file_id, question, *, max_chars=6000, max_items=8, root=None,
             raise ValueError("OCR contextual requer PDF.")
         from src.tools.file_analysis.ocr import ocr_page as recognize
         result = recognize(file_id, page=ocr_page, language=ocr_language, root=root)
+        if not isinstance(result, dict):
+            return {"tool": "files.context", "version": VERSION,
+                    "status": "failed", "file_id": file_id, "items": [],
+                    "grounded": False, "error": {"code": "invalid_ocr_receipt"}}
         if result.get("status") != "executed":
             return {"tool": "files.context", "version": VERSION,
                     "status": "ocr_unavailable", "file_id": file_id,
@@ -153,7 +159,15 @@ def retrieve(file_id, question, *, max_chars=6000, max_items=8, root=None,
                 or validation.get("file_verified") is not True
                 or validation.get("ocr_quality_verified") is not False
                 or not isinstance(result.get("text"), str)
-                or len(result["text"]) > 6000):
+                or len(result["text"]) > MAX_OCR_CHARS
+                or proof.get("format") != "pdf"
+                or result.get("tool") != "files.ocr"
+                or not isinstance(result.get("evidence"), list)
+                or len(result["evidence"]) != 1
+                or not isinstance(result["evidence"][0], dict)
+                or result["evidence"][0].get("kind") != "ocr_pdf_page"
+                or result["evidence"][0].get("page") != ocr_page
+                or result["evidence"][0].get("sha256") != info["sha256"]):
             return {"tool": "files.context", "version": VERSION,
                     "status": "failed", "file_id": file_id, "items": [],
                     "grounded": False, "error": {"code": "invalid_ocr_receipt"}}
@@ -192,6 +206,7 @@ def retrieve(file_id, question, *, max_chars=6000, max_items=8, root=None,
                  "sha256": info["sha256"], "format": info["format"]},
         "question": question.strip(), "items": selected,
         "grounded": True, "ocr_used": ocr_used,
+        "ocr_source_truncated": result.get("truncated") is True if ocr_used else False,
         "source_truncated": receipt.get("truncated") is True,
         "selection_truncated": len(selected) < len(candidates),
         "limitations": [
