@@ -9,6 +9,9 @@ import requests
 
 from src.agent.delegation import generate_image
 from src.agent.artifacts import artifact_receipt, describe_artifact
+from src.agent.goal_context import (
+    GoalReferenceError, abandon_active, apply_plan, paused_context, pending_context,
+)
 from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _normalize
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
@@ -213,8 +216,11 @@ def _tool_loop(message, history):
 def _understand(state, message, history):
     """Raciocínio contextual para qualquer assunto, sem executar ações do texto do LLM."""
     if state["phase"] == "goal" and approval_decision(message) == "reject":
-        return _answer("Entendi. Cancelei este plano sem executar nenhuma ação.")
-    pending = state if state["phase"] == "goal" else None
+        return abandon_active(state), {
+            "handled": True, "reply": "Entendi. Cancelei este plano sem executar nenhuma ação.",
+            "phase": "idle",
+        }
+    pending = pending_context(state)
     try:
         # Notas do cérebro são dados de contexto; não autorizam uma nova ferramenta.
         semantic = relevant_context(message)
@@ -232,7 +238,7 @@ def _understand(state, message, history):
         skills = []
     decision = intelligence.decide(
         message, history, pending=pending, capabilities=skills, knowledge=facts,
-        last_result=state.get("last_result"),
+        last_result=state.get("last_result"), paused_goals=paused_context(state),
     )
     if decision is None:
         if pending:
@@ -245,12 +251,20 @@ def _understand(state, message, history):
     if move == "inspect_result":
         receipt = state.get("last_result")
         if receipt:
-            return _answer(describe_artifact(receipt), "idle", last_result=receipt)
-        return _answer("Não tenho um resultado de ferramenta registrado nesta conversa.")
+            return _answer(describe_artifact(receipt), **state)
+        return _answer("Não tenho um resultado de ferramenta registrado nesta conversa.", **state)
     if move == "act":
-        # Um plano pendente não equivale a autorização de ferramentas.
-        # O executor continua responsável pela aprovação de cada escrita.
-        return _tool_loop(message, history)
+        # O executor recebe o objetivo anterior; nunca somente "pode fazer".
+        # Ações com efeito ainda exigem autorização específica por ferramenta.
+        request = message
+        if pending:
+            request = json.dumps({
+                "current_request": message,
+                "pending_goal": pending["goal"],
+                "proposed_steps_not_executed": pending["steps"],
+                "acceptance": pending["acceptance"],
+            }, ensure_ascii=False)
+        return _tool_loop(request, history)
     if move == "research":
         evidence = research.handle(message, history, automatic=True)
         if evidence is not None:
@@ -260,17 +274,21 @@ def _understand(state, message, history):
             "Me diga o tema sem incluir informações privadas ou segredos."
         )
     if move in ("plan", "continue", "clarify"):
+        try:
+            next_state = apply_plan(state, decision)
+        except GoalReferenceError:
+            return _answer(
+                "Não encontrei esse plano anterior nesta conversa. "
+                "Qual objetivo você quer retomar?", **state,
+            )
         reply = (intelligence.render_plan(decision) if move != "clarify"
                  else decision["reply"] + "\n" + decision["question"])
-        return _answer(
-            reply, "goal", goal=decision["goal"],
-            question=decision["question"], steps=decision["steps"],
-            acceptance=decision["acceptance"],
-        )
+        return next_state, {
+            "handled": True, "reply": reply, "phase": "goal",
+            "goal_id": next_state["goal_id"],
+        }
     if pending:
-        if move == "answer":
-            # Responder uma dúvida não deve encerrar o plano em andamento.
-            return _answer(decision["reply"], **state)
+        # Dúvidas incidentais não destroem o plano ativo.
         return _answer(decision["reply"], **state)
     reply = decision["reply"]
     last = state.get("last_result")
@@ -366,6 +384,9 @@ def run(session, turn, message, history, project=None, tasks=None):
         current, result = _advance(state, message, history)
         if state.get("last_result") and "last_result" not in current:
             current["last_result"] = state["last_result"]
+        for key in ("paused_goals", "goal_decisions"):
+            if key not in current and key in state:
+                current[key] = state[key]
     except (requests.RequestException, OSError, ValueError, LookupError, RuntimeError, KeyError, TypeError) as error:
         LOGGER.warning("Execução do agente interrompida: %s", type(error).__name__)
         current, result = _answer(
