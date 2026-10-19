@@ -49,6 +49,10 @@ class ApprovalTests(unittest.TestCase):
                 self.assertIn("aguardando", answer["reply"].lower())
                 self.assertEqual(missions.get(mission["id"])["status"], "queued")
                 self.assertTrue(missions.get(mission["id"])["approval"])
+                _, progress = runner._mission_turn(state, "conseguimos fazer cara?")
+                self.assertTrue(progress["handled"])
+                self.assertIn("aguardando o worker", progress["reply"])
+                self.assertEqual(missions.get(mission["id"])["status"], "queued")
                 with self.assertRaises(ValueError):
                     missions.decide(mission["id"], True)
 
