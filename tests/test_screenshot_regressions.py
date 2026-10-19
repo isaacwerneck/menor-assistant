@@ -5,11 +5,23 @@ from unittest.mock import patch
 
 from src.agent.short_replies import simple_answer
 from src.agent.resolve import resolve
+from src.agent.router import classify
 from src.memory.store import BrainStore
 from test_auth_memory import call
 
 
 class ScreenshotRegressions(unittest.TestCase):
+    @patch("src.agent.router.requests.post")
+    def test_pixel_art_and_new_action_never_become_memory(self, post):
+        message = "queria criar uma pixel art, vc consegue me ajudar?"
+        self.assertEqual(classify(message, [])["decision"], "chat")
+        for answer in (message, "quero que vc crie uma ferramenta de criar pixel art!", "quais tem disponiveis?"):
+            result = resolve("Ideia anterior", answer, suggested_target="tool")
+            self.assertEqual(result["decision"], "chat")
+        self.assertEqual(classify("quero que vc crie uma ferramenta de criar pixel art!", [])["decision"],
+                         "plan_tool")
+        post.assert_not_called()
+
     def test_answer_ferramentas_is_direct_and_does_not_call_model(self):
         with patch("src.agent.resolve.requests.post") as post:
             result = resolve(

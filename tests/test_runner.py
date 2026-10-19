@@ -115,6 +115,27 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual(project["properties"]["action"], {"const": "tool"})
         self.assertNotIn("tool|answer", payload["messages"][0]["content"])
 
+    @patch("src.agent.runner.capability_status", return_value={"ready": False})
+    @patch("src.agent.planner.requests.post", side_effect=__import__("requests").Timeout("offline"))
+    def test_pixel_art_mission_answers_questions_without_approving(self, post, capability):
+        self.assertEqual(self.run_turn("queria criar uma pixel art, vc consegue me ajudar?")["phase"],
+                         "image_offer")
+        self.run_turn("quero que vc crie uma ferramenta de criar pixel art!", "request02")
+        state = self.store.inspect(self.session)
+        missions = MissionStore()
+        self.assertEqual(missions.get(state["mission_id"])["capability"], "images.generate")
+        self.run_turn("Receber minha descrição e devolver pixel art em PNG.", "request03")
+        before = missions.get(state["mission_id"])
+        for turn, question in (("request04", "como assim cpu pode ser lenta?"),
+                               ("request05", "quero q vc me explique melhor do modelo")):
+            result = self.run_turn(question, turn)
+            self.assertIn("CPU", result["reply"])
+            self.assertIn("A aprovação continua pendente", result["reply"])
+            self.assertEqual(missions.get(state["mission_id"]), before)
+        self.run_turn("não", "request06")
+        self.assertEqual(missions.get(state["mission_id"])["status"], "cancelled")
+        self.assertFalse(missions.get(state["mission_id"])["approval"])
+
     def test_conversation_state_is_private_and_validated(self):
         with self.assertRaises(ValueError):
             self.store.inspect("../outside")

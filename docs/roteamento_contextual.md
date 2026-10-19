@@ -1,8 +1,9 @@
 # Roteamento contextual e ações reais (prévia da Fase 2)
 
 Esta entrega implementa um orquestrador pequeno e conservador em `src/agent/router.py`.
-Ele usa o modelo local do Ollama para entender a intenção da mensagem e as últimas 6
-interações de contexto. Não depende de palavras-chave ou comandos especiais.
+Ele usa o modelo local do Ollama para entender a intenção e as últimas 6 interações.
+Pedidos diretos de imagem/ferramenta passam primeiro por regras compartilhadas com
+o núcleo, para impedir que sejam confundidos com autorização de salvar memória.
 
 ## Decisões possíveis
 
@@ -23,8 +24,25 @@ interações de contexto. Não depende de palavras-chave ou comandos especiais.
 | 'Prefiro respostas curtas e objetivas' | Pode registrar preferência clara |
 | 'Tive uma ideia de jogo de corrida' | Pergunta se deve anotar e onde |
 | 'Crie um projeto novo chamado Cidade Noturna' | Cria pasta e arquivos de projeto |
-| 'Vamos criar uma ferramenta para gerar sprites' | Pergunta se registra proposta; **não** finge que já construiu a skill |
+| 'Vamos criar uma ferramenta para gerar sprites' | Inicia missão, coleta requisitos e pede aprovação; não afirma que já construiu a skill |
 | 'Crie uma imagem agora' | Trata como tarefa; se não existir ferramenta, explica a limitação |
+
+## Correções de conversa em 18/10/2026 — versão 0.4.1
+
+- Pixel art, pixel-art e sprites são reconhecidos como imagens. Pedir uma ferramenta
+  de pixel art inicia uma missão de `images.generate`, com requisitos e aprovação.
+- Um novo pedido atendido por `/agent/run` encerra a pergunta antiga de memória na
+  interface, sem salvar a ideia. Se o agente não assumir o pedido, a resposta de
+  memória continua disponível, incluindo confirmação e pasta explícitas.
+- O classificador e o resolvedor também protegem pedidos de ação: criar uma imagem
+  ou uma ferramenta não vira autorização de guardar uma nota.
+- Perguntas durante `awaiting_approval` usam os dados do plano e o modelo local para
+  explicar a proposta. `/agent/missions/{id}/question` atende conversas antigas;
+  o núcleo usa a mesma implementação. Nenhuma dessas consultas altera aprovação,
+  fila ou requisitos. Se a inferência falhar, informa a falha e apresenta os fatos.
+- A explicação distingue reserva de 5 GB do tamanho do download. Não promete tempo
+  de geração nem qualidade de pixel art sem teste. Somente sim/não no fluxo de
+  aprovação muda a decisão. Não há nova biblioteca nem instalador nesta correção.
 
 ## Segurança, limites e próximo passo
 

@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -15,7 +16,7 @@ import requests
 from src.agent.runner import run as run_agent
 from src.agent.tasks import RunBusy, TaskStore
 from src.agent.router import classify
-from src.agent.image_intent import image_intent
+from src.agent.image_intent import IMAGE_TERMS, image_intent, _normalize
 from src.agent.missions import MissionStore
 from src.agent.skills import catalog as skill_catalog, capability_status
 from src.agent.delegation import generate_image as delegate_image
@@ -46,7 +47,7 @@ app = FastAPI(
     lifespan=app_lifespan,
     title="Menor - Assistente de IA Pessoal",
     description="Servidor de orquestração do Menor, assistente pessoal rodando em hardware doméstico.",
-    version="0.4.0",
+    version="0.4.1",
 )
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
@@ -175,6 +176,10 @@ class MissionDetailRequest(BaseModel):
     requirements: str = Field(min_length=8, max_length=1200)
 
 
+class MissionQuestionRequest(BaseModel):
+    message: MessageText
+
+
 class MissionApprovalRequest(BaseModel):
     approved: bool
 
@@ -211,6 +216,17 @@ def mission_requirements(mission_id: str, body: MissionDetailRequest, request: R
     auth.require_owner(request)
     try:
         return MissionStore().detail(mission_id, body.requirements)
+    except LookupError as error:
+        raise HTTPException(404, "Missão não encontrada.") from error
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@app.post("/agent/missions/{mission_id}/question")
+def mission_question(mission_id: str, body: MissionQuestionRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return {"reply": MissionStore().explain(mission_id, body.message)}
     except LookupError as error:
         raise HTTPException(404, "Missão não encontrada.") from error
     except ValueError as error:
@@ -465,10 +481,8 @@ def route_intent(body: IntentRequest, request: Request):
         try:
             if result["decision"] == "plan_tool":
                 result["tool_plan"] = plan_tool(result["text"])
-                lowered = body.message.casefold()
-                capability = "images.generate" if (
-                    "imagem" in lowered or "foto" in lowered or "arte" in lowered
-                ) else "programming"
+                capability = ("images.generate" if re.search(rf"\b{IMAGE_TERMS}\b", _normalize(body.message))
+                              else "programming")
                 result["mission"] = MissionStore().begin(capability, body.message)
                 record("tool.plan", "planned", ["request"])
             elif result["decision"] == "create_project":

@@ -12,6 +12,7 @@ import os
 import requests
 
 from src.tools.audit import record
+from src.agent.image_intent import image_intent, tool_intent
 
 LOGGER = logging.getLogger(__name__)
 MODEL = os.environ.get("OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
@@ -62,6 +63,11 @@ def _fallback():
 def classify(message, history, project=None):
     """Classifica intenção; falha do Ollama nunca provoca gravação."""
     if not isinstance(message, str) or not message.strip() or len(message) > 8000:
+        return _fallback()
+    if tool_intent(message):
+        return {"decision": "plan_tool", "target": "tool", "text": message[:280],
+                "confidence": 1.0, "question": "", "note_kind": "none"}
+    if image_intent(message)["decision"] != "chat":
         return _fallback()
     turns = [
         {"role": item["role"], "content": item["content"][:1200]}

@@ -486,7 +486,7 @@
         </div>
         <div class="sidebar-footer">
             <div class="dot"></div>
-            <span>Menor v0.4 · Memória local</span>
+            <span>Menor v0.4.1 · Memória local</span>
         </div>
     </aside>
 
@@ -1105,7 +1105,7 @@
         }
 
         async function handleAgentTurn(conv, message, history, project, content) {
-            if (conv.pendingMemory || conv.pendingImage || conv.activeMission ||
+            if (conv.pendingImage || conv.activeMission ||
                 conv.pendingCapabilityOffer || selectedImageFile) return false;
             const previous = conv.pendingAgentRequest;
             const payload = previous && previous.message === message ? previous : {
@@ -1130,6 +1130,8 @@
             delete conv.pendingAgentRequest;
             save();
             if (!result.handled) return false;
+            delete conv.pendingMemory;
+            save();
             const events = Array.isArray(result.events) ? result.events.map(
                 item => '✓ ' + item.tool + ' · ' + item.status,
             ).join('\n') : '';
@@ -1327,7 +1329,8 @@
             }
             if (active.status === 'awaiting_approval') {
                 if (!isYes(message) && !isNo(message)) {
-                    imageReply(conv, content, 'Posso prosseguir? Responde sim ou não.');
+                    const result = await imageJson('/agent/missions/' + active.id + '/question', { message });
+                    imageReply(conv, content, result.reply);
                     return true;
                 }
                 const result = await imageJson('/agent/missions/' + active.id + '/approve', {

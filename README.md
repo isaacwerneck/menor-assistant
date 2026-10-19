@@ -106,6 +106,9 @@ planejamento, aprovação persistente e ferramentas limitadas ao catálogo.
 O modelo pode consultar ferramentas de leitura em até quatro passos; uma escrita
 mostra a operação e seus parâmetros antes de pedir autorização. O mesmo turno
 repetido recupera o recibo salvo. Não existe terminal arbitrário nesta versão.
+Pedidos de pixel art e sprites seguem para imagens ou criação de ferramenta,
+mesmo com pergunta antiga de memória pendente. Durante a aprovação, dúvidas sobre
+o modelo e a CPU recebem explicação do plano; perguntar não autoriza instalação.
 
 A comparação com as arquiteturas públicas de Codex, Claude, ChatGPT e
 Antigravity, o que já foi entregue e as próximas fases estão no

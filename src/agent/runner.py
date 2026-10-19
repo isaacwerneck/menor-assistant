@@ -7,7 +7,7 @@ import re
 import requests
 
 from src.agent.delegation import generate_image
-from src.agent.image_intent import image_intent, _normalize
+from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _normalize
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
 from src.agent.tasks import TaskStore
@@ -26,7 +26,7 @@ def _answer(reply, phase="idle", **state):
 
 def _begin_mission(message, history):
     context = message + " " + " ".join(item["content"] for item in history[-4:])
-    capability = ("images.generate" if re.search(r"\b(imagem|imagens|foto|arte)\b", _normalize(context))
+    capability = ("images.generate" if re.search(rf"\b{IMAGE_TERMS}\b", _normalize(context))
                   else "programming")
     mission = MissionStore().begin(capability, message[:600])
     return _answer(mission["question"], "mission", mission_id=mission["id"])
@@ -72,7 +72,7 @@ def _mission_turn(state, message):
         return state, {"handled": False}
     if mission["status"] == "awaiting_approval":
         if not YES.fullmatch(normal) and not NO.fullmatch(normal):
-            return _answer("Posso executar esse plano? Responda sim ou não.", **state)
+            return _answer(missions.explain(mission["id"], message), **state)
         mission = missions.decide(mission["id"], bool(YES.fullmatch(normal)))
     if mission["status"] == "ready":
         verified = capability_status(mission["capability"])["ready"]
@@ -185,9 +185,7 @@ def _advance(state, message, history):
         return current, result
     if state["phase"] == "mission":
         return _mission_turn(state, message)
-    building = re.search(r"\b(ferramenta|skill|plugin)\b", normal) and re.search(
-        r"\b(criar|crie|cria|fazer|faz|desenvolver|desenvolva|construir|implementar)\b", normal,
-    )
+    building = tool_intent(message)
     tutorial = re.match(r"^(como|me explica|explique|tutorial|ensina)\b", normal)
     if building and not tutorial:
         context = history + ([{"role": "user", "content": state["goal"]}] if state.get("goal") else [])

@@ -146,6 +146,12 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
                     question: 'Posso instalar o modelo local?',
                 }) };
             }
+            if (url === '/agent/missions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/question') {
+                missionCalls.push({ type: 'question', data: JSON.parse(options.body) });
+                return { ok: true, json: async () => ({
+                    reply: 'A geração calcula etapas na CPU. Não há benchmark ainda. A aprovação continua pendente.',
+                }) };
+            }
             if (url === '/agent/missions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/approve') {
                 missionCalls.push({ type: 'approve', data: JSON.parse(options.body) });
                 return { ok: true, json: async () => ({
@@ -191,6 +197,24 @@ test('núcleo do servidor assume tarefa e mostra recibo sem chamar roteadores an
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /projects.list/);
     assert.equal(ui.routed.length, 0);
     assert.equal(ui.requests.length, 0);
+});
+
+test('novo pedido de ferramenta interrompe memória pendente sem salvar a ideia', async () => {
+    const ui = browser();
+    ui.context.createConversation('pixel art');
+    const conv = ui.context.getActiveConv();
+    conv.pendingMemory = { text: 'Criar pixel art', target: 'tool', question: 'Em qual pasta?' };
+    ui.context.fetch = async url => {
+        assert.equal(url, '/agent/run');
+        return { ok: true, json: async () => ({ handled: true, phase: 'mission', reply: 'Como deve funcionar?' }) };
+    };
+    ui.elements.get('userInput').value = 'quero que vc crie uma ferramenta de criar pixel art!';
+    await ui.context.sendMsg();
+    assert.equal(conv.pendingMemory, undefined);
+    assert.equal(ui.resolved.length, 0);
+    assert.equal(ui.routed.length, 0);
+    assert.equal(ui.memories.length, 0);
+    assert.match(conv.messages.at(-1).content, /Como deve funcionar/);
 });
 
 test('API antiga informa incompatibilidade sem inventar resposta textual', async () => {
@@ -545,6 +569,22 @@ test('missão conversacional exibe plano, pede consentimento e registra aprovaç
     ui.elements.get('userInput').value = 'status';
     await ui.context.sendMsg();
     assert.match(conv.messages.at(-1).content, /está disponível/);
+    assert.equal(ui.requests.length, 0);
+});
+
+test('missão antiga responde dúvidas e mantém aprovação pendente', async () => {
+    const ui = browser();
+    ui.context.createConversation('pixel art');
+    const conv = ui.context.getActiveConv();
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    for (const question of ['como assim cpu pode ser lenta?', 'quero q vc me explique melhor do modelo']) {
+        ui.elements.get('userInput').value = question;
+        await ui.context.sendMsg();
+        assert.match(conv.messages.at(-1).content, /CPU/);
+        assert.equal(conv.activeMission.status, 'awaiting_approval');
+    }
+    assert.equal(ui.missionCalls.filter(item => item.type === 'question').length, 2);
+    assert.equal(ui.missionCalls.filter(item => item.type === 'approve').length, 0);
     assert.equal(ui.requests.length, 0);
 });
 

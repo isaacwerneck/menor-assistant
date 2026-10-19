@@ -130,6 +130,31 @@ class MissionEndpointTests(unittest.TestCase):
         self.assertEqual(call("/agent/missions", cookie=self.cookie)[1]["items"][0]["id"],
                          mission["id"])
 
+    @patch("src.agent.planner.requests.post", side_effect=__import__("requests").Timeout("offline"))
+    def test_question_endpoint_never_approves_and_requires_auth(self, post):
+        goal = {"goal": "Criar ferramenta de pixel art", "capability": "images.generate"}
+        mission = call("/agent/missions", goal, cookie=self.cookie)[1]
+        url = "/agent/missions/" + mission["id"]
+        call(url + "/requirements", {"requirements": "Receber texto e criar PNG."}, cookie=self.cookie)
+        before = call(url, cookie=self.cookie)[1]
+        question = {"message": "como assim cpu pode ser lenta?"}
+        self.assertEqual(call(url + "/question", question)[0], 401)
+        self.assertEqual(call(url + "/question", question, cookie=self.cookie,
+                              origin="http://evil.invalid")[0], 403)
+        code, result, _ = call(url + "/question", question, cookie=self.cookie)
+        self.assertEqual(code, 200, result)
+        self.assertIn("CPU", result["reply"])
+        self.assertEqual(call(url, cookie=self.cookie)[1], before)
+        post.side_effect = None
+        post.return_value.__enter__.return_value.json.return_value = {
+            "message": {"content": "O modelo transforma descrições em pixels."},
+        }
+        reply = call(url + "/question", {"message": "Explique o modelo"}, cookie=self.cookie)[1]["reply"]
+        self.assertIn("O modelo transforma", reply)
+        self.assertIn("A aprovação continua pendente", reply)
+        call(url + "/question", {"message": "sim"}, cookie=self.cookie)
+        self.assertEqual(call(url, cookie=self.cookie)[1], before)
+
     def test_mission_approval_origin_protection(self):
         goal = {"goal": "Fazer imagens locais para o meu jogo",
                 "capability": "images.generate"}

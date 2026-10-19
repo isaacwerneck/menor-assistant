@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 
 from src.agent.model_catalog import discover
-from src.agent.planner import plan
+from src.agent.planner import explain as explain_plan, plan
 from src.memory.store import BrainStore
 
 _LOCK = threading.RLock()
@@ -141,8 +141,8 @@ class MissionStore:
                 )
             elif candidates:
                 obj["question"] = (
-                    "Encontrei o modelo OpenVINO SD 1.5, que roda no servidor. "
-                    "O download exige cerca de 5 GB livres e a CPU pode ser lenta. "
+                    "O catálogo sugere Stable Diffusion 1.5 com OpenVINO para teste local. "
+                    "A instalação reserva 5 GB em disco; desempenho e qualidade precisam de teste. "
                     "Posso instalar e testar o subagente?"
                 )
             else:
@@ -152,6 +152,14 @@ class MissionStore:
                 )
             self._write(obj)
             return obj
+
+    def explain(self, mission_id, message):
+        if not isinstance(message, str) or not 1 <= len(message.strip()) <= 8000:
+            raise ValueError("Pergunta inválida.")
+        mission = self.get(mission_id)
+        if mission["status"] != "awaiting_approval":
+            raise ValueError("Missão não está aguardando autorização.")
+        return explain_plan(mission, message)
 
     def decide(self, mission_id, approved):
         if not isinstance(approved, bool):

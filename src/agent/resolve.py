@@ -6,10 +6,12 @@ Uma resposta incerta não grava dados.
 import json
 import logging
 import os
+import re
 
 import requests
 
 from src.agent.short_replies import simple_answer
+from src.agent.image_intent import MEMORY_ACTION, image_intent, tool_intent, _normalize
 
 from src.tools.audit import record
 
@@ -48,6 +50,12 @@ def resolve(original, answer, suggested_target="none", project=None, question=""
         return fallback
     if suggested_target not in ("none", "preference", "knowledge", "project", "tool"):
         return fallback
+    normal = _normalize(answer.strip())
+    question_turn = not MEMORY_ACTION.search(normal) and (
+        "?" in answer or re.match(r"^(como|quais|qual|por que|o que|me explica)\b", normal)
+    )
+    if tool_intent(answer) or image_intent(answer)["decision"] != "chat" or question_turn:
+        return {"decision": "chat", "target": "none", "note_kind": "none", "question": ""}
     # Confirmações curtas devem funcionar sem aguardar outra inferência do Qwen.
     direct = simple_answer(answer, suggested_target, question, project)
     if direct is not None:

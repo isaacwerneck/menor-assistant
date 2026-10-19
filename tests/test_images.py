@@ -19,6 +19,18 @@ class ImageIntentTests(unittest.TestCase):
         self.assertEqual(value["kind"], "generate")
         self.assertIn("imagem", value["question"])
 
+    def test_pixel_art_and_sprites_are_image_requests(self):
+        for message in ("queria criar uma pixel art, vc consegue me ajudar?", "quero gerar um sprite"):
+            with self.subTest(message=message):
+                self.assertEqual(image_intent(message)["decision"], "image_ask")
+        for style in ("pixel art", "pixel-art", "sprite"):
+            self.assertEqual(image_intent("Crie uma " + style + " de um gato astronauta")["decision"],
+                             "image_generate")
+        self.assertEqual(image_intent("Anota a ideia de criar pixel art")["decision"], "chat")
+        self.assertEqual(image_intent("Salva a ideia de criar pixel art")["decision"], "chat")
+        self.assertEqual(image_intent("Crie pixel art de um gato astronauta e salve como PNG")["decision"],
+                         "image_generate")
+
     def test_detailed_image_request_generates(self):
         value = image_intent("Cria uma imagem de uma moto numa rua chuvosa, estilo realista")
         self.assertEqual(value["decision"], "image_generate")
