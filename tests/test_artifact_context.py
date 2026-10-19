@@ -113,10 +113,11 @@ class ArtifactTests(unittest.TestCase):
         )
         import json
         payload = post.call_args.kwargs["json"]
-        self.assertEqual(
-            json.loads(payload["messages"][-1]["content"])["previous_verified_tool_result_data"],
-            receipt,
-        )
+        evidence = json.loads(payload["messages"][-1]["content"])[
+            "previous_verified_tool_result_data"
+        ]
+        self.assertEqual(evidence, {"evidence": "metadata_unavailable"})
+        self.assertNotIn(receipt["id"], json.dumps(evidence))
 
     def test_catalog_shows_real_alternatives_without_inventing_installers(self):
         options = comparison("images.generate")
