@@ -358,4 +358,15 @@ Uma capacidade só é concluída depois de teste real; aprender notas não trein
   sem enviar histórico ao planejador no modo de pesquisa automática.
 - [ ] Provar instalação de imagem no Ubuntu e revisar limites de privacidade
   com mais dados reais antes de autonomia ampliada.
+## 17. Menor Intelligence Engine — primeiro incremento
 
+- [x] Compreensão geral de objetivos usando Qwen local, não lista fechada de assuntos.
+- [x] Planejamento, esclarecimento, pesquisa e ações estruturadas como movimentos gerais.
+- [x] Retomar contexto do objetivo por conversa no banco SQLite existente.
+- [x] Utilizar conhecimento relacionado e status real de skills como dados de contexto.
+- [x] Manter autorização/execução no Python, nunca delegá-las a texto do modelo.
+- [x] Laboratório de avaliação por cenários e dataset privado supervisionado com opt-in.
+- [ ] Busca semântica local; programador universal; multimodalidade; treinamento LoRA.
+- [ ] Avaliar e calibrar entendimento com Ollama real e dados inéditos no notebook.
+
+Plano completo: [PLANO_INTELLIGENCE_ENGINE.md](PLANO_INTELLIGENCE_ENGINE.md).
