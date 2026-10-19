@@ -17,6 +17,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
     const memories = [];
     const knowledgeActions = [];
     const imageCalls = [];
+    const fileUploads = [];
     const agentCalls = [];
     const repairCalls = [];
     const feedbackCalls = [];
@@ -52,6 +53,13 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         FormData: class { constructor() { this.values = {}; } append(k, v) { this.values[k] = v; } },
         URL: { createObjectURL(value) { blob = value; return 'blob:test'; }, revokeObjectURL() {} },
         fetch: async (url, options) => {
+            if (url.startsWith('/files/upload?filename=')) {
+                fileUploads.push({ url, options });
+                return { ok: true, status: 201, json: async () => ({
+                    status: 'executed',
+                    file: { file_id: 'f'.repeat(32), format: 'pdf' },
+                }) };
+            }
             if (url === '/agent/feedback') {
                 feedbackCalls.push(JSON.parse(options.body));
                 return { ok: true, json: async () => ({ status: 'saved', id: 'approved-example' }) };
@@ -195,9 +203,141 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, agentCalls, repairCalls, missionCalls, feedbackCalls,
-        downloads, getBlob: () => blob };
+    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, fileUploads,
+        agentCalls, repairCalls, missionCalls, feedbackCalls, downloads, getBlob: () => blob };
 }
+
+test('Chat E: documento privado anexa ID validado sem fingir análise ou executar antes de enviar', async () => {
+    const ui = browser();
+    const privateFile = { name: 'contrato revisão.pdf', size: 120, type: 'application/pdf' };
+    await ui.context.documentSelected({ files: [privateFile] });
+    assert.equal(ui.fileUploads.length, 1);
+    assert.equal(ui.fileUploads[0].url,
+        '/files/upload?filename=' + encodeURIComponent(privateFile.name));
+    assert.equal(ui.fileUploads[0].options.method, 'POST');
+    assert.equal(ui.fileUploads[0].options.credentials, 'same-origin');
+    assert.equal(ui.fileUploads[0].options.headers['Content-Type'], 'application/octet-stream');
+    assert.equal(ui.fileUploads[0].options.body, privateFile);
+    assert.match(ui.elements.get('documentStatus').textContent, /ainda não foi analisado/i);
+    assert.equal(ui.agentCalls.length, 0); // armazenamento não dispara modelo
+    ui.elements.get('userInput').value = 'Qual é o prazo deste contrato?';
+    await ui.context.sendMsg();
+    const message = ui.context.getActiveConv().messages[0].content;
+    assert.match(message, /Qual é o prazo/);
+    assert.match(message, /ID f{32}/);
+    assert.match(message, /conteúdo ainda não foi analisado/);
+    assert.equal(ui.agentCalls.length, 1);
+    assert.equal(ui.agentCalls[0].message, message);
+    assert.equal(ui.elements.get('documentStatus').hidden, true);
+    assert.equal(ui.fileUploads.length, 1);
+});
+
+test('Chat E: arquivo inválido ou grande nunca é enviado', async () => {
+    const ui = browser();
+    for (const candidate of [
+        { name: 'segredo.exe', size: 20 }, { name: 'tabela.csv', size: 8 * 1024 * 1024 + 1 },
+        { name: 'empty.pdf', size: 0 }, { name: 'p'.repeat(125) + '.pdf', size: 100 },
+    ]) {
+        await ui.context.documentSelected({ files: [candidate] });
+        assert.match(ui.elements.get('documentStatus').textContent, /não aceito|inválido|acima/i);
+    }
+    assert.equal(ui.fileUploads.length, 0);
+    assert.equal(ui.agentCalls.length, 0);
+});
+
+test('Chat E: recibo de upload malformado não permite injetar ID ou resultado', async () => {
+    const ui = browser();
+    const endpoints = [];
+    ui.context.fetch = async (url, options) => {
+        endpoints.push(url);
+        return { ok: true, json: async () => ({
+            status: 'executed', file: { file_id: '../../../etc/passwd', format: 'pdf' },
+        }) };
+    };
+    await ui.context.documentSelected({ files: [{ name: 'documento.pdf', size: 200 }] });
+    assert.equal(endpoints.length, 1);
+    assert.match(ui.elements.get('documentStatus').textContent, /não foi possível confirmar/i);
+    ui.elements.get('userInput').value = 'Olá';
+    await ui.context.sendMsg();
+    assert.doesNotMatch(ui.context.getActiveConv().messages[0].content, /\.\.\//);
+});
+
+test('Chat E: upload tardio nunca anexa arquivo a outra conversa', async () => {
+    const ui = browser();
+    let release;
+    const paused = new Promise(resolve => { release = resolve; });
+    const calls = [];
+    ui.context.fetch = async (url, options) => {
+        calls.push({ url, options });
+        if (url.startsWith('/files/upload')) {
+            await paused;
+            return { ok: true, json: async () => ({
+                status: 'executed',
+                file: { file_id: 'f'.repeat(32), format: 'pdf' },
+            }) };
+        }
+        return { ok: true, json: async () => ({ handled: true, reply: 'Olá' }) };
+    };
+    const original = ui.context.createConversation('Primeira');
+    const pending = ui.context.documentSelected({ files: [{ name: 'arquivo.pdf', size: 200 }] });
+    ui.context.newChat();
+    ui.context.createConversation('Segunda');
+    release();
+    await pending;
+    assert.equal(ui.elements.get('documentStatus').hidden, true);
+    assert.equal(ui.context.getActiveConv().messages.length, 0);
+    ui.elements.get('userInput').value = 'Olá';
+    await ui.context.sendMsg();
+    assert.doesNotMatch(ui.context.getActiveConv().messages[0].content, /ID f{32}/);
+    assert.equal(original.messages.length, 0);
+});
+
+test('Chat E: selecionar um arquivo inválido não mantém anexo válido anterior', async () => {
+    const ui = browser();
+    await ui.context.documentSelected({ files: [{ name: 'casa.pdf', size: 300 }] });
+    assert.match(ui.elements.get('documentStatus').textContent, /recebido/i);
+    await ui.context.documentSelected({ files: [{ name: 'malware.exe', size: 300 }] });
+    assert.match(ui.elements.get('documentStatus').textContent, /não aceito/i);
+    ui.elements.get('userInput').value = 'Qual é a hora?';
+    await ui.context.sendMsg();
+    assert.doesNotMatch(ui.context.getActiveConv().messages[0].content, /ID f{32}/);
+    assert.equal(ui.fileUploads.length, 1);
+});
+
+test('Chat E: não mistura anexo de foto com documento armazenado', async () => {
+    const ui = browser();
+    await ui.context.documentSelected({ files: [{ name: 'casa.pdf', size: 300 }] });
+    const imagePicker = { files: [{ name: 'foto.png', size: 100 }], value: 'foto.png' };
+    ui.context.imageSelected(imagePicker);
+    assert.equal(imagePicker.value, '');
+    assert.match(ui.elements.get('documentStatus').textContent, /Desanexe/i);
+    ui.elements.get('userInput').value = 'Analise o documento';
+    await ui.context.sendMsg();
+    assert.match(ui.context.getActiveConv().messages[0].content, /ID f{32}/);
+});
+
+test('Chat E: upload de arquivo bloqueia envio concorrente, sem apagar a pergunta digitada', async () => {
+    const ui = browser();
+    let release;
+    const paused = new Promise(resolve => { release = resolve; });
+    const originalFetch = ui.context.fetch;
+    ui.context.fetch = async (url, options) =>
+        url.startsWith('/files/upload')
+            ? (await paused, originalFetch(url, options))
+            : originalFetch(url, options);
+    const uploading = ui.context.documentSelected({
+        files: [{ name: 'folha.xlsx', size: 500 }],
+    });
+    ui.elements.get('userInput').value = 'Analise a planilha de gastos';
+    await ui.context.sendMsg();
+    assert.equal(ui.agentCalls.length, 0);
+    assert.match(ui.elements.get('userInput').value, /Analise a planilha/);
+    release();
+    await uploading;
+    assert.equal(ui.elements.get('chooseDocumentBtn').disabled, false);
+    ui.context.clearDocumentAttachment();
+    assert.equal(ui.elements.get('documentStatus').hidden, true);
+});
 
 test('aprendizado supervisionado: só salva exemplo após consentimento explícito', async () => {
     const ui = browser();
