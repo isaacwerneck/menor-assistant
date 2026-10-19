@@ -112,10 +112,11 @@ def _mission_turn(state, message):
                        else "A execução falhou; nenhuma capacidade foi marcada como pronta.")
     if mission["status"] == "queued":
         return _answer(
-            "Autorização registrada. Missão aguardando o worker automático para instalar "
-            "o modelo local. Ainda não concluí o download ou o teste.", **state,
+            "Autorização registrada. Missão aguardando o executor automático. "
+            "Ainda não há confirmação de instalação ou teste.", **state,
         )
-    label = {"preparing": "preparando ambiente", "downloading": "baixando modelo", "testing": "verificando imagem"}
+    label = {"preparing": "preparando ambiente", "downloading": "baixando recursos",
+             "testing": "executando testes"}
     progress = label.get(mission.get("stage"), mission["status"])
     return _answer(f"Missão {progress}. Você pode consultar o andamento aqui.", **state)
 
@@ -247,6 +248,8 @@ def _understand(state, message, history):
             return _answer(describe_artifact(receipt), "idle", last_result=receipt)
         return _answer("Não tenho um resultado de ferramenta registrado nesta conversa.")
     if move == "act":
+        # Um plano pendente não equivale a autorização de ferramentas.
+        # O executor continua responsável pela aprovação de cada escrita.
         return _tool_loop(message, history)
     if move == "research":
         evidence = research.handle(message, history, automatic=True)
@@ -265,6 +268,9 @@ def _understand(state, message, history):
             acceptance=decision["acceptance"],
         )
     if pending:
+        if move == "answer":
+            # Responder uma dúvida não deve encerrar o plano em andamento.
+            return _answer(decision["reply"], **state)
         return _answer(decision["reply"], **state)
     reply = decision["reply"]
     last = state.get("last_result")
