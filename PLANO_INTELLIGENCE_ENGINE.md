@@ -71,3 +71,17 @@ backup/restauração, isolamento de ferramentas e recuperação do servidor.
 Limitação: Qwen 7B não se torna um modelo de ponta apenas por instruções.
 CI testa contratos e mocks; hardware, qualidade e treinamento dependem
 de entregas e validação adicionais.
+
+## I2 parcial — Busca semântica local opcional
+
+A busca por significado já está disponível em src/memory/semantic.py,
+com armazenamento SQLite reconstruível e embeddings gerados localmente
+pelo Ollama. Para ativar, é necessário ter um modelo de embeddings
+instalado no Ollama e configurar MENOR_EMBED_MODEL com seu nome. Nenhum
+modelo é baixado automaticamente; sem configuração, a busca FTS5 anterior
+continua ativa. O índice atual cobre aprendizados gerais e estudos,
+com um limite conservador de 150 trechos. Busca semântica de projetos,
+re-ranking e avaliação de precisão ainda ficam para I2 completa.
+
+A primeira sincronização pode ser lenta em CPU; fazer benchmark no notebook.
+
