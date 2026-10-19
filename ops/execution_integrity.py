@@ -33,7 +33,7 @@ def audit_runs(runs):
 
     O relatório não inclui IDs, payloads, prompts, caminhos ou exceções.
     """
-    if not isinstance(runs, (tuple, list)) or len(runs) > _MAX_RUNS:
+    if not isinstance(runs, (tuple, list)) or not runs or len(runs) > _MAX_RUNS:
         return {"status": "unknown", "reason": "invalid_batch",
                 "read_only": True, "runs": "unknown", "findings": {}}
     findings = {}
@@ -51,7 +51,7 @@ def audit_runs(runs):
             add("invalid_trace", "critical")
             continue
         first, last = events[0], events[-1]
-        if not _valid_identity(first) or not _valid_identity(last):
+        if not all(_valid_identity(event) for event in events):
             add("invalid_identity", "critical")
             continue
         identity = tuple(first[field] for field in _FIELDS)
