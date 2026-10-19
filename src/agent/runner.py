@@ -213,6 +213,28 @@ def _tool_loop(message, history):
     return _answer("Atingi o limite de quatro passos. Consulte as operações antes de continuar.", "blocked")
 
 
+def _selected_tool(name, arguments):
+    """Executa apenas ferramentas conhecidas, com pré-validação e aprovação."""
+    if name not in TOOLS:
+        raise ValueError("Ferramenta fora do catálogo.")
+    perform(name, arguments, dry_run=True)
+    if TOOLS[name].writes:
+        return _answer(
+            "Ação planejada: " + TOOLS[name].description
+            + "\nFerramenta: " + name + "\nParâmetros: "
+            + json.dumps(arguments, ensure_ascii=False)
+            + "\nPosso executar? A decisão será registrada antes da execução.",
+            "approval", tool=name, arguments=arguments,
+        )
+    receipt = perform(name, arguments, dry_run=False)
+    result = json.dumps(receipt["result"], ensure_ascii=False)[:6000]
+    current, answer = _answer(
+        "Resultado verificado da ferramenta " + name + ":\n" + result,
+    )
+    answer["events"] = [{"tool": name, "status": receipt["status"]}]
+    return current, answer
+
+
 def _understand(state, message, history):
     """Raciocínio contextual para qualquer assunto, sem executar ações do texto do LLM."""
     if state["phase"] == "goal" and approval_decision(message) == "reject":
@@ -239,6 +261,7 @@ def _understand(state, message, history):
     decision = intelligence.decide(
         message, history, pending=pending, capabilities=skills, knowledge=facts,
         last_result=state.get("last_result"), paused_goals=paused_context(state),
+        tools=list_tools(),
     )
     if decision is None:
         if pending:
@@ -264,7 +287,16 @@ def _understand(state, message, history):
                 "proposed_steps_not_executed": pending["steps"],
                 "acceptance": pending["acceptance"],
             }, ensure_ascii=False)
-        next_state, receipt = _tool_loop(request, history)
+        if decision.get("tool"):
+            try:
+                next_state, receipt = _selected_tool(decision["tool"], decision["arguments"])
+            except (ValueError, OSError, RuntimeError) as error:
+                LOGGER.info("Ferramenta selecionada indisponível: %s", type(error).__name__)
+                reply = ("Não consegui validar os parâmetros ou a disponibilidade "
+                         "dessa ferramenta. Podemos revisar o plano sem executar nada.")
+                return _answer(reply, **state) if pending else _answer(reply)
+        else:
+            next_state, receipt = _tool_loop(request, history)
         if pending:
             if next_state["phase"] == "approval":
                 next_state["return_goal"] = {
