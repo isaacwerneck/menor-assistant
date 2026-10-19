@@ -12,6 +12,7 @@ from src.agent.artifacts import artifact_receipt, describe_artifact
 from src.agent.goal_context import (
     GoalReferenceError, abandon_active, apply_plan, paused_context, pending_context,
 )
+from src.agent.quality_metrics import DecisionMetrics
 from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _normalize
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
@@ -433,6 +434,7 @@ def run(session, turn, message, history, project=None, tasks=None):
     state, cached = tasks.claim(session, turn, {"message": message, "history": history, "project": project})
     if cached is not None:
         return cached
+    error_type = ""
     try:
         current, result = _advance(state, message, history)
         if state.get("last_result") and "last_result" not in current:
@@ -441,10 +443,16 @@ def run(session, turn, message, history, project=None, tasks=None):
             if key not in current and key in state:
                 current[key] = state[key]
     except (requests.RequestException, OSError, ValueError, LookupError, RuntimeError, KeyError, TypeError) as error:
-        LOGGER.warning("Execução do agente interrompida: %s", type(error).__name__)
+        error_type = type(error).__name__
+        LOGGER.warning("Execução do agente interrompida: %s", error_type)
         current, result = _answer(
             "A execução falhou e foi interrompida. Nenhuma nova ação será repetida automaticamente. "
             "Consulte o estado antes de tentar novamente.", "failed",
         )
     tasks.finish(session, turn, current, result)
+    try:
+        DecisionMetrics(tasks.store).record(session, turn, result, error_type)
+    except (OSError, ValueError, sqlite3.Error) as error:
+        # Auditoria é observação, jamais pré-requisito para uma resposta.
+        LOGGER.info("Métrica de decisão indisponível: %s", type(error).__name__)
     return result
