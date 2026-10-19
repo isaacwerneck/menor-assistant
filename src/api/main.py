@@ -109,13 +109,20 @@ class AgentRunRequest(ChatRequest):
 
 
 @app.post("/agent/run")
-def agent_run(body: AgentRunRequest, request: Request):
+def agent_run(body: AgentRunRequest, request: Request, response: Response):
     auth.require_owner(request)
     try:
-        return run_agent(
+        result = run_agent(
             body.session_id, body.turn_id, body.message,
             [item.model_dump() for item in body.history], project=body.project,
         )
+        # A resposta JSON permanece compatível. Somente o servidor marca
+        # indisponibilidade do raciocinador para evitar segunda classificação
+        # pelo mesmo Ollama antes do fallback de streaming.
+        if (result.get("handled") is False and os.environ.get(
+                "MENOR_INTELLIGENCE_ENABLED", "1") == "1"):
+            response.headers["X-Menor-Fallback"] = "stream"
+        return result
     except (RunBusy, ValueError) as error:
         raise HTTPException(409, str(error)) from error
     except (sqlite3.Error, OSError) as error:
