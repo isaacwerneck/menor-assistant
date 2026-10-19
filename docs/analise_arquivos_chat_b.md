@@ -71,7 +71,7 @@ Formatos:
 
 ## Dependências e validação
 
-Instalação **opcional** no ambiente de processamento (não há download de modelos):
+Instalação dos extratores (sem download de modelos; disponível automaticamente no deploy após merge):
 
 ```bash
 python -m pip install -r requirements-file-analysis.txt
@@ -80,8 +80,9 @@ python -m unittest discover -s tests -p 'test_file_analysis.py' -v
 
 O workflow isolado `.github/workflows/file-analysis.yml` executa os extratores
 com `pypdf`, `python-docx`, `openpyxl`, Pillow e geração de fixtures PDF via ReportLab.
-As bibliotecas do Word/Excel/PDF não foram adicionadas ao `requirements.txt` central
-para não alterar o ambiente de produção sem revisão.
+As bibliotecas do Word/Excel/PDF são agora incluídas por `requirements.txt` após revisão do PR,
+para que a API instalada pelo deploy automático consiga analisar esses formatos. O parser
+continua isolado em subprocesso, mas compartilha o ambiente virtual de dependências.
 
 ## Camada de upload e integração ainda necessária
 
@@ -176,9 +177,9 @@ Limites adicionais:
 
 ### Teste de integração no servidor (depois do merge)
 
-1. Instalar as dependências opcionais **após revisão**:
-   \`cd ~/menor-assistant && .venv/bin/pip install -r requirements-file-analysis.txt\`.
-2. Confirmar o deploy, os logs e a versão da API em execução.
+1. Confirmar que o deploy automático instalou `pypdf`, `python-docx` e `openpyxl` no `.venv`
+   após merge e reiniciou a API (não é necessário instalar os pacotes manualmente).
+2. Conferir os logs, os recursos consumidos e a versão da API em execução.
 3. Entrar normalmente no chat pelo navegador e abrir \`/files/view\`.
 4. Enviar PDF com duas páginas, DOCX com tabela e XLSX com duas abas.
    Conferir os recibos; a extração deve ser estruturada e documentar

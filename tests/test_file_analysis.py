@@ -40,6 +40,12 @@ class ContractsTests(unittest.TestCase):
         self.assertEqual(result["visual_understanding"], "not_integrated")
         self.assertEqual(result["ocr"], "not_integrated")
 
+    def test_document_parsers_are_installed_with_api_requirements(self):
+        state = capabilities()["formats"]
+        for fmt in ("pdf", "docx", "xlsx"):
+            with self.subTest(fmt=fmt):
+                self.assertEqual(state[fmt]["status"], "available")
+
     def test_bad_signature_path_large_file_and_wrong_encoding(self):
         bad = [
             (b"not a pdf", "report.pdf"), (b"garbage", "photo.png"),
