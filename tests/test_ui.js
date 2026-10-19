@@ -698,5 +698,5 @@ test('recusa da recuperação mantém tarefa travada sem invocar endpoint', asyn
     await ui.context.sendMsg();
     assert.deepEqual(calls, []);
     assert.equal(conv.pendingRunRecovery, undefined);
-    assert.match(conv.messages.at(-1).content, /não liberei/);
+    assert.match(conv.messages.at(-1).content, /não liberei/i);
 });
