@@ -142,3 +142,16 @@ def inspect(file_id, *, root=None):
         "validation": {"format_verified": True, "semantic_verified": False},
         "state": {"extractor": "operational", "visual_understanding": "not_integrated"},
     }
+
+
+def remove(file_id, *, root=None):
+    """Remove apenas blob e recibo privados associados a um ID validado.
+
+    Não aceita caminho externo e rejeita arquivo alterado/symlink antes de apagar.
+    """
+    meta, _ = _load(file_id, root)
+    folder = _directory(root)
+    (folder / f"{file_id}.blob").unlink()
+    (folder / f"{file_id}.json").unlink()
+    return {"tool": "files.delete", "version": VERSION, "status": "executed",
+            "file_id": meta["file_id"], "state": "deleted"}
