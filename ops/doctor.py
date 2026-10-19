@@ -33,7 +33,7 @@ def check_api(port=8000, timeout=2.0):
         if len(payload) > _MAX_HEALTH_BYTES:
             raise ValueError("resposta acima do limite")
         health = json.loads(payload)
-        if not isinstance(health, dict) or health.get("status") != "online":
+        if not isinstance(health, dict) or health.get("status") != "online" or health.get("service") != "Menor API":
             raise ValueError("contrato de saúde inválido")
     except (OSError, http.client.HTTPException, ValueError, UnicodeError) as error:
         return [
