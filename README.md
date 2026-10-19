@@ -114,6 +114,43 @@ A comparação com as arquiteturas públicas de Codex, Claude, ChatGPT e
 Antigravity, o que já foi entregue e as próximas fases estão no
 [plano de refinamento, seção R11](PLANO_REFINAMENTO.md).
 
+## Pesquisa, estudos e criação supervisionada de ferramentas
+
+Pedidos como `Pesquise a documentação oficial de funções Python` consultam páginas
+públicas e só retornam fatos com citações encontradas no material. `Estude programação
+Python sobre funções` também salva fonte, data e limitações em conhecimentos por
+assunto; essas notas entram na busca textual do cérebro. Citação válida não garante
+que a interpretação esteja correta: o Menor deve reconhecer dúvidas.
+
+Para classificar automaticamente dúvidas e buscar antes de responder, configure
+`MENOR_AUTONOMY_ENABLED=1` no ambiente do serviço. Sem essa opção, pedidos explícitos
+de pesquisa/estudo continuam disponíveis. A busca HTML, com fallback para RSS público
+do Bing, não exige chave paga, mas pode encontrar CAPTCHA ou mudanças nos buscadores.
+
+O navegador é opcional, instalado separadamente no ambiente virtual do Menor:
+
+```bash
+.venv/bin/python -m pip install -r requirements-browser.txt
+.venv/bin/python -m playwright install --with-deps chromium
+```
+
+Ative `MENOR_BROWSER_ENABLED=1` em `~/.config/menor/environment` e reinicie a API.
+A ferramenta `web.browse` fica no catálogo para navegação sob demanda; o leitor
+simples é usado primeiro para reduzir custo e memória.
+
+`developer.build` propõe ferramentas puras de texto com código, testes e documentação,
+testa em Docker sem rede e abre uma branch `codex/` com PR rascunho.
+Exige Docker e a imagem preparada com `docker pull python:3.12-alpine`,
+além do opt-in `MENOR_AUTODEV_ENABLED=1` e da integração GitHub já existente.
+Não coloque tokens no chat ou no repositório. Depois de CI, revisão, merge e
+reinício, a nova ferramenta aparece como `custom.<nome>`.
+Sem sandbox funcional, nenhuma branch da ferramenta nova é criada.
+A autoedição legada `developer.propose` ainda depende do CI para os testes de comportamento.
+
+A visão completa, a proposta anterior preservada e os marcos pendentes estão em
+[PLANO_REFINAMENTO.md, R12](PLANO_REFINAMENTO.md#r12--assistente-autônomo-de-pesquisa-estudo-construção-e-autoevolução).
+Veja limites e operação em [busca de conhecimentos](docs/busca_conhecimentos.md#pesquisa-web-e-estudos-por-assunto).
+
 ## Comandos curtos no servidor
 
 Instalados automaticamente pelo deploy em `~/.local/bin/menor`:

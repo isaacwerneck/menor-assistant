@@ -245,3 +245,27 @@ completo, retomada automática de execução interrompida ou equivalência de
 inteligência com modelos proprietários. O banco de tarefas contém argumentos
 necessários à aprovação e resultados; incluí-lo no backup privado, nunca no Git.
 
+
+## R12 — Assistente autônomo de pesquisa, estudo, construção e autoevolução
+
+Pedido do proprietário em 18/10/2026: aproximar o fluxo do Menor ao de um
+assistente de desenvolvimento como Codex. Receber um objetivo, investigar como
+cumpri-lo, apresentar fatos e alternativas, criar recursos que faltam, reutilizar
+esses recursos e propor melhorias do próprio sistema. O proprietário revisa
+a branch e aprova a incorporação. A inspiração é o fluxo de trabalho; não é
+promessa de equivalência de inteligência, desempenho ou acesso a ferramentas.
+
+### Proposta anterior, preservada integralmente por solicitação do proprietário
+
+O texto abaixo registra a mensagem da conversa antes da implementação.
+A frase sobre não ter alterado código descreve aquele momento, não o estado atual.
+
+**Sim, menor: dá para criar uma ferramenta própria que abre um navegador no servidor, pesquisa e lê os sites.** Minha pergunta anterior limitou demais as opções.
+
+Podemos seguir estes caminhos, inclusive combinando alguns:
+
+| Caminho | Como funciona | Principal limite |
+|---|---|---|
+| **Navegador próprio** | O menor controla Chromium com Playwright: escreve pesquisas, abre resultados, segue links e lê páginas. Funciona sem uma janela visível no servidor. | Exige instalar navegador e automação. [Playwright](https://playwright.dev/python/docs/library) |
+| **SearXNG no servidor** | Um serviço gratuito reúne resultados de outros buscadores e os entrega ao menor. | Precisa manter outro serviço; continua dependendo dos buscadores consultados. [SearXNG](https://docs.searxng.org/) |
+[… truncated at ~4142 of 6200 tokens — use ctx_read with lines= parameter to see specific sections]

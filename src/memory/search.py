@@ -71,7 +71,7 @@ class KnowledgeIndex:
                 continue
             text = raw[2:].strip()
             text = re.sub(r"^\d{4}-\d{2}-\d{2} — ", "", text)
-            if text and len(text) <= 280:
+            if text and len(text) <= 2000:
                 yield text, line_number
 
     def _connect(self):
@@ -86,21 +86,34 @@ class KnowledgeIndex:
         return conn
 
     def _sync(self, conn):
-        markdown = self.store.read_note(_SOURCE)
-        checksum = hashlib.sha256(markdown.encode("utf-8")).hexdigest()
-        existing = conn.execute("SELECT checksum FROM snapshot WHERE source=?", (_SOURCE,)).fetchone()
-        if existing and existing[0] == checksum:
-            return
+        sources = [_SOURCE]
+        folder = self.store.brain_dir / "conhecimentos"
+        for note in sorted(folder.glob("*/estudo-*.md")):
+            relative = note.relative_to(self.store.brain_dir).as_posix()
+            if re.fullmatch(r"conhecimentos/[a-z0-9-]+/estudo-[0-9a-f]{16}\.md", relative):
+                sources.append(relative)
+            if len(sources) > 200:
+                raise ValueError("Índice excedeu o limite de 200 notas; revise o acervo.")
         with conn:
-            conn.execute("DELETE FROM knowledge_fts WHERE source=?", (_SOURCE,))
-            conn.executemany(
-                "INSERT INTO knowledge_fts(content, source, line) VALUES (?, ?, ?)",
-                [(text, _SOURCE, line) for text, line in self._entries(markdown)],
-            )
-            conn.execute(
-                "INSERT INTO snapshot(source, checksum) VALUES (?, ?) "
-                "ON CONFLICT(source) DO UPDATE SET checksum=excluded.checksum", (_SOURCE, checksum),
-            )
+            for (stale,) in conn.execute("SELECT source FROM snapshot").fetchall():
+                if stale not in sources:
+                    conn.execute("DELETE FROM knowledge_fts WHERE source=?", (stale,))
+                    conn.execute("DELETE FROM snapshot WHERE source=?", (stale,))
+            for source in sources:
+                markdown = self.store.read_note(source)
+                checksum = hashlib.sha256(markdown.encode("utf-8")).hexdigest()
+                existing = conn.execute("SELECT checksum FROM snapshot WHERE source=?", (source,)).fetchone()
+                if existing and existing[0] == checksum:
+                    continue
+                conn.execute("DELETE FROM knowledge_fts WHERE source=?", (source,))
+                conn.executemany(
+                    "INSERT INTO knowledge_fts(content, source, line) VALUES (?, ?, ?)",
+                    [(text, source, line) for text, line in self._entries(markdown)],
+                )
+                conn.execute(
+                    "INSERT INTO snapshot(source, checksum) VALUES (?, ?) "
+                    "ON CONFLICT(source) DO UPDATE SET checksum=excluded.checksum", (source, checksum),
+                )
 
     def search(self, query, limit=3):
         """Busca só aprendizados relacionados. Retorna texto, origem e linha."""
