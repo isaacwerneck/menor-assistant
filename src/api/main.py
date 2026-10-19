@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
 from src.agent.runner import run as run_agent
+from src.agent.feedback import FeedbackStore
 from src.agent import research
 from src.agent.tasks import RunBusy, TaskStore
 from src.agent.router import classify
@@ -115,6 +116,27 @@ def agent_run_state(session_id: str, request: Request):
         return TaskStore().inspect(session_id)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+
+
+class FeedbackRequest(BaseModel):
+    prompt: str = Field(min_length=8, max_length=1200)
+    desired_reply: str = Field(min_length=8, max_length=1200)
+    consent: bool = False
+
+
+@app.post("/agent/feedback")
+def agent_feedback(body: FeedbackRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return FeedbackStore().add(body.prompt, body.desired_reply, consent=body.consent)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.get("/agent/feedback/stats")
+def agent_feedback_stats(request: Request):
+    auth.require_owner(request)
+    return FeedbackStore().stats()
 
 
 class ToolRequest(BaseModel):
