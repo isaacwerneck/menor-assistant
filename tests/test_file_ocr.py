@@ -9,8 +9,12 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from PIL import Image, ImageDraw, ImageFont
-from reportlab.lib.utils import ImageReader
-from reportlab.pdfgen.canvas import Canvas
+try:
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen.canvas import Canvas
+except ImportError:
+    ImageReader = None
+    Canvas = None
 
 from src.tools.file_analysis import ocr, ocr_worker, service
 from src.tools.file_analysis.contracts import FileRejected
@@ -20,6 +24,8 @@ from src.security import auth
 
 
 def scanned_pdf(label="MENOR 42"):
+    if Canvas is None:
+        raise unittest.SkipTest("ReportLab opcional não instalado para fixtures OCR.")
     image = Image.new("RGB", (1050, 300), "white")
     draw = ImageDraw.Draw(image)
     font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -121,7 +127,7 @@ class OCRContractsTests(unittest.TestCase):
                     self.assertEqual(result["evidence"][0]["page"], 1)
                     self.assertFalse(result["validation"]["ocr_quality_verified"])
                     self.assertNotIn("HOME", run.call_args.kwargs["env"])
-                    self.assertIn("stdin", "stdin")  # fluxo por bytes, não por path do usuário
+                    self.assertTrue(run.call_args.kwargs["input"].startswith(b"%PDF-"))
 
 
 class OCRRouteTests(unittest.TestCase):
