@@ -658,3 +658,45 @@ test('recibo de imagem permanece no histórico e nunca equivale a qualidade apro
     assert.match(history.at(-1).content, /mago 32x32/);
     assert.match(history.at(-1).content, /NÃO verificado/);
 });
+
+test('conversa permite recuperar interrupção com sim, sem repetir a ação', async () => {
+    const ui = browser();
+    const calls = [];
+    ui.context.fetch = async (url, options) => {
+        calls.push(url);
+        if (url === '/agent/run') return {
+            ok: false, status: 409,
+            json: async () => ({ detail: 'Este turno foi interrompido; não vou repetir efeitos.' }),
+        };
+        if (url.endsWith('/recover')) return {
+            ok: true, status: 200,
+            json: async () => ({ recovered: true, interrupted_turns: 1 }),
+        };
+        throw new Error('unexpected recovery URL');
+    };
+    ui.elements.get('userInput').value = 'continue aquela ferramenta';
+    await ui.context.sendMsg();
+    const conv = ui.context.getActiveConv();
+    assert.equal(conv.pendingRunRecovery, true);
+    assert.match(conv.messages.at(-1).content, /resultado pode ser incerto/);
+    ui.elements.get('userInput').value = 'sim';
+    await ui.context.sendMsg();
+    assert.equal(conv.pendingRunRecovery, undefined);
+    assert.equal(conv.pendingAgentRequest, undefined);
+    assert.match(conv.messages.at(-1).content, /não repetirei|sem repetir|não vou repetir|resultado/i);
+    assert.equal(calls.filter(url => url === '/agent/run').length, 1);
+    assert.equal(calls.filter(url => url.endsWith('/recover')).length, 1);
+});
+
+test('recusa da recuperação mantém tarefa travada sem invocar endpoint', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('tarefa travada');
+    conv.pendingRunRecovery = true;
+    const calls = [];
+    ui.context.fetch = async (url) => { calls.push(url); throw new Error('no calls expected'); };
+    ui.elements.get('userInput').value = 'não';
+    await ui.context.sendMsg();
+    assert.deepEqual(calls, []);
+    assert.equal(conv.pendingRunRecovery, undefined);
+    assert.match(conv.messages.at(-1).content, /não liberei/);
+});
