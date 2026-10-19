@@ -49,6 +49,19 @@ class CriticContractTests(unittest.TestCase):
         self.assertEqual(args["format"], "json")
 
     @patch("src.agent.plan_review.requests.post")
+    def test_short_followup_provides_previous_goal_to_critic(self, post):
+        post.return_value = simulated_reply({
+            "verdict": "ok", "issues": [], "question": "",
+        })
+        result = plan_review.review(
+            "Também sem internet", proposal(),
+            pending={"goal": "Criar analisador privado de documentos"},
+        )
+        self.assertEqual(result["verdict"], "ok")
+        context = json.loads(post.call_args.kwargs["json"]["messages"][-1]["content"])
+        self.assertEqual(context["pending_goal"], "Criar analisador privado de documentos")
+
+    @patch("src.agent.plan_review.requests.post")
     def test_malformed_or_unavailable_verdict_has_no_authority(self, post):
         for reply in [
             {"verdict": "shell.exec", "issues": [], "question": ""},
