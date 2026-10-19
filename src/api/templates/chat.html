@@ -1267,13 +1267,29 @@
         }
 
         // ========== MISSÕES DE SUBAGENTES ==========
-        function isYes(text) {
-            return /^(sim+|simm+|pode|bora|vamos|claro|isso|fechou|confirmo)$/i.test(text.trim());
+        function missionConsent(message) {
+            const text = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase().trim().replace(/\s+/g, ' ');
+            const cleaned = text.replace(/^[\s.,!]+|[\s.,!]+$/g, '');
+            if (text.includes('?') || /\b(se|talvez|sera que|acho que|quando|como)\b/.test(text.slice(0, 35))) {
+                return 'question';
+            }
+            if (/^(nao|nao pode|nao autorizo|nao aprovo|reprovo|deixa|deixa pra la|cancela|cancelar|nao precisa|para|pare)$/.test(cleaned)) {
+                return 'reject';
+            }
+            if (/^(sim+|simm+|eu aprovo|aprovo|aprovado|confirmo|eu confirmo|pode|pode sim|pode comecar|pode instalar|pode executar|bora|bora la|vamos|vamos la|claro|isso|fechou|autorizo|eu autorizo|esta autorizado|ta autorizado|vai em frente|manda ver|mete marcha)$/.test(cleaned)) {
+                return 'approve';
+            }
+            if (/^(mete marcha|pode |eu autorizo|autorizo|vai em frente|manda ver)/.test(cleaned)
+                && /\b(instala|instale|instalar|baixa|baixar|baixe|faz o download|pode prosseguir|pode seguir|pode fazer|executa|execute|comeca|comece|inicia|inicie)\b/.test(cleaned)
+                && /\b(modelo|subagente|ferramenta|instalacao|implementacao|plano|download|etapas|projeto)\b/.test(cleaned)) {
+                return 'approve';
+            }
+            return 'question';
         }
 
-        function isNo(text) {
-            return /^(não|nao|deixa|cancela|cancelar|não precisa|nao precisa)$/i.test(text.trim());
-        }
+        function isYes(text) { return missionConsent(text) === 'approve'; }
+        function isNo(text) { return missionConsent(text) === 'reject'; }
 
         function missionPlanSummary(mission) {
             const plan = mission.plan || {};
@@ -1328,13 +1344,21 @@
                 return true;
             }
             if (active.status === 'awaiting_approval') {
-                if (!isYes(message) && !isNo(message)) {
+                const choice = missionConsent(message);
+                if (choice === 'question') {
+                    if (/\b(que|qual|pra que|para que) aprova[cç][aã]o\b/i.test(message)) {
+                        imageReply(conv, content,
+                            'Sua autorização é para baixar o modelo e instalar as dependências locais '
+                            + 'da ferramenta no servidor. Ainda não iniciei o download. '
+                            + 'Pode perguntar mais ou dizer “eu aprovo”.');
+                        return true;
+                    }
                     const result = await imageJson('/agent/missions/' + active.id + '/question', { message });
                     imageReply(conv, content, result.reply);
                     return true;
                 }
                 const result = await imageJson('/agent/missions/' + active.id + '/approve', {
-                    approved: isYes(message),
+                    approved: choice === 'approve',
                 });
                 active.status = result.status;
                 imageReply(conv, content, result.question);
