@@ -144,8 +144,9 @@ def _xlsx(data):
             limit_cols = min(ws.max_column or MAX_COLS, MAX_COLS)
             if (ws.max_row or 0) > MAX_ROWS or (ws.max_column or 0) > MAX_COLS:
                 truncated = True
-            for number, row in enumerate(ws.iter_rows(min_row=1, max_row=limit_rows,
-                                                       max_col=limit_cols, values_only=True), 1):
+            iterator = ws.iter_rows(min_row=1, max_row=limit_rows,
+                                    max_col=limit_cols, values_only=True)
+            for number, row in enumerate(iterator, 1):
                 cells = [{"column": get_column_letter(index), "value": _cell_value(value)}
                          for index, value in enumerate(row, 1) if value is not None]
                 if cells:
