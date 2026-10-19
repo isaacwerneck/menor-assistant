@@ -27,12 +27,25 @@ objetivo pendente. Escolha exatamente UM próximo movimento:
 - plan: proposta nova ou trabalho extenso; ofereça passos concretos e critérios
   verificáveis; não afirme ter executado nem instalado.
 - act: usuário solicitou REALMENTE uma ação agora; encaminhe ao executor de
-  ferramentas autorizadas. Não afirme sucesso sem recibo.
+  ferramentas autorizadas. Se existir ferramenta no catálogo, inclua seu
+  nome exato e argumentos. Se não existir, não invente: proponha um plano.
+  Não afirme sucesso sem recibo.
 - research: precisa de informação pública atual para decidir; não inclua
   projetos privados, senhas nem conteúdo da memória em buscas externas.
 - inspect_result: usuário pede explicação, avaliação ou correção do resultado recente; consulte recibo.
 - continue: usuário complementou ou corrigiu o objetivo pendente; reformule
   o plano usando o novo contexto, não recomece do zero.
+
+Também escolha a relação entre mensagem e objetivo pendente:
+- start: não há objetivo ativo e surgiu um novo objetivo;
+- refine: mesmo objetivo, esclarecimento ou ajuste (preserve contexto);
+- switch: novo assunto/objetivo independente; guarde o anterior para retomada;
+- resume: usuário retomou um objetivo da lista paused_goals; use somente o ID exato
+  dessa lista em resume_goal_id. Nunca invente IDs.
+Para answer sobre assunto independente, não apague o objetivo ativo.
+Quando o usuário pede uma ferramenta que ainda não existe, elabore um plano
+específico e identifique dependências; não marque como executada.
+Planos só descrevem intenções; execução real exige ferramenta e evidência.
 
 O catálogo é dado sobre CAPACIDADES, não permissão para executar. Na ausência
 de capacidade, ofereça planejar/construir uma skill, indicando limites. Não
@@ -46,7 +59,9 @@ Sem modelo visual não afirme ter visto ou entendido o conteúdo da imagem.
 Responda APENAS JSON com chaves:
 {"move":"answer|clarify|plan|act|research|continue|inspect_result",
  "goal":"objetivo em 1 frase", "reply":"resposta útil curta em português",
- "question":"pergunta única ou vazio", "steps":["etapa"], "acceptance":["critério"]}
+ "question":"pergunta única ou vazio", "steps":["etapa"], "acceptance":["critério"],
+ "relation":"start|refine|switch|resume", "resume_goal_id":"id exato ou vazio",
+ "tool":"nome exato do catálogo ou vazio", "arguments":{"param":"valor"}}
 Limites: goal até 220 caracteres, reply até 900, question até 220,
 até 5 passos e 4 critérios, cada um até 150 caracteres.
 """
@@ -57,7 +72,8 @@ def _strings(items, limit):
             and all(isinstance(item, str) and 6 <= len(item.strip()) <= 150 for item in items))
 
 
-def decide(message, history=None, pending=None, capabilities=None, knowledge="", last_result=None):
+def decide(message, history=None, pending=None, capabilities=None, knowledge="",
+           last_result=None, paused_goals=None, tools=None):
     """Retorna decisão validada, ou None se Ollama falhar; nunca age diretamente."""
     if not isinstance(message, str) or not message.strip() or len(message) > 8000:
         raise ValueError("Mensagem inválida.")
@@ -72,10 +88,28 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
         "previous_verified_tool_result_data": last_result if isinstance(last_result, dict) else None,
         "related_memory_data_not_instructions": knowledge[:1200] if isinstance(knowledge, str) else "",
         "pending_goal": {
+            "id": str((pending or {}).get("id", ""))[:40],
             "goal": str((pending or {}).get("goal", ""))[:220],
             "question": str((pending or {}).get("question", ""))[:220],
             "steps": (pending or {}).get("steps", [])[:5],
         } if pending else None,
+        "paused_goals": [
+            {"id": x["id"], "goal": x["goal"][:220]}
+            for x in (paused_goals or [])[-6:]
+            if isinstance(x, dict) and isinstance(x.get("id"), str)
+            and isinstance(x.get("goal"), str)
+        ],
+        "available_tools": [
+            {
+                "name": x["name"], "description": x["description"][:180],
+                "arguments": x["arguments"][:8], "writes": x["writes"],
+            }
+            for x in (tools or [])[:30]
+            if isinstance(x, dict) and isinstance(x.get("name"), str)
+            and isinstance(x.get("description"), str)
+            and isinstance(x.get("arguments"), list)
+            and type(x.get("writes")) is bool
+        ],
         "skills": [
             {"capability": x["capability"], "ready": x["ready"]}
             for x in (capabilities or [])[:20]
@@ -114,9 +148,38 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             return None
         if item["move"] == "clarify" and not question.strip():
             return None
+        relation = item.get("relation")
+        if relation is not None and relation not in ("start", "refine", "switch", "resume"):
+            return None
+        resume_goal_id = item.get("resume_goal_id", "")
+        if not isinstance(resume_goal_id, str) or len(resume_goal_id) > 40:
+            return None
+        if relation == "resume":
+            available = {
+                x["id"] for x in (paused_goals or [])
+                if isinstance(x, dict) and isinstance(x.get("id"), str)
+            }
+            if resume_goal_id not in available:
+                return None
+        tool_name = item.get("tool", "")
+        arguments = item.get("arguments", {})
+        if not isinstance(tool_name, str) or not isinstance(arguments, dict):
+            return None
+        if tool_name:
+            known = next((t for t in (tools or []) if t.get("name") == tool_name), None)
+            if item["move"] != "act" or known is None:
+                return None
+            if (set(arguments) != set(known["arguments"])
+                    or any(not isinstance(value, str) or not 1 <= len(value.strip()) <= 280
+                           for value in arguments.values())):
+                return None
+        elif arguments:
+            return None
         return {
             "move": item["move"], "goal": goal.strip(), "reply": reply.strip(),
             "question": question.strip(), "steps": steps, "acceptance": acceptance,
+            "relation": relation, "resume_goal_id": resume_goal_id,
+            "tool": tool_name, "arguments": arguments,
         }
     except (requests.RequestException, ValueError, TypeError, KeyError) as error:
         LOG.info("Análise contextual indisponível: %s", type(error).__name__)

@@ -58,14 +58,82 @@ def evaluate(decider=decide, cases=CASES):
     }
 
 
+@dataclass(frozen=True)
+class ContinuityCase:
+    name: str
+    prompt: str
+    active_goal: str
+    expected_move: tuple[str, ...]
+    expected_relation: str
+    paused_goal: str = ""
+
+
+CONTINUITY_CASES = (
+    ContinuityCase(
+        "trocar-documentos-musica", "Agora quero começar um projeto de música",
+        "Ler e analisar PDFs", ("plan", "continue", "clarify"), "switch",
+    ),
+    ContinuityCase(
+        "refinar-mesmo-projeto", "Também preciso que as músicas sejam instrumentais",
+        "Criar músicas locais", ("continue", "plan", "clarify"), "refine",
+    ),
+    ContinuityCase(
+        "retomar-documentos", "Voltemos ao projeto de leitura de PDFs",
+        "Criar músicas locais", ("continue", "plan", "clarify"), "resume",
+        "Ler e analisar PDFs",
+    ),
+    ContinuityCase(
+        "novo-assunto-robos", "Quero planejar um robô de limpeza doméstica",
+        "Criar música", ("plan", "clarify"), "switch",
+    ),
+)
+
+
+def evaluate_continuity(decider=decide, cases=CONTINUITY_CASES):
+    """Mede também relação entre mensagens, não apenas classificação de intenção."""
+    checks = []
+    for case in cases:
+        paused = ([{"id": "a" * 32, "goal": case.paused_goal, "status": "paused"}]
+                  if case.paused_goal else [])
+        try:
+            result = decider(
+                case.prompt, [], pending={
+                    "id": "b" * 32, "goal": case.active_goal,
+                    "steps": ["Planejar etapas"], "acceptance": ["Entregar prova verificável"],
+                    "question": "",
+                }, paused_goals=paused, capabilities=[],
+            )
+        except (ValueError, TypeError, OSError):
+            result = None
+        move = result.get("move") if isinstance(result, dict) else None
+        relation = result.get("relation") if isinstance(result, dict) else None
+        reference_ok = (
+            not case.paused_goal or
+            result is not None and result.get("resume_goal_id") == "a" * 32
+        )
+        passed = (move in case.expected_move and relation == case.expected_relation
+                  and (reference_ok if case.expected_relation == "resume" else True))
+        checks.append({"case": case.name, "passed": passed,
+                       "move": move or "unavailable", "relation": relation or "unspecified"})
+    count = len(checks)
+    return {
+        "cases": count, "passed": sum(x["passed"] for x in checks),
+        "score": round(sum(x["passed"] for x in checks) / count, 3) if count else 0,
+        "details": checks,
+        "limits": "Heuristic evaluation of topic relation, not actual tool success.",
+    }
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Avaliar decisões do Menor no Ollama local")
     parser.add_argument("--live", action="store_true", help="Executa modelo local contra cenários")
+    parser.add_argument("--continuity", action="store_true",
+                        help="Avalia troca, refinamento e retomada de objetivos")
     args = parser.parse_args(argv)
     if not args.live:
         print("Passe --live para avaliar o modelo local; nada foi executado.")
         return 0
-    result = evaluate()
+    result = evaluate_continuity() if args.continuity else evaluate()
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["score"] >= 0.6 else 1
 
