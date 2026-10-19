@@ -8,6 +8,7 @@ from test_file_api import FileRoutesTests, request
 
 class ContextOcrApiTests(unittest.TestCase):
     setUp = FileRoutesTests.setUp
+
     def test_explicit_ocr_parameters_and_owner_boundary(self):
         saved_status, saved = request("POST", "/files/upload?filename=nota.txt",
                                       b"Nota privada", cookie=self.cookie)
@@ -53,9 +54,9 @@ class ContextOcrApiTests(unittest.TestCase):
                                 b"Nota privada", cookie=self.cookie)
         self.assertEqual(status, 201)
         target = f"/files/{saved['file']['file_id']}/context"
-        with patch("src.tools.file_analysis.api.retrieve_context", return_value={
-            "tool": "files.context", "status": "ocr_unavailable",
-            "grounded": False, "items": []}):
+        unavailable = {"tool": "files.context", "status": "ocr_unavailable",
+                       "grounded": False, "items": []}
+        with patch("src.tools.file_analysis.api.retrieve_context", return_value=unavailable):
             code, result = request("POST", target,
                                    b'{"question":"Prazo","ocr_page":1}',
                                    cookie=self.cookie, content_type="application/json")
