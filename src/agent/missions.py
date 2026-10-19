@@ -159,6 +159,14 @@ class MissionStore:
         mission = self.get(mission_id)
         if mission["status"] != "awaiting_approval":
             raise ValueError("Missão não está aguardando autorização.")
+        normalized = re.sub(r"\s+", " ", message.casefold()).strip(" ?!.")
+        if "aprova" in normalized or "autoriza" in normalized:
+            return (
+                "A autorização pendente é para baixar o modelo de imagens e instalar "
+                "as dependências locais no servidor, conforme o plano. "
+                "Até agora nada foi instalado por esta missão. "
+                "Você pode tirar dúvidas ou dizer 'eu aprovo' para prosseguir."
+            )
         return explain_plan(mission, message)
 
     def decide(self, mission_id, approved):
