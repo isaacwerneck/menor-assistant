@@ -89,7 +89,7 @@
 - **C**: deploy, observabilidade, smoke/doctor e segurança; E apenas apresenta telemetria disponibilizada.
 - **D**: lógica de conversas, aprovação e imagens; E não substitui `sendMsg`, agentes ou fluxos de refinamento.
 - **E**: tokens, layout, responsividade, interação de navegação e integração visual.
-- Sempre desenvolver em branch `feat/chat-e-*`, testar e abrir PR. Nunca merge automático ou escrita direta em `main`.
+- Sempre desenvolver em branch `feat/chat-e-*`, testar e abrir PR. Por autorização posterior do proprietário, o Chat E pode mesclar **somente seus próprios PRs** após revisão de escopo, CI obrigatório aprovado, branch atualizada, ausência de conflitos e regressões conhecidas. Não executar deploy, restart, instalação de modelos nem alterações destrutivas; nunca escrever diretamente na `main`. O Chat D continua coordenando conflitos entre frentes.
 
 ## Ponte futura de diagnóstico remoto (escopo E, não implementada por este documento)
 
