@@ -12,7 +12,7 @@ import threading
 import uuid
 from datetime import datetime, timezone
 
-from src.agent.model_catalog import discover
+from src.agent.model_catalog import comparison, discover
 from src.agent.planner import explain as explain_plan, plan
 from src.memory.store import BrainStore
 
@@ -127,6 +127,7 @@ class MissionStore:
             obj["plan"] = {
                 **proposal,
                 "candidates": candidates,
+                "alternatives": comparison(capability),
                 "preferred": candidates[0]["id"] if candidates else None,
                 "requires_approval": True,
             }
@@ -141,9 +142,10 @@ class MissionStore:
                 )
             elif candidates:
                 obj["question"] = (
-                    "O catálogo sugere Stable Diffusion 1.5 com OpenVINO para teste local. "
-                    "A instalação reserva 5 GB em disco; desempenho e qualidade precisam de teste. "
-                    "Posso instalar e testar o subagente?"
+                    "Comparei alternativas documentadas: SD 1.5 INT8/FP16, SD-Turbo e FLUX Schnell. "
+                    "Apenas SD 1.5 INT8 tem instalador integrado e auditado neste servidor. "
+                    "Ele NÃO foi validado para pixel art ou fidelidade de cena. "
+                    "Posso instalar e testar esta opção, ou prefere pesquisar outra antes?"
                 )
             else:
                 obj["question"] = (
