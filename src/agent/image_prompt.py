@@ -29,8 +29,10 @@ def adapt(brief):
         with requests.post(
             os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/chat",
             json={
-                "model": os.environ.get("MENOR_IMAGE_PROMPT_MODEL")
-                         or os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"),
+                "model": (
+                    os.environ.get("MENOR_IMAGE_PROMPT_MODEL")
+                    or os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
+                ),
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": brief},
