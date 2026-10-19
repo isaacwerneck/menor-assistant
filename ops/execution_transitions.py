@@ -21,7 +21,7 @@ def audit_transition(previous, current):
     if not isinstance(previous, dict) or not isinstance(current, dict):
         return dict(invalid)
     for record in (previous, current):
-        if (record.get("status") not in _STATES
+        if (type(record.get("status")) is not str or record["status"] not in _STATES
                 or any(type(record.get(field)) is not str
                        or not 1 <= len(record[field]) <= 128 for field in _FIELDS)):
             return dict(invalid)

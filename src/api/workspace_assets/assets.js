@@ -95,6 +95,7 @@ async function loadGoals() {
     "Nenhum objetivo com estado registrado nas últimas conversas. Os dados não são estimados.");
   if (failures) targets.goals.append(node("p", "empty error",
     "Não foi possível consultar " + failures + " conversa(s). Nenhum estado foi presumido."));
+  return failures;
 }
 
 const active = new Set(["gathering", "awaiting_approval", "queued", "installing", "needs_test", "blocked"]);
@@ -135,18 +136,30 @@ async function loadMissions() {
   drawMissions();
 }
 
-async function refresh() {
+// Reutiliza a atualização em andamento. A carga automática e um refresh
+// manual imediato não podem duplicar cartões nem disparar consultas concorrentes.
+let inFlightRefresh = null;
+function refresh() {
+  if (inFlightRefresh) return inFlightRefresh;
   targets.refresh.disabled = true;
   targets.status.textContent = "Consultando estados registrados…";
-  try {
-    const outcomes = await Promise.allSettled([loadGoals(), loadMissions()]);
-    const errors = outcomes.filter(x => x.status === "rejected").map(x => x.reason.message);
-    if (outcomes[0].status === "rejected") empty(targets.goals, errors[0], true);
-    if (outcomes[1].status === "rejected") empty(targets.missions,
-      outcomes[1].reason.message, true);
-    targets.status.textContent = errors.length ?
-      "Consulta parcial: " + errors.join(" ") : "Dados consultados. Nenhuma ação foi executada.";
-  } finally { targets.refresh.disabled = false; }
+  inFlightRefresh = (async () => {
+    try {
+      const outcomes = await Promise.allSettled([loadGoals(), loadMissions()]);
+      const errors = outcomes.filter(x => x.status === "rejected").map(x => x.reason.message);
+      if (outcomes[0].status === "rejected") empty(targets.goals, outcomes[0].reason.message, true);
+      else if (outcomes[0].value > 0) errors.push(
+        "Falha ao consultar " + outcomes[0].value + " conversa(s).");
+      if (outcomes[1].status === "rejected") empty(targets.missions,
+        outcomes[1].reason.message, true);
+      targets.status.textContent = errors.length ?
+        "Consulta parcial: " + errors.join(" ") : "Dados consultados. Nenhuma ação foi executada.";
+    } finally {
+      targets.refresh.disabled = false;
+      inFlightRefresh = null;
+    }
+  })();
+  return inFlightRefresh;
 }
 
 targets.refresh.addEventListener("click", refresh);

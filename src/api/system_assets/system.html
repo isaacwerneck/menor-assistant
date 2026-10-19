@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d0e16">
+<title>Sistema e capacidades — Menor AI</title>
+<link rel="stylesheet" href="/workspace/system/assets.css">
+</head>
+<body>
+<a class="skip-link" href="#content">Ir para o conteúdo</a>
+<div class="shell">
+<aside class="sidebar">
+  <a class="brand" href="/" aria-label="Menor AI — voltar às conversas">
+    <span class="mark" aria-hidden="true">M</span><span>Menor <span class="quiet">AI</span></span>
+  </a>
+  <nav class="side-nav" aria-label="Navegação principal">
+    <a href="/">Conversas</a>
+    <a href="/workspace/objectives">Objetivos</a>
+    <a href="/files/view">Arquivos</a>
+    <span aria-current="page">Sistema</span>
+  </nav>
+  <p class="side-foot">Consulta privada · somente leitura</p>
+</aside>
+<div class="main-shell">
+<header class="topbar">
+  <div class="topbar-leading"><a href="/" aria-label="Voltar às conversas">←</a>
+    <span>Sistema e capacidades</span></div>
+  <span class="topbar-hint">Menor AI / Estado observado</span>
+</header>
+<main class="content" id="content">
+  <div class="intro">
+    <div><p class="eyebrow">MENOR AI / OPERAÇÃO</p>
+      <h1>Sistema</h1>
+      <p>Disponibilidade informada pelo backend. As verificações abaixo não executam comandos nem testes de inferência.</p></div>
+    <button id="refresh" type="button">Atualizar estados</button>
+  </div>
+  <p id="updated" class="update-note" role="status" aria-live="polite">Consultando o sistema…</p>
+  <div class="summary-grid">
+    <section class="panel" aria-labelledby="api-title">
+      <p class="eyebrow">SERVIÇO</p><h2 id="api-title">API</h2>
+      <p id="api-state" class="primary-status">Não consultado</p>
+      <dl id="api-details" class="kv"></dl>
+      <p class="footnote">Uma resposta de saúde não confirma o código implantado ou o timer de deploy.</p>
+    </section>
+    <section class="panel" aria-labelledby="ollama-title">
+      <p class="eyebrow">INFERÊNCIA</p><h2 id="ollama-title">Ollama</h2>
+      <p id="ollama-state" class="primary-status">Não consultado</p>
+      <p id="ollama-explain" class="footnote">A API informa conectividade, não qualidade do modelo.</p>
+    </section>
+    <section class="panel" aria-labelledby="deploy-title">
+      <p class="eyebrow">INSTALAÇÃO</p><h2 id="deploy-title">Deploy no Ubuntu</h2>
+      <p class="primary-status unknown">Sem telemetria de deploy</p>
+      <p class="footnote">Revisão implantada, serviço systemd, CPU, memória e últimos reinícios ainda não são fornecidos por estas rotas. Não confundir com GitHub Actions.</p>
+    </section>
+  </div>
+  <section class="section" aria-labelledby="diagnostics-title">
+    <div class="section-header"><div><h2 id="diagnostics-title">Diagnósticos locais</h2>
+      <p>Evidências do Ubuntu agregadas, sem comandos remotos nem dados sensíveis.</p></div></div>
+    <div id="diagnostics" class="grid" aria-live="polite">
+      <p class="empty">Aguardando a rota privada de diagnóstico.</p>
+    </div>
+  </section>
+  <section class="section" aria-labelledby="models-title">
+    <div class="section-header"><div><h2 id="models-title">Modelos instalados</h2>
+      <p>Inventário informado pelo Ollama, sem benchmark automático.</p></div></div>
+    <div id="models" class="grid" aria-live="polite"></div>
+  </section>
+  <section class="section" aria-labelledby="images-title">
+    <div class="section-header"><div><h2 id="images-title">Geração de imagens</h2>
+      <p>Provedor configurado e disponibilidade declarada pelo Menor.</p></div></div>
+    <div id="images" class="grid" aria-live="polite"></div>
+  </section>
+  <section class="section" aria-labelledby="skills-title">
+    <div class="section-header"><div><h2 id="skills-title">Capacidades especializadas</h2>
+      <p>Prontidão verificada pelo contrato de skills, não promessas de treinamento.</p></div></div>
+    <div id="skills" class="grid" aria-live="polite"></div>
+  </section>
+  <section class="section" aria-labelledby="tools-title">
+    <div class="section-header"><div><h2 id="tools-title">Ferramentas disponíveis</h2>
+      <p>Catálogo de operações autorizáveis. Listar uma ferramenta não a executa.</p></div></div>
+    <div id="tools" class="grid" aria-live="polite"></div>
+  </section>
+  <p class="source-note">Fontes: <code>/health</code>, <code>/models</code>, <code>/images/status</code>,
+  <code>/agent/skills</code>, <code>/tools</code> e <code>/ops/diagnostics</code> quando disponível. Leituras independentes, sem alterações na API ou no Ollama.
+  Dados indisponíveis são mostrados como indisponíveis, nunca preenchidos por suposição.</p>
+</main>
+<nav class="mobile-nav" aria-label="Navegação rápida">
+  <a href="/">Conversas</a><a href="/workspace/objectives">Objetivos</a>
+  <a href="/files/view">Arquivos</a><span aria-current="page">Sistema</span>
+</nav>
+</div></div>
+<script defer src="/workspace/system/assets.js"></script>
+</body></html>
