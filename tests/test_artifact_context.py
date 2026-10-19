@@ -2,7 +2,6 @@ import io
 import os
 import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from PIL import Image
@@ -11,7 +10,6 @@ from src.agent import artifacts, image_prompt, intelligence, runner
 from src.agent.model_catalog import comparison, discover
 from src.agent.reviewer import review_image
 from src.agent.tasks import TaskStore
-from src.memory.store import BrainStore
 from src.tools import images
 
 
