@@ -135,12 +135,12 @@ class MissionStore:
                 from src.tools.local_images import preflight
                 obj["plan"]["preflight"] = preflight(self.store)
             obj["status"] = "awaiting_approval"
-            if candidates and not obj["plan"]["preflight"]["enough_disk"]:
+            if capability == "images.generate" and candidates and not obj["plan"]["preflight"]["enough_disk"]:
                 obj["question"] = (
                     "Encontrei o modelo local, mas não há 5 GB livres em disco. "
                     "Precisamos liberar espaço antes do download."
                 )
-            elif candidates:
+            elif capability == "images.generate" and candidates:
                 obj["question"] = (
                     "Comparei alternativas documentadas: SD 1.5 INT8/FP16, SD-Turbo e FLUX Schnell. "
                     "Apenas SD 1.5 INT8 tem instalador integrado e auditado neste servidor. "
@@ -163,11 +163,13 @@ class MissionStore:
             raise ValueError("Missão não está aguardando autorização.")
         normalized = re.sub(r"\s+", " ", message.casefold()).strip(" ?!.")
         if "aprova" in normalized or "autoriza" in normalized:
+            if mission["capability"] == "images.generate":
+                subject = "baixar o modelo de imagens e instalar dependências locais"
+            else:
+                subject = "preparar a capacidade " + mission["capability"]
             return (
-                "A autorização pendente é para baixar o modelo de imagens e instalar "
-                "as dependências locais no servidor, conforme o plano. "
-                "Até agora nada foi instalado por esta missão. "
-                "Você pode tirar dúvidas ou dizer 'eu aprovo' para prosseguir."
+                "A autorização se refere a " + subject + ", conforme o plano. "
+                "Nada foi executado por esta missão. Você pode perguntar ou autorizar."
             )
         return explain_plan(mission, message)
 
