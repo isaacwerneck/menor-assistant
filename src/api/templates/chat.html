@@ -1558,7 +1558,10 @@
             if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : 'Falha no agente.');
             delete conv.pendingAgentRequest;
             save();
-            if (!result.handled) return false;
+            if (!result.handled) {
+                conv.skipLegacyRoute = response.headers?.get?.('X-Menor-Fallback') === 'stream';
+                return false;
+            }
             delete conv.pendingMemory;
             save();
             const events = Array.isArray(result.events) ? result.events.map(
@@ -2004,6 +2007,9 @@
                     save();
                 }
                 let routeNotice = '';
+                const skipLegacyRoute = conv.skipLegacyRoute === true;
+                delete conv.skipLegacyRoute;
+                if (!skipLegacyRoute) {
                 try {
                     const routeResponse = await turnFetch('/agent/route', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2066,6 +2072,8 @@
                     document.getElementById('connectionStatus').textContent =
                         'Interpretação contextual indisponível; nenhuma memória nova foi salva.';
                 }
+                }
+                assertLiveTurn(conv);
                 const response = await turnFetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
