@@ -144,6 +144,66 @@ class ConversationContinuityTests(unittest.TestCase):
         runner.run(self.session, "multiTurn001", "Quero criar um robô", [], tasks=TaskStore())
         tool.assert_not_called()
 
+    @patch("src.agent.runner._tool_loop")
+    @patch("src.agent.runner.intelligence.decide")
+    def test_approval_restores_active_goal_after_verified_tool_receipt(self, think, loop):
+        think.side_effect = [
+            decision("Criar um projeto de estudos", relation="start"),
+            decision("Criar um projeto de estudos", move="act"),
+        ]
+        runner.run(self.session, "multiTurn001", "Vamos planejar projeto", [], tasks=TaskStore())
+        first_state = TaskStore().inspect(self.session)
+        loop.return_value = runner._answer(
+            "Preciso de autorização", "approval",
+            tool="projects.create", arguments={"name": "Estudos"},
+        )
+        pending = runner.run(self.session, "multiTurn002", "Pode começar a criar", [], tasks=TaskStore())
+        self.assertEqual(pending["phase"], "approval")
+        self.assertEqual(TaskStore().inspect(self.session)["return_goal"]["goal_id"],
+                         first_state["goal_id"])
+        with patch("src.agent.runner.perform", return_value={
+            "tool": "projects.create", "status": "executed",
+            "result": {"path": "projetos/estudos"},
+        }) as perform:
+            finished = runner.run(self.session, "multiTurn003", "eu aprovo", [], tasks=TaskStore())
+            duplicate = runner.run(self.session, "multiTurn003", "eu aprovo", [], tasks=TaskStore())
+        self.assertEqual(finished, duplicate)
+        self.assertEqual(finished["phase"], "goal")
+        self.assertEqual(TaskStore().inspect(self.session)["goal_id"], first_state["goal_id"])
+        perform.assert_called_once_with("projects.create", {"name": "Estudos"}, dry_run=False)
+
+    @patch("src.agent.runner._tool_loop")
+    @patch("src.agent.runner.intelligence.decide")
+    def test_rejecting_one_action_keeps_plan(self, think, loop):
+        think.side_effect = [
+            decision("Criar aplicativo", relation="start"),
+            decision("Criar aplicativo", move="act"),
+        ]
+        runner.run(self.session, "multiTurn001", "Planejar aplicativo", [], tasks=TaskStore())
+        loop.return_value = runner._answer(
+            "Ação requer autorização", "approval",
+            tool="projects.create", arguments={"name": "Aplicativo"},
+        )
+        runner.run(self.session, "multiTurn002", "Inicie trabalho", [], tasks=TaskStore())
+        reply = runner.run(self.session, "multiTurn003", "não autorizo", [], tasks=TaskStore())
+        self.assertEqual(reply["phase"], "goal")
+        self.assertEqual(TaskStore().inspect(self.session)["goal"], "Criar aplicativo")
+
+    @patch("src.agent.runner.research.handle", return_value={
+        "reply": "Encontrei fontes públicas para avaliar alternativas.",
+    })
+    @patch("src.agent.runner.intelligence.decide")
+    def test_public_research_does_not_erase_goal(self, think, research):
+        think.side_effect = [
+            decision("Automatizar jardim", relation="start"),
+            decision("Automatizar jardim", move="research"),
+        ]
+        runner.run(self.session, "multiTurn001", "Planeja o jardim", [], tasks=TaskStore())
+        answer = runner.run(self.session, "multiTurn002", "Pesquise fontes públicas", [], tasks=TaskStore())
+        self.assertEqual(answer["phase"], "goal")
+        self.assertIn("fontes públicas", answer["reply"])
+        self.assertEqual(TaskStore().inspect(self.session)["goal"], "Automatizar jardim")
+
     @patch("src.agent.runner.intelligence.decide")
     def test_cancellation_does_not_erase_prior_goals(self, think):
         think.side_effect = [
