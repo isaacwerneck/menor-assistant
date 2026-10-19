@@ -3,12 +3,12 @@
 Nenhum caminho informado pelo modelo é repassado diretamente ao sistema.
 """
 from dataclasses import dataclass
-import importlib
 import json
 from pathlib import Path
 import re
 
 from src.agent.tool_builder import build
+from src.agent.custom_runtime import run as run_custom_skill
 
 from src.agent.diagnostics import analyze
 from src.agent.self_edit import propose
@@ -114,10 +114,7 @@ def perform(name, arguments, dry_run=True):
     if name == "developer.build":
         output = build(arguments["name"], arguments["goal"], dry_run=False)
     elif name.startswith("custom."):
-        module = importlib.import_module("src.tools.generated." + name.removeprefix("custom."))
-        output = module.run(arguments["text"])
-        if not isinstance(output, str) or len(output) > 12000:
-            raise ValueError("A ferramenta retornou uma saída inválida.")
+        output = run_custom_skill(name.removeprefix("custom."), arguments["text"])
     elif name == "web.search":
         output = web.search(arguments["query"])
     elif name == "web.read":

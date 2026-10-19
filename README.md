@@ -230,3 +230,15 @@ espaço em disco; o modelo fica fora do Git. Consulte
 
 A validação efetiva no notebook continua pendente.
 
+### Correções de aprovação e segurança (PR #11)
+
+No chat, frases naturais de autorização como `eu aprovo` e `bora lá`
+são aceitas quando já existe uma missão aguardando consentimento.
+Perguntas como `que aprovação?` explicam exatamente o que será instalado
+sem executar downloads; o estado é salvo e consultável depois do aceite.
+
+Ferramentas geradas passam a executar dentro de containers Docker restritos
+na utilização, não apenas durante os testes. Sem Docker disponível,
+a execução é recusada. Pesquisas externas recebem filtragem preventiva de
+dados privados; não envie senhas ou tokens em consultas.
+

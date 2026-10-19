@@ -1,6 +1,6 @@
 """Testa propostas puras em container descartável, sem segredos ou rede."""
+import json
 import os
-import re
 from pathlib import Path
 import secrets
 import shutil
@@ -11,6 +11,20 @@ from src.agent.self_edit import ImprovementUnavailable
 from src.memory.store import BrainStore
 
 IMAGE = "python:3.12-alpine"
+# O resultado dos testes vem do unittest, não de palavras soltas no log da skill.
+HARNESS = """
+import contextlib, io, json, sys, unittest
+sys.path.insert(0, '/workspace')
+output = io.StringIO()
+with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+    suite = unittest.defaultTestLoader.discover('/workspace/tests')
+    count = suite.countTestCases()
+    result = unittest.TextTestRunner(stream=output, verbosity=1).run(suite)
+passed = result.wasSuccessful() and count > 0 and result.testsRun == count
+print(json.dumps({'passed': passed, 'discovered': count, 'ran': result.testsRun,
+                  'failures': len(result.failures), 'errors': len(result.errors)}))
+sys.exit(0 if passed else 5)
+"""
 
 
 def verify(name, source, tests):
@@ -45,7 +59,7 @@ def verify(name, source, tests):
             "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m",
             "--mount", f"type=bind,source={directory},target=/workspace,readonly",
             "--workdir", "/workspace", IMAGE,
-            "python", "-B", "-m", "unittest", "discover", "-s", "tests", "-v",
+            "python", "-I", "-B", "-c", HARNESS,
         ]
 
         def execute(arguments, timeout=10):
@@ -60,11 +74,18 @@ def verify(name, source, tests):
             started = True
             result = execute([docker, "wait", container], timeout=25)
             logs = execute([docker, "logs", "--tail=100", container])
-            log = (logs.stdout + logs.stderr)[:8000]
-            summary = re.search(r"Ran [1-9][0-9]* tests? in ", log)
-            if result.returncode or logs.returncode or result.stdout.strip() != "0" or not summary:
+            try:
+                report = json.loads(logs.stdout.strip())
+            except ValueError as error:
+                raise ImprovementUnavailable("O sandbox não retornou recibo de testes válido.") from error
+            if (result.returncode or logs.returncode or result.stdout.strip() != "0"
+                    or not isinstance(report, dict) or report.get("passed") is not True
+                    or type(report.get("ran")) is not int or report["ran"] < 1
+                    or report.get("discovered") != report["ran"]
+                    or report.get("errors") != 0 or report.get("failures") != 0):
                 raise ImprovementUnavailable("Os testes falharam no sandbox; nenhuma branch foi criada.")
-            return {"status": "passed", "command": "unittest discover", "log": log}
+            return {"status": "passed", "command": "unittest discover",
+                    "log": json.dumps(report, ensure_ascii=False)[:1000]}
         except subprocess.TimeoutExpired as error:
             raise ImprovementUnavailable("Tempo de teste excedido; nenhuma branch foi criada.") from error
         except OSError as error:

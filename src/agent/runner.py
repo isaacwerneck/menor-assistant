@@ -7,6 +7,7 @@ import re
 import requests
 
 from src.agent.delegation import generate_image
+from src.agent.approval import decision as approval_decision
 from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _normalize
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
@@ -68,13 +69,27 @@ def _mission_turn(state, message):
         criteria = "; ".join(mission["plan"].get("acceptance", []))
         return _answer(f"Plano:\n{steps}\nVerificação: {criteria}\n\n{mission['question']}", **state)
     if mission["status"] in ("queued", "installing") and not re.search(
-        r"status|andamento|pront|termin|como|cancel", normal,
+        r"status|andamento|progresso|pront|termin|como|cancel|consegu|"
+        r"deu certo|funcion|instal|baix|modelo|ferramenta|e agora|falta", normal,
     ):
         return state, {"handled": False}
     if mission["status"] == "awaiting_approval":
-        if not YES.fullmatch(normal) and not NO.fullmatch(normal):
+        choice = approval_decision(message)
+        if choice == "question":
+            if re.search(r"\b(?:que|qual|pra que|para que) aprovacao\b", normal):
+                return _answer(
+                    "A aprovação é para instalar dependências e baixar o modelo local "
+                    "de imagens no servidor, conforme o plano apresentado. "
+                    "Nenhum download foi iniciado. Você pode perguntar mais ou "
+                    "dizer 'eu aprovo' para autorizar.", **state,
+                )
+            if "?" not in message and not re.search(r"^(como|qual|quais|que|por que|o que)", normal):
+                return _answer(
+                    "Ainda falta sua autorização para instalar o modelo. "
+                    "Se quiser prosseguir, diga 'eu aprovo' ou 'pode instalar'.", **state,
+                )
             return _answer(missions.explain(mission["id"], message), **state)
-        mission = missions.decide(mission["id"], bool(YES.fullmatch(normal)))
+        mission = missions.decide(mission["id"], choice == "approve")
     if mission["status"] == "ready":
         verified = capability_status(mission["capability"])["ready"]
         return _answer("A ferramenta passou no teste e está pronta." if verified
@@ -82,6 +97,11 @@ def _mission_turn(state, message):
     if mission["status"] in ("cancelled", "failed", "blocked"):
         return _answer(mission["question"] if mission["status"] != "failed"
                        else "A execução falhou; nenhuma capacidade foi marcada como pronta.")
+    if mission["status"] == "queued":
+        return _answer(
+            "Autorização registrada. Missão aguardando o worker automático para instalar "
+            "o modelo local. Ainda não concluí o download ou o teste.", **state,
+        )
     label = {"preparing": "preparando ambiente", "downloading": "baixando modelo", "testing": "verificando imagem"}
     progress = label.get(mission.get("stage"), mission["status"])
     return _answer(f"Missão {progress}. Você pode consultar o andamento aqui.", **state)
@@ -179,10 +199,14 @@ def _tool_loop(message, history):
 def _advance(state, message, history):
     normal = _normalize(message.strip())
     if state["phase"] == "approval":
-        if NO.fullmatch(normal):
+        choice = approval_decision(message)
+        if choice == "reject":
             return _answer("Ação cancelada, sem executar a ferramenta.")
-        if not YES.fullmatch(normal):
-            return _answer("Há uma ação específica pendente. Responda sim ou não para esse plano.", **state)
+        if choice != "approve":
+            return _answer(
+                "Esta ação específica está pendente de autorização. "
+                "Diga 'eu aprovo' ou 'não autorizo'; fazer perguntas não a executa.", **state,
+            )
         receipt = perform(state["tool"], state["arguments"], dry_run=False)
         current, result = _answer(
             "Execução confirmada: " + receipt["tool"] + ".\n"
@@ -208,10 +232,10 @@ def _advance(state, message, history):
         context = history + ([{"role": "user", "content": state["goal"]}] if state.get("goal") else [])
         return _begin_mission(message, context)
     if state["phase"] in ("image_offer", "image_scene"):
-        if NO.fullmatch(normal):
+        if approval_decision(message) == "reject":
             return _answer("Pedido cancelado.")
         if state["phase"] == "image_offer":
-            if YES.fullmatch(normal):
+            if approval_decision(message) == "approve":
                 return _begin_mission("Desenvolver ferramenta de imagens: " + state["goal"][:540], history)
             return _answer("Quer planejar a ferramenta local de imagens? Responda sim ou não.", **state)
         return _image_turn("Crie uma imagem de " + message)
