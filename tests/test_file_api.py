@@ -109,6 +109,14 @@ class FileRoutesTests(unittest.TestCase):
                                  headers_extra={"content-length": str(MAX_BYTES + 1)})[0], 413)
         self.assertEqual(request("POST", path, huge, cookie=self.cookie)[0], 413)
 
+    def test_private_inspector_page_and_assets(self):
+        self.assertEqual(request("GET", "/files/view")[0], 401)
+        self.assertEqual(request("GET", "/files/assets.js")[0], 401)
+        self.assertEqual(request("GET", "/files/assets.css")[0], 401)
+        self.assertEqual(request("GET", "/files/view", cookie=self.cookie)[0], 200)
+        self.assertEqual(request("GET", "/files/assets.js", cookie=self.cookie)[0], 200)
+        self.assertEqual(request("GET", "/files/assets.css", cookie=self.cookie)[0], 200)
+
     def test_capabilities_are_grounded_and_require_auth(self):
         status, data = request("GET", "/files/capabilities", cookie=self.cookie)
         self.assertEqual(status, 200, data)
