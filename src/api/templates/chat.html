@@ -1117,6 +1117,44 @@
         }
 
         async function handleAgentTurn(conv, message, history, project, content) {
+            if (conv.pendingRunRecovery) {
+                const choice = missionConsent(message);
+                if (choice === 'reject') {
+                    delete conv.pendingRunRecovery;
+                    delete conv.pendingAgentRequest;
+                    imageReply(conv, content,
+                        'Certo. Não liberei a tarefa anterior e não repeti nenhuma ação.');
+                    return true;
+                }
+                if (choice !== 'approve') {
+                    imageReply(conv, content,
+                        'Uma operação anterior pode ter sido interrompida. O resultado é incerto. '
+                        + 'Quer encerrar aquela tentativa sem repeti-la? Responda sim ou não.');
+                    return true;
+                }
+                const recovery = await fetch('/agent/runs/' + encodeURIComponent(conv.id) + '/recover', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirmed: true }),
+                });
+                const receipt = await recovery.json();
+                if (recovery.status === 409) {
+                    imageReply(conv, content,
+                        'Ainda existe uma operação ativa nesta conversa. '
+                        + 'Não vou interrompê-la nem repetir seus efeitos.');
+                    return true;
+                }
+                if (!recovery.ok) {
+                    throw new Error(receipt.detail || 'Falha ao recuperar tarefa.');
+                }
+                delete conv.pendingRunRecovery;
+                delete conv.pendingAgentRequest;
+                imageReply(conv, content, receipt.recovered
+                    ? 'Estado anterior liberado com segurança. O resultado da ação interrompida '
+                      + 'continua incerto; verifique antes de pedir outra execução. '
+                      + 'Podemos retomar o planejamento.'
+                    : 'A conversa já estava disponível. Podemos continuar.');
+                return true;
+            }
             if (conv.pendingImage || conv.activeMission ||
                 conv.pendingCapabilityOffer || selectedImageFile) return false;
             const previous = conv.pendingAgentRequest;
@@ -1138,6 +1176,17 @@
                 throw new Error('Faça login para continuar.');
             }
             const result = await response.json();
+            if (response.status === 409 && typeof result.detail === 'string'
+                && /em execução|interrompid|ainda está ativa|em andamento/i.test(result.detail)) {
+                conv.pendingRunRecovery = true;
+                delete conv.pendingAgentRequest;
+                imageReply(conv, content,
+                    'Uma tarefa desta conversa ainda está marcada como em execução. '
+                    + 'Se ela foi interrompida, o resultado pode ser incerto. '
+                    + 'Quer liberar o estado para continuar, sem repetir a ação anterior? '
+                    + 'Se a tarefa ainda estiver ativa, a recuperação será bloqueada.');
+                return true;
+            }
             if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : 'Falha no agente.');
             delete conv.pendingAgentRequest;
             save();
