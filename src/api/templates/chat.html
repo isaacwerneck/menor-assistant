@@ -1258,7 +1258,7 @@
                     if (!response.ok) throw new Error(data.detail || 'Erro ao editar imagem.');
                     result = data;
                 } else {
-                    result = await imageJson('/images/generate', { prompt });
+                    result = await imageJson('/images/generate', { prompt, session_id: conv.id });
                 }
                 if (result.status !== 'completed' || !result.url) {
                     throw new Error('O motor não confirmou a imagem.');
