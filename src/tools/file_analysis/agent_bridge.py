@@ -63,7 +63,8 @@ def _context_data(receipt, file_id):
                 return None
         except (TypeError, ValueError):
             return None
-        selected.append({"text": text, "citation": citation, "anchor": anchor})
+        selected.append({"text": text, "citation": citation, "anchor": anchor,
+                         "source": "ocr" if item.get("source") == "ocr" else "extracted"})
     if sum(len(item["text"]) for item in selected) > 4000:
         return None
     return {
@@ -72,7 +73,8 @@ def _context_data(receipt, file_id):
         "items": selected,
         "source_truncated": receipt.get("source_truncated") is True,
         "selection_truncated": receipt.get("selection_truncated") is True,
-        "content_kind": "extracted_text",
+        "content_kind": "mixed_or_ocr_text" if any(x["source"] == "ocr" for x in selected)
+                        else "extracted_text",
         "provenance": "source_locator_not_truth_verification",
         "semantic_verified": False,
     }
