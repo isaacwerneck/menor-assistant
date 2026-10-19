@@ -85,3 +85,11 @@ re-ranking e avaliação de precisão ainda ficam para I2 completa.
 
 A primeira sincronização pode ser lenta em CPU; fazer benchmark no notebook.
 
+
+## Separação dos modelos locais
+
+Opcionalmente, MENOR_REASONING_MODEL escolhe um modelo do Ollama já
+instalado para interpretar objetivos e conversas. Se não estiver definido,
+o motor usa OLLAMA_ROUTER_MODEL ou OLLAMA_MODEL. Isso permite comparar modelos
+instruct sem substituir o Qwen Coder utilizado para código. Não baixa nem
+treina modelos automaticamente; benchmarks reais continuam necessários.
