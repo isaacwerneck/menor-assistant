@@ -602,3 +602,32 @@ test('missão não instala nada após recusa do usuário', async () => {
     await ui.context.sendMsg();
     assert.equal(ui.missionCalls.at(-1).data.approved, false);
 });
+
+test('prints: que aprovação é pergunta, eu aprovo registra aceite e não volta a pedir', async () => {
+    const ui = browser();
+    ui.context.createConversation('pixel art');
+    const conv = ui.context.getActiveConv();
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.elements.get('userInput').value = 'que aprovação?';
+    await ui.context.sendMsg();
+    assert.match(conv.messages.at(-1).content, /baixar o modelo/);
+    assert.equal(ui.missionCalls.filter(item => item.type === 'approve').length, 0);
+    ui.elements.get('userInput').value = 'eu aprovo';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.filter(item => item.type === 'approve').length, 1);
+    assert.equal(ui.missionCalls.at(-1).data.approved, true);
+    assert.equal(conv.activeMission.status, 'queued');
+    assert.match(conv.messages.at(-1).content, /Aprovado/);
+});
+
+test('prints: ordem direta para baixar o modelo autoriza plano pendente', async () => {
+    const ui = browser();
+    ui.context.createConversation('pixel art');
+    const conv = ui.context.getActiveConv();
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.elements.get('userInput').value =
+        'mete marcha, planeja a implementação, baixa o modelo, constrói todo o fluxo e vai me avisando';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.filter(item => item.type === 'approve').length, 1);
+    assert.equal(conv.activeMission.status, 'queued');
+});
