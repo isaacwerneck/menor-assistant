@@ -343,3 +343,19 @@ Aceites ainda pendentes: Chromium/Qwen/Docker no servidor, programador geral,
 pesquisa iterativa, estudo progressivo e avaliação mensurável da qualidade.
 Uma capacidade só é concluída depois de teste real; aprender notas não treina os pesos.
 
+## 16. Aprovações naturais e ferramentas isoladas — PR #11
+
+- [x] Interpretar `eu aprovo`, `bora lá`, `pode instalar` e ordens explícitas
+  de execução como aceite **somente** na missão já aguardando autorização.
+- [x] Explicar `que aprovação?` sem encaminhar ao Qwen uma decisão de permissão.
+- [x] Consultar o estado real quando o usuário perguntar `conseguimos fazer?`,
+  evitando promessas de trabalho concluído antes da execução.
+- [x] Impedir importação de código de ferramentas geradas dentro da API.
+  A execução posterior ocorre em Docker restrito; sem Docker, falha fechada.
+- [x] Validar resultados dos testes pelo recibo estruturado do `unittest`
+  em vez de buscar frases de sucesso em stdout/stderr.
+- [x] Bloquear pesquisas públicas com padrões de dados privados ou segredos,
+  sem enviar histórico ao planejador no modo de pesquisa automática.
+- [ ] Provar instalação de imagem no Ubuntu e revisar limites de privacidade
+  com mais dados reais antes de autonomia ampliada.
+
