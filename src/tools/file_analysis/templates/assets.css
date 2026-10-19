@@ -12,3 +12,6 @@ overflow-wrap:anywhere;max-height:55vh;overflow:auto;padding:14px;font-size:13px
 textarea{display:block;width:100%;font:inherit;margin:12px 0;padding:10px;border:1px solid #a6aab0;border-radius:7px}
 .actions{display:flex;flex-wrap:wrap;gap:10px}
 .notice{font-size:14px;color:#505a65}
+
+fieldset{margin:16px 0 0;padding:14px;border:1px solid #d4d7db;border-radius:7px}
+input[type="number"]{max-width:120px;font:inherit;padding:8px}
