@@ -1,5 +1,4 @@
 """Regressões para autorizações reais, sandbox pós-merge e privacidade."""
-import json
 import os
 import tempfile
 import unittest
@@ -72,6 +71,7 @@ class CustomSandboxTests(unittest.TestCase):
             path = Path(temp) / "teste.py"
             path.write_text("def run(text): return text", encoding="utf-8")
             received = []
+
             def execute(args, **kwargs):
                 received.append((args, kwargs))
                 if args[1] == "run":
