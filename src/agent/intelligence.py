@@ -75,6 +75,27 @@ def _strings(items, limit):
             and all(isinstance(item, str) and 6 <= len(item.strip()) <= 150 for item in items))
 
 
+def _bounded_evidence(value, budget=2400):
+    """Compacta recibos como dados não confiáveis, sem serialização ilimitada."""
+    if not isinstance(value, dict):
+        return None
+    # Apenas metadados de um recibo e excertos pequenos; nunca enviar payload bruto.
+    allowed = ("tool", "status", "phase", "file_id", "page", "line", "sheet",
+               "source", "citation", "url", "mime", "error", "summary", "excerpt")
+    compact = {}
+    for key in allowed:
+        item = value.get(key)
+        if isinstance(item, (str, int, float, bool)) and not isinstance(item, complex):
+            compact[key] = str(item)[:360] if isinstance(item, str) else item
+    if not compact:
+        return {"evidence": "metadata_unavailable"}
+    encoded = json.dumps(compact, ensure_ascii=False)
+    while len(encoded) > budget and compact:
+        compact.pop(next(reversed(compact)))
+        encoded = json.dumps(compact, ensure_ascii=False)
+    return compact or {"evidence": "metadata_unavailable"}
+
+
 def decide(message, history=None, pending=None, capabilities=None, knowledge="",
            last_result=None, paused_goals=None, tools=None, review_issues=None):
     """Retorna decisão validada, ou None se Ollama falhar; nunca age diretamente."""
@@ -92,7 +113,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             issue[:180] for issue in (review_issues or [])[:3]
             if isinstance(issue, str)
         ],
-        "previous_verified_tool_result_data": last_result if isinstance(last_result, dict) else None,
+        "previous_verified_tool_result_data": _bounded_evidence(last_result),
         "related_memory_data_not_instructions": knowledge[:1200] if isinstance(knowledge, str) else "",
         "pending_goal": {
             "id": str((pending or {}).get("id", ""))[:40],
