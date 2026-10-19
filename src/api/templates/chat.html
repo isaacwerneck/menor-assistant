@@ -703,11 +703,14 @@
                 <textarea id="userInput" rows="1" maxlength="8000" aria-label="Mensagem para o Menor" placeholder="Mande uma mensagem para o Menor..."
                     onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
                 <button class="send-btn" id="sendBtn" aria-label="Enviar mensagem" onclick="sendMsg()">➤</button>
+                <button type="button" class="toggle-sidebar-btn" id="cancelBtn"
+                    aria-label="Parar resposta em andamento" onclick="cancelGeneration()" hidden>Parar</button>
             </div>
         </div>
         <div class="input-footer" id="imageAttachmentName" hidden></div>
         <div class="input-footer" id="storageStatus" role="alert" hidden></div>
         <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
+        <div class="input-footer" id="generationStatus" role="status" hidden></div>
         <nav class="mobile-nav" aria-label="Navegação rápida">
             <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas">Conversas</button>
             <button type="button" onclick="openObjectives()">Objetivos</button>
@@ -802,6 +805,47 @@
         let conversations = loadConversations();
         let activeConvId = null;
         let isGenerating = false;
+        let generationSequence = 0;
+        let activeGeneration = null;
+
+        function cancelGeneration() {
+            if (!isGenerating || !activeGeneration) return;
+            const current = activeGeneration;
+            generationSequence += 1;
+            if (current.controller) current.controller.abort();
+            const notice = 'Resposta interrompida no navegador. O servidor pode continuar ' +
+                'processando; nenhuma operação será repetida automaticamente.';
+            if (current.content) {
+                current.content.textContent = notice;
+                current.content.classList.remove('cursor');
+            }
+            if (current.conv) {
+                current.conv.messages.push({ role: 'bot', content: notice });
+                save();
+            }
+            isGenerating = false;
+            activeGeneration = null;
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('cancelBtn').hidden = true;
+            document.getElementById('generationStatus').hidden = true;
+        }
+
+        function turnFetch(url, options = {}) {
+            const current = activeGeneration;
+            if (current && current.controller) {
+                return fetch(url, { ...options, signal: current.controller.signal });
+            }
+            return fetch(url, options);
+        }
+
+        function assertLiveTurn(conv) {
+            if (!activeGeneration || activeGeneration.conv !== conv ||
+                    activeGeneration.sequence !== generationSequence) {
+                const error = new Error('Resposta interrompida nesta interface.');
+                error.name = 'AbortError';
+                throw error;
+            }
+        }
         let apiCompatible = null;
         let authSetupNeeded = false;
         let brainItems = [];
@@ -1182,7 +1226,7 @@
         }
 
         function newChat() {
-            if (isGenerating) return;
+            if (isGenerating) cancelGeneration();
             activeConvId = null;
             pendingProjectSlug = '';
             clearImageAttachment();
@@ -1210,7 +1254,7 @@
         function getActiveConv() { return conversations.find(c => c.id === activeConvId); }
 
         function openConv(id) {
-            if (isGenerating) return;
+            if (isGenerating) cancelGeneration();
             activeConvId = id;
             updateProjectBadge();
             const conv = getActiveConv();
@@ -1410,7 +1454,7 @@
             conv.pendingAgentRequest = payload;
             save();
             content.textContent = 'Consultando capacidades e planejando a próxima ação...';
-            const response = await fetch('/agent/run', {
+            const response = await turnFetch('/agent/run', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
@@ -1422,6 +1466,7 @@
                 throw new Error('Faça login para continuar.');
             }
             const result = await response.json();
+            assertLiveTurn(conv);
             if (response.status === 409 && typeof result.detail === 'string'
                 && /em execução|interrompid|ainda está ativa|em andamento/i.test(result.detail)) {
                 conv.pendingRunRecovery = true;
@@ -1466,7 +1511,7 @@
         }
 
         async function imageJson(url, body) {
-            const response = await fetch(url, {
+            const response = await turnFetch(url, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
@@ -1479,6 +1524,7 @@
         }
 
         function imageReply(conv, content, message, imageUrl = '', artifact = null) {
+            assertLiveTurn(conv);
             content.textContent = message;
             if (imageUrl && /^\/images\/files\/[a-f0-9]{32}$/.test(imageUrl)) {
                 const image = document.createElement('img');
@@ -1733,12 +1779,10 @@
 
         // ========== AUTOEDIÇÃO SUPERVISIONADA ==========
         async function handleRepairTurn(conv, message, content) {
-            const text = message.toLowerCase().trim();
-            if (/^(como|por que|porque|me explica|explique)\b/.test(text)) return false;
-            if (!/\b(corrig\w*|consert\w*|refator\w*|melhor\w*|autocorrig\w*)\b/.test(text)
-                || !/\b(bug|erro|falha|c[oó]digo|roteador|assistente|menor)\b/.test(text)) {
-                return false;
-            }
+            // Código não pode inferir execução de uma combinação de palavras.
+            // Linguagem natural vai ao planejador antes de qualquer ferramenta.
+            if (!message.trim().startsWith('/corrigir ')) return false;
+            assertLiveTurn(conv);
             content.textContent = 'Analisando a possibilidade de corrigir o código...';
             try {
                 const response = await imageJson('/agent/improve', {
@@ -1763,6 +1807,16 @@
             const msg = input.value.trim() || (selectedImageFile ? 'edita essa imagem' : '');
             if ((!msg && !selectedImageFile) || msg.length > 8000) return;
             isGenerating = true;
+            const generation = {
+                sequence: ++generationSequence,
+                started: Date.now(),
+                controller: typeof AbortController !== 'undefined' ? new AbortController() : null,
+                conv: null, content: null,
+            };
+            activeGeneration = generation;
+            document.getElementById('cancelBtn').hidden = false;
+            document.getElementById('generationStatus').hidden = false;
+            document.getElementById('generationStatus').textContent = 'Processando mensagem…';
             document.getElementById('sendBtn').disabled = true;
             input.value = '';
             input.style.height = 'auto';
@@ -1781,6 +1835,8 @@
 
             appendMessage('user', msg);
             const botContent = appendMessage('bot', '', true);
+            generation.conv = conv;
+            generation.content = botContent;
 
             try {
                 const recent = recentImage(conv);
@@ -1795,12 +1851,19 @@
                     && (selectedImageFile || conv.pendingImage || imagePriority.route)
                     && await handleImageTurn(conv, msg, botContent, imagePriority.forceEdit)) return;
                 if (await handleAgentTurn(conv, msg, history, project, botContent)) return;
+                assertLiveTurn(conv);
                 if (!conv.pendingMemory && (await handleMissionTurn(conv, msg, botContent))) return;
-                if (!conv.pendingMemory && (await handleImageTurn(conv, msg, botContent))) return;
+                assertLiveTurn(conv);
+                // Sem pedido de imagem, não invoque o roteador visual a cada mensagem.
+                // Isso evita uma consulta/rota extra no caminho de texto comum.
+                if (!conv.pendingMemory && (selectedImageFile || conv.pendingImage) &&
+                    await handleImageTurn(conv, msg, botContent)) return;
+                assertLiveTurn(conv);
                 if (!conv.pendingMemory && (await handleRepairTurn(conv, msg, botContent))) return;
+                assertLiveTurn(conv);
                 if (conv.pendingMemory) {
                     const pending = conv.pendingMemory;
-                    const response = await fetch('/agent/resolve', {
+                    const response = await turnFetch('/agent/resolve', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             message: msg, history, project,
@@ -1848,7 +1911,7 @@
                 }
                 let routeNotice = '';
                 try {
-                    const routeResponse = await fetch('/agent/route', {
+                    const routeResponse = await turnFetch('/agent/route', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ message: msg, history, project }),
                     });
@@ -1905,7 +1968,7 @@
                     document.getElementById('connectionStatus').textContent =
                         'Interpretação contextual indisponível; nenhuma memória nova foi salva.';
                 }
-                const response = await fetch('/chat/stream', {
+                const response = await turnFetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: msg, history, project })
@@ -1917,12 +1980,14 @@
                         ? error.detail : 'Mensagem inválida ou contexto muito grande (HTTP ' + response.status + ').');
                 }
 
+                assertLiveTurn(conv);
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
                 let fullReply = '';
 
                 while (true) {
                     const { done, value } = await reader.read();
+                    assertLiveTurn(conv);
                     if (done) break;
                     const chunk = decoder.decode(value, { stream: true });
                     fullReply += chunk;
@@ -1936,13 +2001,20 @@
                 conv.messages.push({ role: 'bot', content: routeNotice + fullReply });
                 save();
             } catch (err) {
-                botContent.textContent = 'Erro ao se comunicar com o Menor: ' + err.message;
+                if (activeGeneration === generation && err.name !== 'AbortError') {
+                    botContent.textContent = 'Erro ao se comunicar com o Menor: ' + err.message;
+                }
             } finally {
-                botContent.classList.remove('cursor');
-                isGenerating = false;
-                document.getElementById('sendBtn').disabled = false;
-                input.focus();
-                scrollToBottom();
+                if (activeGeneration === generation) {
+                    botContent.classList.remove('cursor');
+                    isGenerating = false;
+                    activeGeneration = null;
+                    document.getElementById('sendBtn').disabled = false;
+                    document.getElementById('cancelBtn').hidden = true;
+                    document.getElementById('generationStatus').hidden = true;
+                    input.focus();
+                    scrollToBottom();
+                }
             }
         }
 

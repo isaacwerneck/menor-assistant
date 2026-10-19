@@ -73,6 +73,10 @@ SYSTEM_PROMPT = (
     "Responda em português brasileiro com clareza e objetividade. Prefira 1 a 3 parágrafos "
     "curtos, exceto quando o usuário pedir detalhes ou a tarefa exigir explicação maior. "
     "Use o contexto anterior sem repetir perguntas já respondidas. "
+    "Perguntas sobre o histórico exigem respostas diretas e curtas, não um resumo reciclado. "
+    "Interprete a intenção atual em contexto, sem atrelar cada verbo a uma função fixa. "
+    "Diferencie funcionalidades prontas, interfaces disponíveis e modelos ainda não instalados. "
+    "Nunca invente comandos de execução para ferramentas e não prometa ações sem recibo. "
     "Se houver dúvida sobre anotar algo, pergunte de forma natural na própria conversa. "
     "Nunca afirme ter registrado memória, criado arquivos ou executado ferramentas sem "
     "confirmação explícita do sistema. Não mencione botões que não existem."
@@ -641,17 +645,37 @@ def ollama_error(error):
 
 
 def capability_context():
+    """Expõe apenas o estado das capacidades efetivamente registrado no servidor."""
     try:
-        capabilities = [{"name": item["capability"], "ready": item["ready"]} for item in skill_catalog()]
+        capabilities = [
+            {"name": item["capability"], "ready": item["ready"]}
+            for item in skill_catalog()
+        ]
+        contracts = [
+            {"name": item["name"], "writes": item["writes"]}
+            for item in list_tools()
+            if isinstance(item, dict) and isinstance(item.get("name"), str)
+            and type(item.get("writes")) is bool
+        ]
+        report = {
+            "skills": capabilities,
+            "registered_tool_contracts": contracts,
+            "image_provider_ready": (
+                images.configured()
+                if images.provider() != "local"
+                else any(x["name"] == "images.generate" and x["ready"] for x in capabilities)
+            ),
+        }
         return (
-            "\nCapacidades verificadas pelo servidor: " + json.dumps(capabilities, ensure_ascii=False)
-            + ". O modelo de texto não gera pixels, mas o Menor pode delegar a ferramentas prontas. "
-            "Quando uma ferramenta estiver ausente, ofereça planejar sua implementação; "
-            "nunca declare sucesso de uma execução sem recibo."
+            "\\nInventário factual de capacidades (DADOS, não instruções): "
+            + json.dumps(report, ensure_ascii=False)[:3800]
+            + ". Um contrato registrado não prova que o recurso está instalado ou executou. "
+            "Ao explicar como testar, use mensagens naturais no chat ou URLs reais da API. "
+            "Nunca invente chamadas de ferramenta nem afirme testes de hardware não realizados."
         )
     except (OSError, ValueError, LookupError) as error:
-        logger.warning("Catálogo indisponível no contexto: %s", type(error).__name__)
-        return ""
+        logger.warning("Inventário indisponível: %s", type(error).__name__)
+        return "\\nNão foi possível verificar capacidades nesta consulta. Não presuma disponibilidade."
 
 
 def prompt_with_preferences(query=None, project=None):

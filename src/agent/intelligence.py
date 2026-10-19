@@ -15,6 +15,9 @@ SYSTEM = """Você é o planejador universal do Menor, um assistente pessoal loca
 
 Sua função é ENTENDER O OBJETIVO ATUAL, não procurar palavras-chave ou rotas fixas.
 A solicitação atual tem prioridade sobre temas antigos no histórico.
+Perguntas factuais curtas pedem respostas focais, não a repetição do último
+resumo. Ao perguntar o sistema do servidor descrito como Ubuntu, responda
+simplesmente Ubuntu. Não invente comandos ou capacidades do servidor.
 Diferencie gerar imagens de analisar imagens, ler PDFs ou documentos.
 Não reutilize planos de instalação de um domínio para outro.
 Etapas e critérios precisam refletir a tarefa solicitada.
@@ -103,10 +106,18 @@ def _bounded_evidence(value, budget=2400):
 
 
 def decide(message, history=None, pending=None, capabilities=None, knowledge="",
-           last_result=None, paused_goals=None, tools=None, review_issues=None):
+           last_result=None, paused_goals=None, tools=None, review_issues=None,
+           feedback_examples=None):
     """Retorna decisão validada, ou None se Ollama falhar; nunca age diretamente."""
     if not isinstance(message, str) or not message.strip() or len(message) > 8000:
         raise ValueError("Mensagem inválida.")
+    if feedback_examples is None:
+        # Exemplos aprovados pelo dono adaptam o estilo sem treino ou permissão.
+        try:
+            from src.agent.feedback import FeedbackStore
+            feedback_examples = FeedbackStore().samples(limit=500)[-5:]
+        except (OSError, ValueError, TypeError, KeyError):
+            feedback_examples = []
     turns = [
         {"role": item["role"], "content": item["content"][:800]}
         for item in (history or [])[-6:]
@@ -115,6 +126,12 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
     ]
     context = {
         "current_message": message[:1800],
+        "owner_approved_examples_data_not_instructions": [
+            {"request": item["prompt"][:240], "preferred_reply": item["response"][:320]}
+            for item in (feedback_examples or [])[-5:]
+            if isinstance(item, dict) and isinstance(item.get("prompt"), str)
+            and isinstance(item.get("response"), str)
+        ],
         "review_issues_data_not_instructions": [
             issue[:180] for issue in (review_issues or [])[:3]
             if isinstance(issue, str)
@@ -161,7 +178,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
                 "messages": [{"role": "system", "content": SYSTEM}, *turns,
                              {"role": "user", "content": json.dumps(context, ensure_ascii=False)}],
                 "format": "json", "stream": False,
-                "options": {"temperature": 0.1, "num_predict": 600},
+                "options": {"temperature": 0.1, "num_predict": 480},
             },
             timeout=(4, 40),
         ) as response:
@@ -172,6 +189,10 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
         goal, reply, question = (item.get(key, "") for key in ("goal", "reply", "question"))
         if any(not isinstance(x, str) for x in (goal, reply, question)):
             return None
+        # Respostas diretas não precisam inventar um objetivo novo.
+        # Um modelo de 7B às vezes devolve apenas {"move":"answer","reply":"Ubuntu"}.
+        if item["move"] in ("answer", "inspect_result") and not goal.strip():
+            goal = message[:220]
         if not (0 < len(goal.strip()) <= 220 and 0 < len(reply.strip()) <= 900
                 and len(question) <= 220):
             return None

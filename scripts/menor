@@ -33,8 +33,18 @@ case "${1:-status}" in
     status)
         systemctl --user --no-pager status menor-api.service "${timers[@]}"
         ;;
+    monitor|monitorar)
+        shift
+        # readlink -f resolve o symlink de ~/.local/bin/menor.
+        root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+        cd "$root"
+        if [[ -x "$root/.venv/bin/python" ]]; then
+            exec "$root/.venv/bin/python" -m ops.monitor "$@"
+        fi
+        exec python3 -m ops.monitor "$@"
+        ;;
     *)
-        echo "Uso: menor {start|stop|restart|status}" >&2
+        echo "Uso: menor {start|stop|restart|status|monitor [--once|--json|--interval SEGUNDOS|--speed-test]}" >&2
         exit 2
         ;;
 esac

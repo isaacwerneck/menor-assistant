@@ -532,14 +532,32 @@ test('estado de imagem persiste na conversa e pode ser cancelado', async () => {
 });
 
 
-test('pedido de corrigir bug abre PR supervisionado sem alegar merge', async () => {
+test('pedido de corrigir bug em linguagem natural não pula o agente para autoedição', async () => {
     const ui = browser();
     ui.elements.get('userInput').value = 'Menor, corrige esse bug no código do roteador';
     await ui.context.sendMsg();
+    assert.equal(ui.repairCalls.length, 0);
+    assert.equal(ui.agentCalls.length, 1);
+    assert.equal(ui.requests.length, 1);
+});
+
+test('pedido de planejar melhoria não inicia autoedição sem autorização', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'quero organizar meu projeto menor assistant. ' +
+        'crie um objetivo para melhorar a interface, divida em 3 etapas e me mostre o plano ' +
+        'antes de executar qualquer ação';
+    await ui.context.sendMsg();
+    assert.equal(ui.repairCalls.length, 0);
+    assert.equal(ui.agentCalls.length, 1);
+    assert.equal(ui.requests.length, 1);
+});
+
+test('comando /corrigir explícito continua limitado por autorização do servidor', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = '/corrigir bug no código do roteador';
+    await ui.context.sendMsg();
     assert.equal(ui.repairCalls.length, 1);
     assert.equal(ui.repairCalls[0].dry_run, false);
-    assert.equal(ui.requests.length, 0);
-    assert.equal(ui.routed.length, 0);
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /Precisa de revisão/);
 });
 
@@ -846,6 +864,60 @@ test('D08: trocar de imagem para correção de software não envia edição visu
     await ui.context.sendMsg();
     assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
     assert.equal(ui.agentCalls.length, 1);
+});
+
+test('trocar de conversa durante geração permite navegar e não contamina histórico', async () => {
+    const ui = browser();
+    let release;
+    const paused = new Promise(resolve => { release = resolve; });
+    ui.context.createConversation('Conversa antiga');
+    const old = ui.context.getActiveConv();
+    const other = ui.context.createConversation('Conversa nova');
+    ui.context.openConv(old.id);
+    ui.context.fetch = async url => {
+        if (url === '/agent/run') {
+            await paused;
+            return { ok: true, status: 200, json: async () =>
+                ({ handled: true, reply: 'Retorno antigo' }) };
+        }
+        throw new Error('Requisição inesperada: ' + url);
+    };
+    ui.elements.get('userInput').value = 'Me explique a arquitetura';
+    const inProgress = ui.context.sendMsg();
+    assert.equal(ui.elements.get('cancelBtn').hidden, false);
+    ui.context.openConv(other.id);
+    assert.equal(ui.context.getActiveConv().id, other.id);
+    assert.equal(ui.elements.get('cancelBtn').hidden, true);
+    release();
+    await inProgress;
+    assert.equal(old.messages.at(-1).role, 'bot');
+    assert.match(old.messages.at(-1).content, /interrompida/i);
+    assert.equal(old.messages.some(msg => msg.content === 'Retorno antigo'), false);
+    assert.equal(other.messages.length, 0);
+});
+
+test('nova conversa cancela visualmente pedido pendente sem conceder execução', async () => {
+    const ui = browser();
+    let release;
+    const paused = new Promise(resolve => { release = resolve; });
+    ui.context.fetch = async url => {
+        if (url === '/agent/run') {
+            await paused;
+            return { ok: true, status: 200, json: async () =>
+                ({ handled: false }) };
+        }
+        throw new Error('Requisição inesperada');
+    };
+    ui.elements.get('userInput').value = 'Me ajude a planejar um projeto';
+    const inProgress = ui.context.sendMsg();
+    const previous = ui.context.getActiveConv();
+    ui.context.newChat();
+    assert.equal(ui.context.getActiveConv(), undefined);
+    assert.equal(ui.elements.get('sendBtn').disabled, false);
+    release();
+    await inProgress;
+    assert.match(previous.messages.at(-1).content, /servidor pode continuar/i);
+    assert.equal(ui.context.getActiveConv(), undefined);
 });
 
 test('D14: nova conversa mantém histórico e imagem da conversa anterior', async () => {
