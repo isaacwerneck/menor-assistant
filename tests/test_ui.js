@@ -461,7 +461,7 @@ test('criação de projeto é ação real com confirmação do caminho criado', 
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /projetos\/cidade-noturna/);
 });
 
-test('conversa não muda enquanto classificação ou geração está em curso', async () => {
+test('navegação interrompe geração e preserva histórico original', async () => {
     const ui = browser();
     let finish;
     const old = ui.context.fetch;
@@ -474,10 +474,12 @@ test('conversa não muda enquanto classificação ou geração está em curso', 
     await new Promise(resolve => setImmediate(resolve));
     const conv = ui.context.getActiveConv();
     ui.context.newChat();
-    assert.equal(ui.context.getActiveConv(), conv);
+    assert.equal(ui.context.getActiveConv(), undefined);
     finish({ ok: false, json: async () => ({ detail: 'Serviço indisponível' }) });
     await pending;
-    assert.equal(conv.messages.length, 1);
+    assert.equal(conv.messages.length, 2);
+    assert.match(conv.messages[1].content, /interrompida/i);
+    assert.equal(ui.context.getActiveConv(), undefined);
 });
 
 
@@ -1041,11 +1043,12 @@ test('D14: troca de conversa durante requisição não redireciona resposta pend
     await new Promise(resolve => setImmediate(resolve));
     const first = ui.context.getActiveConv();
     ui.context.newChat();
-    assert.equal(ui.context.getActiveConv().id, first.id);
+    assert.equal(ui.context.getActiveConv(), undefined);
     finish({ ok: false, json: async () => ({ detail: 'Serviço indisponível' }) });
     await pending;
-    assert.equal(first.messages.length, 1);
-    assert.equal(ui.context.getActiveConv().id, first.id);
+    assert.equal(first.messages.length, 2);
+    assert.match(first.messages[1].content, /servidor pode continuar/i);
+    assert.equal(ui.context.getActiveConv(), undefined);
 });
 
 test('D03: bora autoriza apenas a missão pendente da conversa ativa', async () => {
