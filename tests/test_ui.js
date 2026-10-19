@@ -1120,6 +1120,54 @@ test('Chat E: painel completo preserva metas pausadas de sessões ociosas', asyn
     assert.ok(requests.every(request => request.options.credentials === 'same-origin'));
 });
 
+test('Chat E: refresh concorrente usa uma consulta e evita cartões duplicados', async () => {
+    const javascript = fs.readFileSync(path.join(__dirname,
+        '../src/api/workspace_assets/assets.js'), 'utf8');
+    const elements = new Map();
+    function element(tag = 'div') {
+        return {
+            tag, textContent: '', children: [], disabled: false, value: 'all',
+            append(...items) { this.children.push(...items); },
+            replaceChildren(...items) { this.children = [...items]; },
+            get childNodes() { return this.children; },
+            addEventListener() {},
+        };
+    }
+    for (const name of ['goals', 'missions', 'status', 'refresh', 'mission-filter']) {
+        elements.set(name, element());
+    }
+    let release;
+    const pause = new Promise(resolve => { release = resolve; });
+    const calls = [];
+    const context = vm.createContext({
+        document: {
+            getElementById(id) { return elements.get(id); },
+            createElement: element,
+        },
+        localStorage: { getItem() { return JSON.stringify([
+            { id: 'abcde12345', title: 'Conversa' },
+        ]); } },
+        fetch: async (url, options) => {
+            calls.push({ url, options });
+            await pause;
+            return { ok: true, status: 200, json: async () =>
+                url === '/agent/missions' ? { items: [] } :
+                    { phase: 'idle', paused_goals: [{ goal: 'Meta pausada' }] } };
+        },
+        Date, encodeURIComponent, console,
+    });
+    vm.runInContext(javascript, context); // primeira consulta automática
+    const first = context.refresh();
+    const second = context.refresh();
+    assert.equal(first, second);
+    assert.equal(elements.get('refresh').disabled, true);
+    release();
+    await first;
+    assert.equal(calls.length, 2); // apenas um GET de missões e um da sessão
+    assert.equal(elements.get('goals').children.length, 1);
+    assert.equal(elements.get('refresh').disabled, false);
+});
+
 test('D01: confirmação solta não cria autorização nem execução supervisionada', async () => {
     const ui = browser();
     ui.elements.get('userInput').value = 'eu aprovo';
