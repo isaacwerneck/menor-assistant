@@ -191,7 +191,8 @@ def _image(data, expected):
                     partial_alpha = sum(count for count, color in histogram if 0 < color[3] < 255)
                 else:
                     transparent, partial_alpha = None, None
-                bounds = list(rgba.getchannel("A").getbbox()) if transparent else None
+                visible_bounds = rgba.getchannel("A").getbbox()
+                bounds = list(visible_bounds) if transparent and visible_bounds else None
                 sprite_metrics = {
                     "unique_rgba_colors": palette_count,
                     "more_than_256_colors": histogram is None,
