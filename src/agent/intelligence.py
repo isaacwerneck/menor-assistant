@@ -75,7 +75,6 @@ def _strings(items, limit):
             and all(isinstance(item, str) and 6 <= len(item.strip()) <= 150 for item in items))
 
 
-
 def _bounded_evidence(value, budget=2400):
     """Compacta recibos como dados não confiáveis, sem serialização ilimitada."""
     if not isinstance(value, dict):
