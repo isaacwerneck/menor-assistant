@@ -35,8 +35,9 @@ previamente escolhida, e sem reestruturar o design aprovado.
 - Ao alternar conversa, uma seleção pendente é abandonada; uploads ainda
   em andamento são cancelados no navegador quando possível e respostas
   atrasadas são ignoradas. O servidor pode ter armazenado os bytes antes
-  de notar o cancelamento, portanto o usuário recebe orientação para
-  revisar/excluir uploads em `/files/view` quando houver incerteza.
+  de notar o cancelamento, portanto o usuário recebe orientação para verificar o armazenamento antes de
+  reenviar quando houver incerteza. A tela `/files/view` só apaga o arquivo
+  que foi carregado nela; o chat ainda não lista envios antigos para exclusão.
 - Arquivos confirmados não são apagados ao desanexar. Exclusão exige
   `DELETE /files/{id}` com autorização. Sem limpeza silenciosa.
 - Anexo de foto via botão **＋** continua sendo fluxo independente de
