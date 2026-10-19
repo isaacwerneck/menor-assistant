@@ -50,8 +50,19 @@ class SystemWorkspaceTests(unittest.TestCase):
                              "/workspace/system/assets.css"):
                     self.assertEqual(request("GET", path)[0], 401)
                     self.assertEqual(request("GET", path, cookie=cookie)[0], 200)
-                page_headers = main.system_workspace_router.routes[0].endpoint
-                self.assertIsNotNone(page_headers)
+                from src.api import system_workspace
+                with patch.object(system_workspace.auth, "require_owner"):
+                    page = system_workspace.status_page(object())
+                    style = system_workspace.status_css(object())
+                    script = system_workspace.status_js(object())
+                for response in (page, style, script):
+                    self.assertEqual(response.headers["cache-control"], "private, no-store")
+                    self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+                policy = page.headers["content-security-policy"]
+                self.assertIn("default-src 'none'", policy)
+                self.assertIn("connect-src 'self'", policy)
+                self.assertIn("frame-ancestors 'none'", policy)
+                self.assertIsNotNone(main.system_workspace_router)
 
 
 if __name__ == "__main__":
