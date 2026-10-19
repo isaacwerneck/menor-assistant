@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menor — Leitura local de arquivos</title>
+<link rel="stylesheet" href="/files/assets.css">
+</head>
+<body>
+<main>
+<h1>Análise local de arquivos</h1>
+<p>Os arquivos ficam apenas no servidor privado do Menor. A leitura extrai texto e estrutura,
+não interpreta imagens nem garante que um documento esteja correto.</p>
+<section aria-labelledby="upload-title">
+<h2 id="upload-title">Enviar arquivo</h2>
+<label for="file">Arquivo PDF, Word, Excel, imagem ou texto (até 8 MB)</label>
+<input id="file" type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp,.gif,.bmp,.txt,.md,.csv">
+<button id="upload" type="button">Enviar e analisar</button>
+<p id="message" role="status" aria-live="polite"></p>
+</section>
+<section aria-labelledby="result-title">
+<h2 id="result-title">Resultado</h2>
+<p id="file-info"></p>
+<pre id="result" tabindex="0">Nenhum arquivo analisado.</pre>
+<button id="delete" type="button" disabled>Excluir arquivo do servidor</button>
+</section>
+<p><a href="/">Voltar ao chat</a></p>
+</main>
+<script defer src="/files/assets.js"></script>
+</body>
+</html>

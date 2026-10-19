@@ -126,3 +126,66 @@ Fontes para modelos e segurança (consultadas em 18/10/2026):
 3. OCR local em worker opt-in para PDFs digitalizados; preservar página e confiança do OCR.
 4. Renderização estruturada de tabelas e seleção de contexto para o agente principal.
 5. Isolamento de parser em container sem rede e benchmark real no notebook.
+
+
+## Incremento Chat B v2 — interface e API privadas
+
+Após integrar este PR, o navegador autenticado pode abrir
+**\`/files/view\`**. A tela independente permite selecionar um arquivo
+local, enviar os bytes, analisar estrutura/metadata e excluir o arquivo
+armazenado. Não altera a interface principal do chat e não passa documentos
+automaticamente ao contexto do Qwen.
+
+### Endpoints
+
+| Método | Rota | Comportamento |
+| --- | --- | --- |
+| \`GET\` | \`/files/view\` | Interface privada (CSP restritiva e renderização via textContent). |
+| \`GET\` | \`/files/capabilities\` | Formatos e bibliotecas realmente disponíveis. |
+| \`POST\` | \`/files/upload?filename=... \` | Recebe corpo binário, limite estrito de 8 MiB, retorna ID privado e hash. |
+| \`GET\` | \`/files/{file_id}\` | Extração em subprocesso; retorna origem/estrutura e limitações. |
+| \`DELETE\` | \`/files/{file_id}\` | Exclusão explícita de blob e recibo após validação de integridade. |
+
+Todos exigem a sessão autenticada do proprietário; requisições com
+\`Origin\` divergente são recusadas pelo módulo de autenticação já
+existente. A API usa \`application/octet-stream\` diretamente,
+**não multipart**, para controlar o corpo durante \`request.stream()\`
+antes de manter bytes em memória. Usar
+\`encodeURIComponent(file.name)\` na query string para preservar nomes
+Unicode sem permitir caminhos externos; nenhum nome de arquivo vira path.
+
+A UI exibe JSON com \`metadata\`, \`content\`, \`evidence\`,
+\`truncated\`, \`limitations\` e \`semantic_verified\` (false).
+Ela nunca injeta HTML proveniente de arquivos no DOM.
+
+Limites adicionais:
+- \`Content-Length\` maior que 8 MiB é recusado antes da leitura; corpos
+  sem Content-Length também são interrompidos ao alcançar o limite.
+- Upload não é automaticamente interpretado pelo LLM nem indexado
+  na memória. Um futuro conector do Chat A precisará selecionar
+  trechos e associar citações de página/célula.
+- Bibliotecas opcionais para PDF, DOCX e XLSX ainda precisam estar
+  instaladas no ambiente Python do worker no servidor. A API não
+  instala dependências e não baixa modelos.
+- A consulta tem timeout e limites de recursos por subprocesso no Linux,
+  mas ainda não tem sandbox completo de rede/filesystem. Para arquivos
+  não confiáveis de terceiros, implementar container isolado antes
+  de oferecer o serviço publicamente.
+- Exclusão depende do operador clicar no botão; retenção automática e
+  limpeza periódica ainda são etapas futuras.
+
+### Teste de integração no servidor (depois do merge)
+
+1. Instalar as dependências opcionais **após revisão**:
+   \`cd ~/menor-assistant && .venv/bin/pip install -r requirements-file-analysis.txt\`.
+2. Confirmar o deploy, os logs e a versão da API em execução.
+3. Entrar normalmente no chat pelo navegador e abrir \`/files/view\`.
+4. Enviar PDF com duas páginas, DOCX com tabela e XLSX com duas abas.
+   Conferir os recibos; a extração deve ser estruturada e documentar
+   eventual truncamento.
+5. Excluir o arquivo e confirmar que a consulta pelo mesmo ID retorna 404.
+6. Monitorar memória, tempo de processamento e integridade do worker no Intel real.
+
+**Critério de aceite:** não declarar OCR, compreensão visual,
+conexão com o agente nem resistência a arquivos hostis como
+capacidades validadas por esses testes.
