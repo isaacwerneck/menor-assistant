@@ -1,6 +1,7 @@
 """Delegação de imagens ao worker local e verificação técnica independente."""
 from src.agent.reviewer import review_image
 from src.agent.vision_review import inspect as visual_inspect
+from src.agent.image_prompt import adapt as adapt_prompt
 from src.agent.skills import capability_status
 from src.tools import images, local_images
 import os
@@ -21,7 +22,7 @@ def generate_image(prompt, missions=None):
             "Posso ajudar a preparar essa ferramenta."
         )
     reasons = []
-    model_prompt = prompt
+    model_prompt = adapt_prompt(prompt)
     for attempt in range(MAX_ATTEMPTS):
         try:
             produced = local_images.generate(model_prompt)
