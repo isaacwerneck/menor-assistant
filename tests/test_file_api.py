@@ -49,7 +49,11 @@ def request(method, path, raw=b"", cookie=None, origin="http://localhost:8000",
         }, receive, send)
         status = sent[0]["status"]
         payload = b"".join(m.get("body", b"") for m in sent[1:])
-        return status, json.loads(payload) if payload else None
+        try:
+            decoded = json.loads(payload) if payload else None
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            decoded = payload.decode("utf-8", errors="replace")
+        return status, decoded
 
     return asyncio.run(invoke())
 
