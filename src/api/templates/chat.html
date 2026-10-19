@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menor - Assistente IA</title>
+    <title>Menor AI — Assistente pessoal</title>
     <style>
         :root {
             --bg-primary: #0b0f19;
@@ -470,23 +470,168 @@
             .conv-item .conv-delete { opacity: 1; }
             .welcome-suggestions { flex-direction: column; }
         }
+
+        /* Chat E / Quiet Intelligence — sobreposições visuais, sem mudar o fluxo de conversa. */
+        :root {
+            --bg-primary: #0d0e16;
+            --bg-secondary: #151621;
+            --bg-tertiary: #20202f;
+            --bg-hover: #29283b;
+            --border: #343344;
+            --text-primary: #f4f2fa;
+            --text-secondary: #b2b0c3;
+            --text-muted: #9291a6;
+            --accent: #b2a2f5;
+            --accent-hover: #9c89ef;
+            --user-bubble: #302746;
+            --success: #74d5aa;
+            --sidebar-width: 268px;
+        }
+        body {
+            background: radial-gradient(ellipse 850px 500px at 85% -10%,
+                rgba(110, 74, 162, 0.10), transparent 73%), var(--bg-primary);
+            letter-spacing: -0.005em;
+        }
+        .sidebar {
+            background: linear-gradient(170deg, #171722, #12131d 78%);
+            border-right-color: rgba(184, 173, 226, 0.10);
+        }
+        .sidebar-header { border-bottom: 0; padding: 20px 14px 12px; }
+        .brand { display: flex; align-items: center; gap: 11px; margin: 0 5px 18px; }
+        .brand-mark, .welcome-logo {
+            display: grid; place-items: center;
+            background: linear-gradient(145deg, #bcb0f8, #7467b9);
+            color: #15111e;
+            font-weight: 800;
+            box-shadow: 0 3px 16px rgba(120, 99, 195, .15);
+        }
+        .brand-mark { width: 32px; height: 32px; font-size: .87rem; border-radius: 11px; }
+        .brand-name { font-size: 1.05rem; font-weight: 730; letter-spacing: -.035em; }
+        .brand-name span { color: var(--text-secondary); font-weight: 540; }
+        .new-chat-btn {
+            background: rgba(145, 126, 204, .10);
+            border: 1px solid rgba(178, 162, 245, .20);
+            padding: 12px 14px; border-radius: 11px; font-weight: 550;
+        }
+        .new-chat-btn:hover { background: rgba(145, 126, 204, .18); }
+        .app-nav { display: grid; gap: 3px; padding: 2px 12px 11px; }
+        .app-nav button, .app-nav a, .app-nav-current {
+            display: block; width: 100%; border: 0; padding: 10px 12px;
+            border-radius: 10px; background: transparent; color: var(--text-secondary);
+            text-align: left; text-decoration: none; font: inherit; font-size: .88rem;
+            cursor: pointer; line-height: 1.45;
+        }
+        .app-nav-current { color: var(--text-primary); background: rgba(157, 139, 231, .13); cursor: default; }
+        .app-nav a:hover, .app-nav button:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .sidebar-section-title { letter-spacing: .075em; font-size: .69rem; }
+        .conv-item { border-radius: 9px; padding: 11px 12px; }
+        .conv-item.active { background: rgba(165, 148, 236, .11); }
+        .sidebar-footer { border-top-color: rgba(184, 173, 226, .10); }
+        .sidebar-footer .dot { width: 7px; height: 7px; }
+        .topbar {
+            padding: 14px 24px; min-height: 64px;
+            background: rgba(21, 22, 33, .78);
+            border-bottom: 1px solid rgba(184, 173, 226, .11);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        }
+        .topbar-title { font-weight: 650; letter-spacing: -.025em; }
+        .toggle-sidebar-btn { font-size: .87rem; border-radius: 9px; padding: 8px 10px; }
+        .topbar-model { border: 1px solid rgba(184, 173, 226, .09); }
+        .welcome-screen { padding: 32px 24px; gap: 14px; }
+        .welcome-logo {
+            width: 62px; height: 62px; font-size: 1.8rem; border-radius: 22px;
+            margin-bottom: 12px;
+        }
+        .welcome-title { color: var(--text-primary); font-size: clamp(1.65rem, 3vw, 2.2rem); letter-spacing: -.05em; }
+        .welcome-subtitle { max-width: 440px; }
+        .welcome-suggestions { max-width: 610px; margin-top: 20px; }
+        .suggestion-chip { border-radius: 12px; background: rgba(31, 31, 45, .85); }
+        .messages-container { max-width: 860px; padding-top: 30px; gap: 26px; }
+        .avatar { border-radius: 11px; }
+        .avatar.bot-avatar { background: #7664c0; color: #fff; }
+        .avatar.user-avatar { background: #363049; color: var(--text-primary); }
+        .message-content { line-height: 1.75; }
+        .message-row.user .message-content {
+            background: #282338; border: 1px solid rgba(178, 162, 245, .1);
+            border-radius: 15px; padding: 12px 16px;
+        }
+        .input-area { padding: 12px 24px 13px; }
+        .input-wrapper {
+            border-radius: 17px; padding: 12px 14px; background: rgba(30, 29, 43, .96);
+            border: 1px solid rgba(184, 173, 226, .20); box-shadow: 0 10px 35px rgba(0,0,0,.13);
+        }
+        .input-wrapper:focus-within { border-color: rgba(178, 162, 245, .75); }
+        .send-btn { border-radius: 11px; background: var(--accent); color: #161122; }
+        .send-btn:hover { color: #161122; }
+        .modal-layer { background: rgba(6, 7, 13, .86); backdrop-filter: blur(5px); }
+        .modal-box {
+            background: rgba(25, 24, 38, .97); border-color: rgba(184, 173, 226, .18);
+            box-shadow: 0 22px 90px rgba(0,0,0,.26);
+        }
+        .modal-box button { color: #15111e; }
+        .mobile-nav { display: none; }
+        .app-nav button:focus-visible, .app-nav a:focus-visible,
+        .mobile-nav button:focus-visible, .mobile-nav a:focus-visible {
+            outline: 2px solid var(--accent); outline-offset: 2px;
+        }
+        @media (max-width: 768px) {
+            .sidebar-header { padding-top: max(20px, env(safe-area-inset-top)); }
+            .topbar { min-height: 56px; padding: 8px 12px; gap: 6px; }
+            .topbar #projectButton { display: none; }
+            .topbar .toggle-sidebar-btn { font-size: .8rem; padding: 8px 7px; }
+            .welcome-screen { padding: 22px 18px; }
+            .welcome-logo { width: 52px; height: 52px; border-radius: 18px; }
+            .welcome-suggestions { width: 100%; max-width: 420px; }
+            .suggestion-chip { text-align: left; }
+            .messages-container { padding: 18px 12px; gap: 20px; }
+            .message-row.user .message-content { padding: 10px 13px; }
+            .input-area { padding: 8px 12px 10px; }
+            .input-wrapper { padding: 9px 10px; }
+            .mobile-nav {
+                display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 2px; min-height: 56px;
+                padding: 4px 6px max(5px, env(safe-area-inset-bottom));
+                border-top: 1px solid rgba(184, 173, 226, .13);
+                background: rgba(19, 19, 29, .94);
+            }
+            .mobile-nav button, .mobile-nav a {
+                display: grid; place-items: center;
+                text-decoration: none; color: var(--text-secondary);
+                border: 0; background: transparent; font: inherit; font-size: .76rem;
+                border-radius: 9px; min-height: 44px; cursor: pointer;
+            }
+            .mobile-nav button:active, .mobile-nav a:active { background: var(--bg-hover); }
+        }
+        @media (prefers-reduced-transparency: reduce) {
+            .topbar, .modal-layer { backdrop-filter: none; -webkit-backdrop-filter: none; }
+        }
     </style>
 </head>
 <body>
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
+            <div class="brand" aria-label="Menor AI">
+                <span class="brand-mark" aria-hidden="true">M</span>
+                <span class="brand-name">Menor <span>AI</span></span>
+            </div>
             <button class="new-chat-btn" onclick="newChat()">
                 <span>＋</span>
                 <span>Nova Conversa</span>
             </button>
         </div>
+        <nav class="app-nav" aria-label="Navegação principal">
+            <span class="app-nav-current" aria-current="page">Conversa</span>
+            <button type="button" onclick="openProjects()">Projetos</button>
+            <a href="/files/view">Arquivos</a>
+            <button type="button" onclick="openBrain()">Conhecimentos</button>
+        </nav>
         <div class="sidebar-conversations" id="convList">
             <div class="sidebar-section-title">Conversas Recentes</div>
         </div>
         <div class="sidebar-footer">
             <div class="dot"></div>
-            <span>Menor v0.4.1 · Memória local</span>
+            <span>Menor AI · Assistente local</span>
         </div>
     </aside>
 
@@ -494,19 +639,19 @@
     <div class="main">
         <div class="topbar">
             <button class="toggle-sidebar-btn" aria-label="Alternar conversas" onclick="toggleSidebar()">☰</button>
-            <div class="topbar-title" id="topbarTitle">Menor</div>
+            <div class="topbar-title" id="topbarTitle">Menor AI</div>
             <button class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
                 aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
-            <button class="toggle-sidebar-btn" onclick="openBrain()" aria-label="Abrir conhecimentos salvos" title="Meu cérebro">🧠</button>
+            <button class="toggle-sidebar-btn" onclick="openBrain()" aria-label="Abrir conhecimentos salvos" title="Conhecimentos salvos">Memória</button>
             <button class="toggle-sidebar-btn" onclick="exportChat()" aria-label="Exportar conversa em Markdown">↓</button>
             <div class="topbar-model" id="modelName">qwen2.5-coder:7b</div>
         </div>
 
         <div class="chat-area" id="chatArea">
             <div class="welcome-screen" id="welcomeScreen">
-                <div class="welcome-logo">⚡</div>
-                <div class="welcome-title">Menor</div>
-                <div class="welcome-subtitle">Seu assistente pessoal de IA rodando localmente. Programação, projetos, jogos e o que mais precisar.</div>
+                <div class="welcome-logo" aria-hidden="true">M</div>
+                <div class="welcome-title">Menor AI</div>
+                <div class="welcome-subtitle">Seu espaço para conversar, criar e acompanhar projetos com inteligência local.</div>
                 <div class="welcome-suggestions">
                     <button type="button" class="suggestion-chip" onclick="useSuggestion(this)">Me ajude a planejar meu próximo projeto</button>
                     <button type="button" class="suggestion-chip" onclick="useSuggestion(this)">Escreva um código em Python pra...</button>
@@ -531,6 +676,12 @@
         <div class="input-footer" id="imageAttachmentName" hidden></div>
         <div class="input-footer" id="storageStatus" role="alert" hidden></div>
         <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
+        <nav class="mobile-nav" aria-label="Navegação rápida">
+            <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas">Conversas</button>
+            <button type="button" onclick="openProjects()">Projetos</button>
+            <a href="/files/view">Arquivos</a>
+            <button type="button" onclick="openBrain()">Memória</button>
+        </nav>
     </div>
 
 
