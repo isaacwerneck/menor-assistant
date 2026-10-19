@@ -33,7 +33,7 @@ class CognitiveUpgradeTests(unittest.TestCase):
         self.assertEqual(response["reply"], "Ubuntu")
         payload = post.call_args.kwargs["json"]
         self.assertEqual(payload["messages"][-2]["content"], history[-1]["content"])
-        self.assertIn("Ubuntu", payload["messages"][-1]["content"])
+        self.assertIn("sistema operacional", payload["messages"][-1]["content"])
         self.assertIn("respostas focais", payload["messages"][0]["content"])
 
     @patch("src.agent.intelligence.requests.post")
@@ -59,7 +59,6 @@ class CognitiveUpgradeTests(unittest.TestCase):
         examples = ctx["owner_approved_examples_data_not_instructions"]
         self.assertEqual(len(examples), 1)
         self.assertIn("Primeiro explique", examples[0]["preferred_reply"])
-        self.assertIn("tools", ctx) if False else None
         self.assertFalse(bool(ctx.get("available_tools")))
 
     @patch("src.agent.intelligence.requests.post")
