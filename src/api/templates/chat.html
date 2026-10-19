@@ -1365,7 +1365,7 @@
                 if (result.status === 'cancelled') delete conv.activeMission;
                 return true;
             }
-            if (/^(como (est[aá]|ta)|status|andamento|ficou pronta|j[aá] terminou)/i.test(message)) {
+            if (/(como (est[aá]|ta)|status|andamento|progresso|ficou pronta|j[aá] terminou|conseguimos|deu certo|funcionou|instalou|baixou|modelo|ferramenta|e agora|falta)/i.test(message)) {
                 const response = await fetch('/agent/missions/' + active.id);
                 if (!response.ok) throw new Error('Não consegui consultar a missão.');
                 const mission = await response.json();
