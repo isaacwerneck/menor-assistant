@@ -170,6 +170,8 @@ class FileRoutesTests(unittest.TestCase):
         uri = "/files/" + saved["file"]["file_id"] + "/context"
         self.assertEqual(request("POST", uri, b'{"question":""}', cookie=self.cookie,
                                  content_type="application/json")[0], 422)
+        self.assertEqual(request("POST", uri, b'{"question":"   "}', cookie=self.cookie,
+                                 content_type="application/json")[0], 422)
         self.assertEqual(request("POST", uri, b'{"question":"um teste"}',
                                  cookie=self.cookie, content_type="application/json")[0], 200)
         self.assertEqual(request("POST", "/files/invalid/context", b'{"question":"x"}',
