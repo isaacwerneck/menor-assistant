@@ -948,3 +948,77 @@ test('D14: troca de conversa durante requisição não redireciona resposta pend
     assert.equal(first.messages.length, 1);
     assert.equal(ui.context.getActiveConv().id, first.id);
 });
+
+test('D03: bora autoriza apenas a missão pendente da conversa ativa', async () => {
+    const ui = browser();
+    const other = ui.context.createConversation('missão antiga');
+    other.activeMission = { id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', status: 'awaiting_approval' };
+    ui.context.newChat();
+    const current = ui.context.createConversation('missão atual');
+    current.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.elements.get('userInput').value = 'bora';
+    await ui.context.sendMsg();
+    const approvals = ui.missionCalls.filter(x => x.type === 'approve');
+    assert.equal(approvals.length, 1);
+    assert.equal(approvals[0].data.approved, true);
+    assert.equal(current.activeMission.status, 'queued');
+    assert.equal(other.activeMission.status, 'awaiting_approval');
+});
+
+test('D03: pergunta com sim não deve autorizar missão sensível', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('missão');
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.elements.get('userInput').value = 'sim, mas como funciona?';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
+    assert.equal(conv.activeMission.status, 'awaiting_approval');
+});
+
+test('D10: recuperação autorizada usa apenas sessão ativa e não repete agente', async () => {
+    const ui = browser();
+    const old = ui.context.createConversation('interrompida');
+    old.pendingRunRecovery = true;
+    ui.context.newChat();
+    const current = ui.context.createConversation('outra tarefa');
+    current.pendingRunRecovery = true;
+    const paths = [];
+    ui.context.fetch = async (url, options) => {
+        paths.push({ url, body: options?.body });
+        if (url.endsWith('/recover')) {
+            return { ok: true, status: 200, json: async () => ({ recovered: true }) };
+        }
+        throw new Error('unexpected network request');
+    };
+    ui.elements.get('userInput').value = 'sim';
+    await ui.context.sendMsg();
+    assert.equal(paths.length, 1);
+    assert.equal(paths[0].url, '/agent/runs/' + current.id + '/recover');
+    assert.equal(JSON.parse(paths[0].body).confirmed, true);
+    assert.equal(current.pendingRunRecovery, undefined);
+    assert.equal(old.pendingRunRecovery, true);
+});
+
+test('D10: consulta de recuperação não autoriza endpoint sensível', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('interrompida');
+    conv.pendingRunRecovery = true;
+    const calls = [];
+    ui.context.fetch = async url => { calls.push(url); throw new Error('unexpected network request'); };
+    ui.elements.get('userInput').value = 'como recupera essa tarefa?';
+    await ui.context.sendMsg();
+    assert.equal(calls.length, 0);
+    assert.equal(conv.pendingRunRecovery, true);
+});
+
+test('D14: aprovação pendente permanece isolada após alternar e voltar', async () => {
+    const ui = browser();
+    const first = ui.context.createConversation('missão');
+    first.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.context.newChat();
+    ui.context.createConversation('conversa neutra');
+    ui.context.openConv(first.id);
+    assert.equal(ui.context.getActiveConv().id, first.id);
+    assert.equal(first.activeMission.status, 'awaiting_approval');
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
+});
