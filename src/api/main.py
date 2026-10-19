@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
 from src.agent.runner import run as run_agent
+from src.agent import research
 from src.agent.tasks import RunBusy, TaskStore
 from src.agent.router import classify
 from src.agent.image_intent import IMAGE_TERMS, image_intent, _normalize
@@ -31,7 +32,7 @@ from src.security import auth
 from src.tools.audit import record
 from src.tools.registry import list_tools, perform
 from src.tools.design import plan_tool
-from src.tools import images, local_images
+from src.tools import images, local_images, web
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,9 @@ DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
 KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "24h")
 SYSTEM_PROMPT = (
     "Você é o Menor, o assistente pessoal de inteligência artificial criado e hospedado localmente pelo Isaac. "
-    "Você é altamente competente em programação, desenvolvimento de jogos, "
-    "planejamento de projetos e tarefas do dia a dia. "
+    "Ajude com programação, desenvolvimento de jogos, planejamento e tarefas do dia a dia. "
+    "Não prometa certeza absoluta. Sem evidência suficiente, diga que não conseguiu confirmar. "
+    "Diferencie fato consultado, hipótese, código proposto e execução verificada. "
     "Responda em português brasileiro com clareza e objetividade. Prefira 1 a 3 parágrafos "
     "curtos, exceto quando o usuário pedir detalhes ou a tarefa exigir explicação maior. "
     "Use o contexto anterior sem repetir perguntas já respondidas. "
@@ -134,7 +136,7 @@ def tool_execute(body: ToolRequest, request: Request):
         receipt = perform(body.tool, body.arguments, dry_run=body.dry_run)
         record(body.tool, receipt["status"], body.arguments.keys())
         return receipt
-    except (ValueError, LookupError, OSError) as error:
+    except (ValueError, LookupError, OSError, web.WebUnavailable) as error:
         logger.warning("Ferramenta indisponível: %s", type(error).__name__)
         try:
             record(body.tool, "failed", body.arguments.keys())
@@ -686,6 +688,12 @@ def stream_ollama_generator(response):
 
 @app.post("/chat/stream")
 def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
+    evidence = research.handle(
+        req.message, [item.model_dump() for item in req.history],
+        automatic=os.environ.get("MENOR_AUTONOMY_ENABLED", "0") == "1",
+    )
+    if evidence is not None:
+        return StreamingResponse(iter([evidence["reply"]]), media_type="text/plain")
     response = open_ollama(req, stream=True)
     return StreamingResponse(
         stream_ollama_generator(response),
@@ -696,6 +704,12 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
 
 @app.post("/chat", response_model=ChatResponse)
 def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
+    evidence = research.handle(
+        req.message, [item.model_dump() for item in req.history],
+        automatic=os.environ.get("MENOR_AUTONOMY_ENABLED", "0") == "1",
+    )
+    if evidence is not None:
+        return ChatResponse(reply=evidence["reply"], model=req.model)
     with open_ollama(req, stream=False) as response:
         try:
             reply = chat_text(response.json())

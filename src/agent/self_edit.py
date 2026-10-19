@@ -125,13 +125,14 @@ def propose(issue, dry_run=True):
     if not token:
         raise ImprovementUnavailable("Integração GitHub para autoedição não configurada.")
     try:
-        remote = _github("GET", f"/contents/{path}?ref=main", token)
+        main = _github("GET", "/git/ref/heads/main", token)
+        revision = main["object"]["sha"]
+        remote = _github("GET", f"/contents/{path}?ref={revision}", token)
         original = base64.b64decode(remote["content"]).decode("utf-8")
         if len(original.encode("utf-8")) > MAX_SOURCE:
             raise ImprovementUnavailable("Arquivo de origem ultrapassa o limite.")
         proposal, review = _propose_with_model(issue.strip(), path, original)
-        main = _github("GET", "/git/ref/heads/main", token)
-        name = "menor/revisao-" + secrets.token_hex(6)
+        name = "codex/menor-revisao-" + secrets.token_hex(6)
         _github("POST", "/git/refs", token, json={
             "ref": f"refs/heads/{name}", "sha": main["object"]["sha"],
         })
@@ -152,6 +153,6 @@ def propose(issue, dry_run=True):
         })
         record("autodev.propose", "planned", ["issue", "path"])
         return {"status": "pr_created", "pr": pr["number"], "url": pr["html_url"],
-                "target": path, "requires_review": True}
+                "target": path, "requires_review": True, "tests": "pending_ci", "ready": False}
     except requests.RequestException as error:
         raise ImprovementUnavailable("GitHub recusou a proposta ou está indisponível.") from error

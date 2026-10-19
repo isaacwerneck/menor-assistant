@@ -1,0 +1,2 @@
+# Opcional: instalar somente para habilitar web.browse.
+playwright>=1.48.0,<2

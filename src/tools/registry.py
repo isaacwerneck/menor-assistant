@@ -3,12 +3,18 @@
 Nenhum caminho informado pelo modelo é repassado diretamente ao sistema.
 """
 from dataclasses import dataclass
+import importlib
+import json
+from pathlib import Path
+import re
+
+from src.agent.tool_builder import build
 
 from src.agent.diagnostics import analyze
 from src.agent.self_edit import propose
 from src.agent.delegation import generate_image as delegate_image
 from src.memory.store import BrainStore
-from src.tools import images
+from src.tools import images, web
 from src.projects.manager import create_project
 from src.projects.workspace import ProjectWorkspace
 
@@ -23,6 +29,12 @@ class Tool:
 
 
 TOOLS = {
+    "developer.build": Tool(
+        "developer.build", "Cria ferramenta pura de texto com testes em draft PR.", "review", True, ("name", "goal"),
+    ),
+    "web.search": Tool("web.search", "Busca páginas públicas na internet.", "external", False, ("query",)),
+    "web.read": Tool("web.read", "Lê texto de uma página HTTPS pública.", "external", False, ("url",)),
+    "web.browse": Tool("web.browse", "Abre página pública no Chromium isolado.", "external", False, ("url",)),
     "system.diagnose": Tool(
         "system.diagnose", "Resume falhas das ferramentas em auditoria local.", "read", False, (),
     ),
@@ -54,6 +66,22 @@ TOOLS = {
 }
 
 
+def _load_custom():
+    path = Path(__file__).with_name("generated") / "catalog.json"
+    catalog = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(catalog, dict) or len(catalog) > 30:
+        raise ValueError("Catálogo de ferramentas revisadas inválido.")
+    for name, description in catalog.items():
+        if (not re.fullmatch(r"[a-z][a-z0-9_]{2,39}", name)
+                or not isinstance(description, str) or not 1 <= len(description) <= 200):
+            raise ValueError("Ferramenta revisada inválida.")
+        key = "custom." + name
+        TOOLS[key] = Tool(key, description, "write", True, ("text",))
+
+
+_load_custom()
+
+
 def list_tools():
     return [
         {
@@ -76,10 +104,27 @@ def perform(name, arguments, dry_run=True):
         raise ValueError("Parâmetros inválidos.")
     if name == "brain.remember" and arguments["kind"] not in ("preference", "knowledge"):
         raise ValueError("Tipo de memória inválido.")
+    if name == "developer.build":
+        build(arguments["name"], arguments["goal"], dry_run=True)
+    if name in ("web.read", "web.browse"):
+        web.public_url(arguments["url"])
     if dry_run:
         return {"status": "planned", "tool": name, "writes": tool.writes,
                 "arguments": list(tool.arguments)}
-    if name == "images.generate":
+    if name == "developer.build":
+        output = build(arguments["name"], arguments["goal"], dry_run=False)
+    elif name.startswith("custom."):
+        module = importlib.import_module("src.tools.generated." + name.removeprefix("custom."))
+        output = module.run(arguments["text"])
+        if not isinstance(output, str) or len(output) > 12000:
+            raise ValueError("A ferramenta retornou uma saída inválida.")
+    elif name == "web.search":
+        output = web.search(arguments["query"])
+    elif name == "web.read":
+        output = web.read(arguments["url"])
+    elif name == "web.browse":
+        output = web.browse(arguments["url"])
+    elif name == "images.generate":
         output = (
             delegate_image(arguments["prompt"])
             if images.provider() == "local" else images.generate(arguments["prompt"])

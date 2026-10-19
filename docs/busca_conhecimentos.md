@@ -54,6 +54,46 @@ APIs (todas exigem sessão do dono):
 - Evite salvar segredos e informações sensíveis; o acesso continua destinado
   a uma rede doméstica confiável ou VPN.
 
+## Pesquisa web e estudos por assunto
+
+O núcleo e os endpoints de chat compartilham `src.agent.research`. Pedidos explícitos
+de pesquisa/estudo são tratados antes da conversa comum. Com
+`MENOR_AUTONOMY_ENABLED=1`, um passo adicional do Ollama decide se precisa consultar
+a web; esta inferência pode errar e aumenta a latência. O modelo atual não foi
+substituído ou treinado novamente.
+
+Fluxo: consulta pública → até cinco resultados → leitura de até três páginas →
+síntese de até três afirmações → verificação dos trechos e URLs →
+resposta com fontes ou reconhecimento de insuficiência. Informações da internet
+são dados não confiáveis e não autorizam comandos, escrita em produção ou código.
+
+`estude`/`aprenda` salva a pesquisa em
+`conhecimentos/programacao/estudo-<hash-da-consulta>.md` para assuntos de programação,
+ou `conhecimentos/pesquisas/` nos demais casos. Uma nova pesquisa com a mesma consulta
+atualiza essa nota. Fonte, consulta, trecho e limitações permanecem no Markdown.
+O índice FTS inclui essas notas (até 200 fontes no total) e remove entradas quando
+a nota é excluída do disco. A gestão pelo painel ainda edita somente aprendizados gerais.
+As notas de estudo precisam ser geridas no disco; mantenha backup do cérebro.
+
+A leitura aceita HTTPS público, porta 443, sem credenciais. Cada resolução DNS
+é verificada e a conexão fixa o IP verificado, mantendo validação TLS do hostname.
+Endereços privados, loopback e link-local são recusados; redirecionamentos também
+são verificados. Há limites de resposta (1 MiB), texto (12000 caracteres) e tempo.
+
+`web.browse` usa Playwright/Chromium opcional em contexto descartável. Não reutiliza
+cookies do proprietário, não aceita downloads e bloqueia WebSockets/service workers.
+O tráfego da página é intermediado pelo mesmo leitor público; páginas que dependem
+de recursos não suportados podem falhar. Nenhum CAPTCHA é contornado.
+A busca usa HTML público do DuckDuckGo e, em falha, o feed RSS público do Bing.
+Ambos podem falhar por bloqueio ou mudança de formato.
+Uma fonte recusada é registrada como falha parcial; sem fontes legíveis, há abstenção.
+
+Limites: checar a existência da citação não prova que a frase sintetizada decorre
+dela. A seleção de autoridade, confirmação entre fontes, revisão de versões e
+busca iterativa ainda exigem evolução e avaliação real. Estudar não executa exemplos,
+não instala ferramentas e não altera os pesos do modelo. Não há estudo agendado
+ou infinito. A pesquisa envia a consulta ao buscador; não inclua segredos nos pedidos.
+
 ## Testes
 
 O CI executa testes de busca, sincronização após edição direta do Markdown,

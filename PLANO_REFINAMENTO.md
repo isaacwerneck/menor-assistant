@@ -245,3 +245,147 @@ completo, retomada automática de execução interrompida ou equivalência de
 inteligência com modelos proprietários. O banco de tarefas contém argumentos
 necessários à aprovação e resultados; incluí-lo no backup privado, nunca no Git.
 
+
+## R12 — Assistente autônomo de pesquisa, estudo, construção e autoevolução
+
+Pedido do proprietário em 18/10/2026: aproximar o fluxo do Menor ao de um
+assistente de desenvolvimento como Codex. Receber um objetivo, investigar como
+cumpri-lo, apresentar fatos e alternativas, criar recursos que faltam, reutilizar
+esses recursos e propor melhorias do próprio sistema. O proprietário revisa
+a branch e aprova a incorporação. A inspiração é o fluxo de trabalho; não é
+promessa de equivalência de inteligência, desempenho ou acesso a ferramentas.
+
+### Proposta anterior, preservada integralmente por solicitação do proprietário
+
+O texto abaixo registra a mensagem da conversa antes da implementação.
+A frase sobre não ter alterado código descreve aquele momento, não o estado atual.
+
+**Sim, menor: dá para criar uma ferramenta própria que abre um navegador no servidor, pesquisa e lê os sites.** Minha pergunta anterior limitou demais as opções.
+
+Podemos seguir estes caminhos, inclusive combinando alguns:
+
+| Caminho | Como funciona | Principal limite |
+|---|---|---|
+| **Navegador próprio** | O menor controla Chromium com Playwright: escreve pesquisas, abre resultados, segue links e lê páginas. Funciona sem uma janela visível no servidor. | Exige instalar navegador e automação. [Playwright](https://playwright.dev/python/docs/library) |
+| **SearXNG no servidor** | Um serviço gratuito reúne resultados de outros buscadores e os entrega ao menor. | Precisa manter outro serviço; continua dependendo dos buscadores consultados. [SearXNG](https://docs.searxng.org/) |
+| **API de pesquisa** | Um serviço entrega resultados estruturados, sem precisar controlar a página de um buscador. | Depende das condições, credenciais e limites do fornecedor. O próprio Ollama oferece pesquisa e leitura de páginas com conta e chave. [Ollama](https://docs.ollama.com/capabilities/web-search) |
+| **Leitor de documentação** | A ferramenta acessa fontes conhecidas diretamente, como a documentação de uma linguagem. | Ajuda a estudar essas fontes, mas precisamos de busca para descobrir outras. |
+
+No navegador, **não precisaríamos contratar uma API de busca**, mas isso não garante acesso ilimitado: o Google, por exemplo, pode apresentar CAPTCHA ao detectar consultas automatizadas. [Explicação do Google](https://support.google.com/websearch/answer/86640?hl=pt-BR)
+
+Sobre um “modelo de pesquisa”: podemos usar um modelo para decidir **o que pesquisar, quais páginas ler e quando buscar mais evidências**. Ele ainda precisa de uma ferramenta que acesse a internet. O Ollama suporta esse fluxo de chamadas de ferramentas. [Documentação](https://docs.ollama.com/capabilities/tool-calling)
+
+**Para o menor, eu começaria com leitor de páginas + navegador sob demanda**, aproveitando o modelo local. Minha proposta de funcionamento seria:
+
+1. Você pede algo; ele consulta a memória e identifica o que precisa confirmar.
+2. Pesquisa, abre as fontes e prioriza documentação oficial.
+3. Responde com referências e admite quando a evidência é insuficiente ou contraditória.
+4. Quando você pedir para estudar, organiza o material em `conhecimentos/programacao/`, com fonte, data, versão e limitações.
+5. Ao desenvolver uma ferramenta, cria o código e verifica seu funcionamento antes de registrá-la como disponível.
+
+Esse “aprendizado” inicialmente seria **memória persistente consultada nas próximas tarefas**. Treinar os pesos do modelo seria outro processo. E salvar uma explicação sobre programação não provaria que ele já consegue executar corretamente qualquer programa.
+
+Ainda não alterei código nem instalei dependências. Certeza absoluta não é garantível; o objetivo é exigir evidências e reconhecer o que não foi confirmado.
+
+### Fluxo completo desejado
+
+1. **Entender e contextualizar:** recuperar preferências, projeto selecionado,
+   capacidades instaladas e conhecimentos pertinentes; manter dados privados locais.
+2. **Avaliar lacunas:** distinguir conversa/criação livre de dúvidas factuais;
+   pesquisar informações atuais, APIs, versões e qualquer ponto sem evidência.
+   A confiança declarada pelo modelo não é prova.
+3. **Investigar:** formular consultas, descobrir fontes, abrir páginas completas,
+   seguir referências e reformular a busca quando faltar informação. Priorizar
+   documentação oficial para programação; fóruns e exemplos são complementares.
+4. **Conferir:** confrontar afirmações com trechos reais, versões e datas;
+   registrar contradições e falhas de acesso. Nunca converter ausência de fonte
+   em resposta inventada. Citação existente não prova interpretação correta.
+5. **Responder:** separar fatos sustentados, inferências e lacunas. Apresentar
+   fontes consultadas e explicar como executar a solução. Admitir impossibilidade
+   de confirmação quando necessário; nenhuma promessa de certeza absoluta.
+6. **Estudar:** a pedido, organizar conceitos, documentação, exemplos e exercícios
+   em conhecimentos por assunto, com origem, data, versão e limitações.
+   Retomar o material em tarefas futuras e revalidar informações que envelhecem.
+7. **Construir:** identificar capacidade ausente, definir contrato, gerar código,
+   testes e documentação. Executar apenas em ambiente isolado; falha de teste
+   impede tratar a ferramenta como pronta.
+8. **Revisar e incorporar:** preparar branch `codex/`, testes, diff e PR rascunho.
+   O proprietário revisa e decide o merge. Somente código incorporado e validado
+   passa a compor o catálogo executável após reinício.
+9. **Usar e aprender com a execução:** resolver novas tarefas com recursos
+   aprovados; registrar falhas sem segredos e converter problemas reproduzíveis
+   em testes e propostas de melhoria.
+10. **Autoanalisar:** observar recorrência de falhas, propor causas e correções
+    mensuráveis, testar e abrir nova branch. Não elevar as próprias permissões,
+    alterar produção, fazer merge ou treinar os próprios pesos automaticamente.
+
+### Incremento implementado no checkout
+
+- `web.search`: HTML público do DuckDuckGo com fallback para feed RSS público do Bing,
+  sem chave ou API paga. Integrações públicas podem mudar ou encontrar bloqueios/CAPTCHA.
+- `web.read`: texto de HTTPS público com limites de tamanho, protocolos e
+  redirecionamentos; DNS é validado e a conexão usa o IP validado com TLS no hostname.
+- `web.browse`: Chromium opcional com Playwright, contexto descartável, sem
+  sessão do proprietário, downloads ou WebSockets; requisições passam pelo leitor
+  de endereços públicos. Não é um navegador com login ou controle irrestrito.
+- Pesquisa explícita no núcleo e nos endpoints de chat. A classificação automática
+  de dúvidas usa `MENOR_AUTONOMY_ENABLED=1`; desligada por padrão para implantação
+  controlada e compatibilidade. Falha de pesquisa/validação resulta em incerteza.
+- Estudo explícito com `estude`/`aprenda` salva notas em
+  `conhecimentos/programacao/estudo-<hash>.md` ou `conhecimentos/pesquisas/`.
+  Fonte, data e limitações são preservadas; o índice textual passa a incluir essas notas.
+- No máximo cinco resultados e leitura das três primeiras fontes por pesquisa.
+  Síntese de até três fatos, com checagem de existência literal das citações.
+  Não há garantia automática de verdade, autoridade da fonte ou implicação semântica.
+- `developer.build`: proposta de ferramenta pura `run(text) -> str`, testes unittest,
+  documentação e catálogo em draft PR. Testes em container sem rede, sem credenciais,
+  sistema de arquivos de leitura e cotas de CPU, memória, processos e tempo,
+  antes de qualquer mutação no GitHub. Docker/imagem ausentes bloqueiam a proposta.
+- Catálogo `custom.<nome>` carregado somente do código local revisado e incorporado;
+  a ferramenta nova não é importada durante sua geração nem diretamente do cérebro.
+- Autoanálise no chat pode consultar `system.diagnose` e propor `developer.propose`.
+  O autoeditor existente permanece restrito aos arquivos permitidos; fixa a revisão
+  de origem antes de gerar a branch e declara testes comportamentais pendentes de CI.
+- Conteúdos privados do cérebro não são anexados automaticamente ao código/PR.
+  O objetivo solicitado e o código proposto são enviados à integração GitHub autorizada.
+
+### Próximos marcos e critérios de aceite
+
+- **Pesquisa iterativa:** reformular consultas e seguir links por orçamento de
+  páginas, tempo e tokens. Aceite: resolver pergunta que a primeira busca não cobre.
+- **Qualidade das fontes:** identificar documentação oficial, versões conflitantes
+  e informação desatualizada. Aceite: não misturar APIs de versões diferentes.
+- **Estudo progressivo:** currículo por assunto, exemplos, exercícios executados
+  em sandbox e revisão de erros. Aceite: retomar estudo e distinguir material lido
+  de habilidade demonstrada por teste.
+- **Programador geral:** snapshot/worktree do projeto, dependências aprovadas,
+  edição de múltiplos arquivos, lint e testes do projeto em sandbox completo.
+  Aceite: implementar uma feature real sem tocar produção ou expor credenciais.
+- **Autoeditor com testes completos:** reproduzir a falha e executar a suíte do
+  snapshot antes de commit/PR, além de CI. O autoeditor legado ainda não faz isso.
+- **Autonomia persistente:** fila, cancelamento, eventos, retomada segura e cotas
+  entre turnos; estudo agendado apenas com objetivo e autorização definidos.
+  O incremento atual não inicia estudo infinito ou rotina em segundo plano.
+- **Avaliação do modelo:** medir acerto, abstenção, citações inválidas, ferramentas
+  escolhidas, latência e RAM no servidor real. Comparar modelos compatíveis com o
+  hardware antes de escolher mudanças. Mais memória não substitui um modelo melhor.
+- **Liberação:** revisão humana, CI, backup, deploy, teste de saúde e rollback
+  verificado. Nunca usar o texto de uma página como autorização operacional.
+
+Os procedimentos de ativação ficam no README e em
+[busca de conhecimentos](docs/busca_conhecimentos.md). A validação no servidor,
+com Qwen, Chromium e Docker reais, é um aceite separado dos testes com mocks.
+
+### Evidências desta implementação no ambiente de desenvolvimento
+
+- Leitura real da documentação Python e busca pública foram exercitadas.
+  A busca HTML recebeu HTTP 202; o fallback Bing RSS devolveu resultados.
+- Testes locais cobrem rede privada/DNS, IP fixado com TLS, citações inválidas,
+  memória, índice, endpoints de chat, catálogo, branch atômica, recusa de execução
+  sem opt-in, falha e timeout do sandbox.
+- Flake8 e testes de interface são executados separadamente.
+- A suíte Python existente depende de permissões POSIX e falha neste Windows
+  por `os.fchmod`, modos e privilégios de symlink; precisa rodar no Linux/CI.
+- O Docker real foi bloqueado pela allowlist da ferramenta de shell deste ambiente.
+  O navegador Chromium e o Qwen reais ainda precisam de aceite no servidor.
+

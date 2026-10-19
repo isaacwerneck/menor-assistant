@@ -328,3 +328,18 @@ Consultar [arquitetura multiagente](docs/arquitetura_multiagente.md).
 - [ ] Confirmar download e geração real no notebook Intel (CI simula modelo pesado).
 - [ ] Benchmark CPU/GPU e edição local de fotos com modelo adequado.
 
+## 16. Pesquisa, estudo e autoevolução supervisionada
+
+O objetivo é receber pedidos, investigar como cumpri-los, responder com evidências,
+aprender em memória por assunto, construir e reutilizar ferramentas e propor
+melhorias do próprio Menor em branch revisável pelo proprietário.
+A mensagem anterior com as opções e o fluxo foi preservada integralmente em
+[PLANO_REFINAMENTO.md, R12](PLANO_REFINAMENTO.md#r12--assistente-autônomo-de-pesquisa-estudo-construção-e-autoevolução).
+
+Incremento no código: busca/leitura web, navegador opcional, estudos com fontes
+indexados no cérebro, proposta de ferramentas puras com testes em container e
+PR rascunho, e conexão da autoanálise ao fluxo do chat.
+Aceites ainda pendentes: Chromium/Qwen/Docker no servidor, programador geral,
+pesquisa iterativa, estudo progressivo e avaliação mensurável da qualidade.
+Uma capacidade só é concluída depois de teste real; aprender notas não treina os pesos.
+
