@@ -167,6 +167,22 @@ class XlsxTests(unittest.TestCase):
         self.assertEqual(result["structure"][0]["rows"][1]["cells"][1]["value"], 150)
         self.assertIn("cache", result["limitations"][0])
 
+    def test_xlsx_end_to_end_private_worker(self):
+        wb = Workbook()
+        wb.active.title = "Inventário"
+        wb.active["A1"] = "Código"
+        wb.active["B1"] = "Quantidade"
+        wb.active["A2"] = "ABC-1"
+        wb.active["B2"] = 7
+        out = io.BytesIO()
+        wb.save(out)
+        with tempfile.TemporaryDirectory() as tmp:
+            stored = ingest(out.getvalue(), "inventario.xlsx", root=Path(tmp) / "data")
+            receipt = inspect(stored["file"]["file_id"], root=Path(tmp) / "data")
+        self.assertEqual(receipt["status"], "executed", receipt)
+        self.assertEqual(receipt["content"][0]["name"], "Inventário")
+        self.assertEqual(receipt["content"][0]["rows"][1]["cells"][1]["value"], 7)
+
     def test_mismatched_office_extension(self):
         wb = Workbook()
         out = io.BytesIO()
