@@ -7,12 +7,13 @@ import re
 import requests
 
 from src.agent.delegation import generate_image
-from src.agent.approval import decision as approval_decision
 from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _normalize
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
 from src.agent.tasks import TaskStore
-from src.agent import research
+from src.agent import research, intelligence
+from src.agent.approval import decision as approval_decision
+from src.memory.search import contextual_knowledge
 from src.tools import images
 from src.tools.registry import TOOLS, list_tools, perform
 
@@ -196,6 +197,55 @@ def _tool_loop(message, history):
     return _answer("Atingi o limite de quatro passos. Consulte as operações antes de continuar.", "blocked")
 
 
+def _understand(state, message, history):
+    """Raciocínio contextual para qualquer assunto, sem executar ações do texto do LLM."""
+    if state["phase"] == "goal" and approval_decision(message) == "reject":
+        return _answer("Entendi. Cancelei este plano sem executar nenhuma ação.")
+    pending = state if state["phase"] == "goal" else None
+    try:
+        # Notas do cérebro são dados de contexto; não autorizam uma nova ferramenta.
+        facts = contextual_knowledge(message)
+    except (OSError, ValueError):
+        facts = ""
+    try:
+        from src.agent.skills import catalog
+        skills = catalog()
+    except (OSError, ValueError):
+        skills = []
+    decision = intelligence.decide(
+        message, history, pending=pending, capabilities=skills, knowledge=facts,
+    )
+    if decision is None:
+        if pending:
+            return _answer(
+                "Não consegui interpretar a continuação do plano agora. "
+                "Pode explicar de outro jeito? Nenhuma ação foi executada.", **state,
+            )
+        return None
+    move = decision["move"]
+    if move == "act":
+        return _tool_loop(message, history)
+    if move == "research":
+        evidence = research.handle(message, history, automatic=True)
+        if evidence is not None:
+            return _answer(evidence["reply"])
+        return _answer(
+            "Para pesquisar isso preciso de uma consulta pública segura. "
+            "Me diga o tema sem incluir informações privadas ou segredos."
+        )
+    if move in ("plan", "continue", "clarify"):
+        reply = (intelligence.render_plan(decision) if move != "clarify"
+                 else decision["reply"] + "\n" + decision["question"])
+        return _answer(
+            reply, "goal", goal=decision["goal"],
+            question=decision["question"], steps=decision["steps"],
+            acceptance=decision["acceptance"],
+        )
+    if pending:
+        return _answer(decision["reply"], **state)
+    return _answer(decision["reply"])
+
+
 def _advance(state, message, history):
     normal = _normalize(message.strip())
     if state["phase"] == "approval":
@@ -216,6 +266,10 @@ def _advance(state, message, history):
         return current, result
     if state["phase"] == "mission":
         return _mission_turn(state, message)
+    if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
+        intelligent = _understand(state, message, history)
+        if intelligent is not None:
+            return intelligent
     if research.RESEARCH.search(message):
         evidence = research.handle(message, history)
         return _answer(evidence["reply"])

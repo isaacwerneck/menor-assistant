@@ -21,7 +21,7 @@ class HarnessTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        env = patch.dict(os.environ, {"MENOR_DATA_DIR": temporary.name})
+        env = patch.dict(os.environ, {"MENOR_DATA_DIR": temporary.name, "MENOR_INTELLIGENCE_ENABLED": "0"})
         env.start()
         self.addCleanup(env.stop)
         self.store = TaskStore()
