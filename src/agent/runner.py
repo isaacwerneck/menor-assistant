@@ -31,9 +31,15 @@ def _answer(reply, phase="idle", **state):
 
 
 def _begin_mission(message, history):
-    context = message + " " + " ".join(item["content"] for item in history[-4:])
-    capability = ("images.generate" if re.search(rf"\b{IMAGE_TERMS}\b", _normalize(context))
-                  else "programming")
+    # Histórico não deve converter análise de arquivos em geração de imagens.
+    if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") != "1":
+        # Compatibilidade do fluxo legado; nunca usado pelo planejador universal.
+        context = message + " " + " ".join(item["content"] for item in history[-4:])
+        capability = ("images.generate" if re.search(rf"\b{IMAGE_TERMS}\b", _normalize(context))
+                      else "programming")
+    else:
+        capability = ("images.generate" if image_intent(message)["decision"] == "image_generate"
+                      else "programming")
     mission = MissionStore().begin(capability, message[:600])
     return _answer(mission["question"], "mission", mission_id=mission["id"])
 
@@ -88,15 +94,12 @@ def _mission_turn(state, message):
         if choice == "question":
             if re.search(r"\b(?:que|qual|pra que|para que) aprovacao\b", normal):
                 return _answer(
-                    "A aprovação é para instalar dependências e baixar o modelo local "
-                    "de imagens no servidor, conforme o plano apresentado. "
-                    "Nenhum download foi iniciado. Você pode perguntar mais ou "
-                    "dizer 'eu aprovo' para autorizar.", **state,
+                    missions.explain(mission["id"], message), **state,
                 )
             if "?" not in message and not re.search(r"^(como|qual|quais|que|por que|o que)", normal):
                 return _answer(
-                    "Ainda falta sua autorização para instalar o modelo. "
-                    "Se quiser prosseguir, diga 'eu aprovo' ou 'pode instalar'.", **state,
+                    "A execução do plano ainda aguarda autorização específica. "
+                    "Você pode perguntar sobre as etapas, aprovar ou cancelar.", **state,
                 )
             return _answer(missions.explain(mission["id"], message), **state)
         mission = missions.decide(mission["id"], choice == "approve")
@@ -303,6 +306,14 @@ def _advance(state, message, history):
         intelligent = _understand(state, message, history)
         if intelligent is not None:
             return intelligent
+    if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
+        # Ações antigas não são executadas sem interpretação universal.
+        # Consultas explícitas de pesquisa podem manter a rota segura.
+        if research.RESEARCH.search(message):
+            evidence = research.handle(message, history)
+            if evidence is not None:
+                return _answer(evidence["reply"])
+        return {"phase": "idle"}, {"handled": False}
     if research.RESEARCH.search(message):
         evidence = research.handle(message, history)
         return _answer(evidence["reply"])

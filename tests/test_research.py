@@ -144,8 +144,9 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(handle.call_count, 2)
 
     def test_explicit_programming_uses_existing_tool_loop(self):
-        with patch.object(runner, "_tool_loop", return_value=({}, {"handled": True, "reply": "Plano"})) as loop:
-            runner._advance({"phase": "idle"}, "Crie um conversor de texto em Python", [])
+        with patch.dict(os.environ, {"MENOR_INTELLIGENCE_ENABLED": "0"}):
+            with patch.object(runner, "_tool_loop", return_value=({}, {"handled": True, "reply": "Plano"})) as loop:
+                runner._advance({"phase": "idle"}, "Crie um conversor de texto em Python", [])
         loop.assert_called_once()
 
     def test_search_falls_back_without_accepting_xml_entities(self):
