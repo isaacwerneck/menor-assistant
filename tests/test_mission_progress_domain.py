@@ -1,6 +1,4 @@
 """Garantias de comunicação de estado de missões sem confundir domínios."""
-import os
-import tempfile
 import unittest
 from unittest.mock import patch
 
