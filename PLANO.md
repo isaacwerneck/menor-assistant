@@ -1,5 +1,12 @@
 # PLANO — Ecossistema Menor Assistant
 
+> **Direção consolidada em 19/10/2026:** [Plano integrado A–E](docs/plano_integrado_a_e.md).
+> O Menor interpreta por modelo e contexto, não por palavras isoladas; aprendizado
+> é supervisionado e nenhuma inferência concede permissão. A lista histórica
+> abaixo preserva decisões e entregas anteriores, mas não é comprovação de 100%
+> nem substitui critérios atuais de aceite e validação no Ubuntu.
+
+
 > Documento de referência do projeto (**fonte de verdade para os próximos passos**).
 > Plano complementar de estabilidade/autonomia: [PLANO_REFINAMENTO.md](PLANO_REFINAMENTO.md).
 > Versão inicial: 1.0 — 18/10/2026. Repositório: `isaacwerneck/menor-assistant`.

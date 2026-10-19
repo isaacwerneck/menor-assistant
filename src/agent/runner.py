@@ -18,6 +18,8 @@ from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
 from src.agent.tasks import TaskStore
 from src.agent import research, intelligence, plan_review
+from src.agent.context_engine import assemble_memory
+from src.projects.workspace import ProjectWorkspace
 from src.agent.approval import decision as approval_decision
 from src.memory.search import contextual_knowledge
 from src.memory.semantic import relevant_context
@@ -264,7 +266,7 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
     return plan_review.annotate(decision, status), status
 
 
-def _understand(state, message, history):
+def _understand(state, message, history, project=None):
     """Raciocínio contextual para qualquer assunto, sem executar ações do texto do LLM."""
     if state["phase"] == "goal" and approval_decision(message) == "reject":
         return abandon_active(state), {
@@ -272,16 +274,24 @@ def _understand(state, message, history):
             "phase": "idle",
         }
     pending = pending_context(state)
+    # Fontes são independentes: falha do índice semântico não elimina FTS ou projeto.
+    semantic = lexical = project_facts = ""
     try:
-        # Notas do cérebro são dados de contexto; não autorizam uma nova ferramenta.
         semantic = relevant_context(message)
-        lexical = contextual_knowledge(message)
-        facts = (semantic + "\n" + lexical).strip()[:1200] if semantic else lexical
     except (requests.RequestException, OSError, ValueError, sqlite3.Error):
+        pass
+    try:
+        lexical = contextual_knowledge(message)
+    except (OSError, ValueError, sqlite3.Error):
+        pass
+    if project:
         try:
-            facts = contextual_knowledge(message)
-        except (OSError, ValueError, sqlite3.Error):
-            facts = ""
+            # Projeto selecionado explicitamente pela conversa; não escolha outro
+            # projeto por uma palavra no prompt e não enumere projetos privados.
+            project_facts = ProjectWorkspace().context(project, max_chars=1050)
+        except (ValueError, LookupError, OSError):
+            pass
+    facts = assemble_memory(semantic, lexical, project_facts)
     try:
         from src.agent.skills import catalog
         skills = catalog()
@@ -375,7 +385,7 @@ def _understand(state, message, history):
     return _answer(reply)
 
 
-def _advance(state, message, history):
+def _advance(state, message, history, project=None):
     normal = _normalize(message.strip())
     if state["phase"] == "approval":
         choice = approval_decision(message)
@@ -415,7 +425,7 @@ def _advance(state, message, history):
     if state["phase"] == "mission":
         return _mission_turn(state, message)
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
-        intelligent = _understand(state, message, history)
+        intelligent = _understand(state, message, history, project=project)
         if intelligent is not None:
             return intelligent
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
@@ -475,7 +485,7 @@ def _run_locked(session, turn, message, history, project, tasks):
         return cached
     error_type = ""
     try:
-        current, result = _advance(state, message, history)
+        current, result = _advance(state, message, history, project=project)
         if state.get("last_result") and "last_result" not in current:
             current["last_result"] = state["last_result"]
         for key in ("paused_goals", "goal_decisions"):
