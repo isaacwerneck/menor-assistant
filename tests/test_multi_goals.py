@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from src.agent import goal_context, intelligence, runner
+from src.agent import goal_context, intelligence, lab, runner
 from src.agent.tasks import TaskStore
 
 
@@ -128,6 +128,25 @@ class ToolSelectionContractTests(unittest.TestCase):
         self.assertEqual(state["phase"], "approval")
         self.assertIn("Posso executar?", reply["reply"])
         perform.assert_called_once_with("projects.create", {"name": "Estudos"}, dry_run=True)
+
+
+class ContinuityBenchmarkTests(unittest.TestCase):
+    def test_benchmark_measures_relation_not_just_intent(self):
+        def fake(message, history, pending=None, capabilities=None, paused_goals=None):
+            case = next(x for x in lab.CONTINUITY_CASES if x.prompt == message)
+            return {
+                "move": case.expected_move[0], "relation": case.expected_relation,
+                "resume_goal_id": "a" * 32 if case.paused_goal else "",
+            }
+        result = lab.evaluate_continuity(fake)
+        self.assertEqual(result["score"], 1.0)
+        self.assertEqual(result["cases"], len(lab.CONTINUITY_CASES))
+
+    def test_wrong_relation_fails_even_when_intent_is_correct(self):
+        def fake(message, history, pending=None, capabilities=None, paused_goals=None):
+            return {"move": "plan", "relation": "refine", "resume_goal_id": ""}
+        result = lab.evaluate_continuity(fake)
+        self.assertLess(result["score"], 1.0)
 
 
 class ConversationContinuityTests(unittest.TestCase):
