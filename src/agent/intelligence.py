@@ -184,7 +184,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
                     or any(not isinstance(value, str) or not 1 <= len(value.strip()) <= 280
                            for value in arguments.values())):
                 return None
-        elif arguments or item["move"] == "act" and tool_name:
+        elif arguments:
             return None
         return {
             "move": item["move"], "goal": goal.strip(), "reply": reply.strip(),
