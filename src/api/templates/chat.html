@@ -588,7 +588,7 @@
             .input-area { padding: 8px 12px 10px; }
             .input-wrapper { padding: 9px 10px; }
             .mobile-nav {
-                display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+                display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
                 gap: 2px; min-height: 56px;
                 padding: 4px 6px max(5px, env(safe-area-inset-bottom));
                 border-top: 1px solid rgba(184, 173, 226, .13);
@@ -604,6 +604,37 @@
         }
         @media (prefers-reduced-transparency: reduce) {
             .topbar, .modal-layer { backdrop-filter: none; -webkit-backdrop-filter: none; }
+        }
+
+        /* E3 — apresentação do estado real de objetivos; sem cálculo inventado de progresso. */
+        .objectives-sheet { max-width: 750px; max-height: min(90dvh, 900px); overflow-y: auto; }
+        .objectives-heading { display: flex; align-items: start; justify-content: space-between; gap: 14px; }
+        .objectives-heading p { font-size: .87rem; }
+        .objectives-heading button { flex-shrink: 0; }
+        .objectives-full-link { font-size: .82rem; color: var(--accent); align-self: center; }
+        .objectives-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+        .objectives-controls button {
+            min-height: 40px; padding: 9px 12px; border-radius: 9px;
+            border: 1px solid rgba(184,173,226,.16); font-size: .83rem;
+        }
+        .objectives-controls button[aria-pressed="true"] {
+            border-color: var(--accent); color: var(--accent); background: rgba(178,162,245,.12);
+        }
+        .objectives-disclaimer { color: var(--text-muted); font-size: .8rem; }
+        .objectives-list { display: grid; gap: 10px; overflow-wrap: anywhere; }
+        .objective-card {
+            padding: 16px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 12px;
+        }
+        .objective-card h3 { font-size: .94rem; line-height: 1.4; margin: 0 0 8px; }
+        .objective-card p { font-size: .79rem; line-height: 1.55; margin: 0 0 8px; }
+        .objective-state { display: inline-block; font-size: .75rem; color: var(--accent); margin-bottom: 9px; }
+        .objective-card ol { padding-left: 21px; color: var(--text-secondary); font-size: .82rem; line-height: 1.7; }
+        .objective-card li { padding-left: 3px; }
+        @media (max-width: 768px) {
+            .objectives-sheet { max-height: 88dvh; padding: 18px; }
+            .objectives-heading { flex-wrap: wrap; }
+            .mobile-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+            .mobile-nav button, .mobile-nav a { font-size: .7rem; }
         }
     </style>
 </head>
@@ -622,6 +653,7 @@
         </div>
         <nav class="app-nav" aria-label="Navegação principal">
             <span class="app-nav-current" aria-current="page">Conversa</span>
+            <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
             <button type="button" onclick="openBrain()">Conhecimentos</button>
@@ -678,6 +710,7 @@
         <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
         <nav class="mobile-nav" aria-label="Navegação rápida">
             <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas">Conversas</button>
+            <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
             <button type="button" onclick="openBrain()">Memória</button>
@@ -685,6 +718,28 @@
     </div>
 
 
+    <section id="objectivesPanel" class="modal-layer" aria-label="Objetivos das conversas" hidden>
+        <div class="modal-box objectives-sheet" role="dialog" aria-modal="true" aria-labelledby="objectivesTitle">
+            <div class="objectives-heading">
+                <div>
+                    <h2 id="objectivesTitle">Objetivos e tarefas</h2>
+                    <p>Planos e estados reais de até 12 conversas deste navegador.</p>
+                </div>
+                <a class="objectives-full-link" href="/workspace/objectives">Painel completo</a>
+                <button type="button" class="secondary" onclick="closeObjectives()"
+                    aria-label="Fechar objetivos">Fechar</button>
+            </div>
+            <div class="objectives-controls" role="group" aria-label="Filtrar objetivos">
+                <button type="button" class="secondary" onclick="setObjectiveFilter('all')">Todos</button>
+                <button type="button" class="secondary" onclick="setObjectiveFilter('active')">Ativos</button>
+                <button type="button" class="secondary" onclick="setObjectiveFilter('paused')">Pausados</button>
+                <button type="button" class="secondary" onclick="openObjectives()">Atualizar</button>
+            </div>
+            <p class="objectives-disclaimer">Etapas mostradas são planejadas, não tarefas verificadas como concluídas.
+                Não calculamos percentuais sem evidências do servidor.</p>
+            <div id="objectivesList" class="objectives-list" role="status" aria-live="polite"></div>
+        </div>
+    </section>
     <section id="authPanel" class="modal-layer" aria-label="Acesso ao Menor">
         <form class="modal-box" onsubmit="submitAuth(event)">
             <h2 id="authTitle">Acessar Menor</h2>
@@ -1889,6 +1944,156 @@
                 input.focus();
                 scrollToBottom();
             }
+        }
+
+        // ========== CHAT E: OBJETIVOS CONSULTÁVEIS (somente leitura) ==========
+        let objectivesRecords = [];
+        let objectivesFilter = 'all';
+        let objectivesRequest = 0;
+
+        function closeObjectives() {
+            objectivesRequest += 1;
+            document.getElementById('objectivesPanel').hidden = true;
+        }
+
+        function setObjectiveFilter(value) {
+            if (!['all', 'active', 'paused'].includes(value)) return;
+            objectivesFilter = value;
+            renderObjectives();
+        }
+
+        function renderObjectives() {
+            const list = document.getElementById('objectivesList');
+            list.replaceChildren();
+            const controls = document.querySelectorAll
+                ? document.querySelectorAll('.objectives-controls button') : [];
+            for (const button of controls) {
+                const action = button.getAttribute('onclick') || '';
+                const match = action.match(/^setObjectiveFilter\('([a-z]+)'\)$/);
+                if (match) button.setAttribute('aria-pressed', String(match[1] === objectivesFilter));
+            }
+            const rows = objectivesRecords.filter(item => objectivesFilter === 'all'
+                || (objectivesFilter === 'active' && item.kind === 'active')
+                || (objectivesFilter === 'paused' && item.kind === 'paused'));
+            if (!rows.length) {
+                list.textContent = objectivesRecords.length
+                    ? 'Nenhum objetivo encontrado neste filtro.'
+                    : 'Nenhum objetivo registrado nas conversas consultadas.';
+                return;
+            }
+            for (const item of rows) {
+                const card = document.createElement('article');
+                card.className = 'objective-card';
+                const status = document.createElement('span');
+                status.className = 'objective-state';
+                status.textContent = item.label;
+                card.appendChild(status);
+                const title = document.createElement('h3');
+                title.textContent = item.goal;
+                card.appendChild(title);
+                const source = document.createElement('p');
+                source.textContent = 'Conversa: ' + item.conversation;
+                card.appendChild(source);
+                if (item.steps.length) {
+                    const steps = document.createElement('ol');
+                    for (const step of item.steps) {
+                        const entry = document.createElement('li');
+                        entry.textContent = step;
+                        steps.appendChild(entry);
+                    }
+                    card.appendChild(steps);
+                }
+                list.appendChild(card);
+            }
+        }
+
+        function objectiveRecord(conversation, goal, kind, label, steps) {
+            return {
+                conversation: conversation.title.slice(0, 90),
+                goal: goal.slice(0, 300), kind, label,
+                steps: Array.isArray(steps) ? steps.filter(s => typeof s === 'string')
+                    .slice(0, 6).map(s => s.slice(0, 300)) : [],
+            };
+        }
+
+        async function openObjectives() {
+            const panel = document.getElementById('objectivesPanel');
+            const list = document.getElementById('objectivesList');
+            panel.hidden = false;
+            list.replaceChildren();
+            list.textContent = 'Consultando estado do agente...';
+            objectivesFilter = 'all';
+            const ticket = ++objectivesRequest;
+            // IDs são locais ao navegador; consultar no máximo 12 sessões, apenas com ID validado.
+            const recent = conversations.filter(c => /^[a-zA-Z0-9_-]{8,80}$/.test(c.id)).slice(0, 12);
+            if (!recent.length) {
+                objectivesRecords = [];
+                renderObjectives();
+                return;
+            }
+            const states = await Promise.all(recent.map(async conversation => {
+                try {
+                    const response = await fetch('/agent/runs/' + encodeURIComponent(conversation.id), {
+                        credentials: 'same-origin', cache: 'no-store',
+                    });
+                    if (response.status === 401) return { conversation, authRequired: true };
+                    if (!response.ok) return { conversation, error: true };
+                    const state = await response.json();
+                    if (!state || typeof state !== 'object' || Array.isArray(state)) {
+                        return { conversation, error: true };
+                    }
+                    return { conversation, state };
+                } catch (error) {
+                    return { conversation, error: true };
+                }
+            }));
+            if (ticket !== objectivesRequest || panel.hidden) return;
+            if (states.some(x => x.authRequired)) {
+                objectivesRecords = [];
+                list.textContent = 'Entre no Menor para consultar os objetivos.';
+                await checkAuth();
+                return;
+            }
+            const collected = [];
+            for (const item of states) {
+                const state = item.state;
+                if (item.error) {
+                    collected.push(objectiveRecord(item.conversation,
+                        'Não foi possível consultar esta sessão.', 'error',
+                        'Estado indisponível', []));
+                    continue;
+                }
+                if (state.phase === 'goal' && typeof state.goal === 'string') {
+                    collected.push(objectiveRecord(item.conversation, state.goal,
+                        'active', 'Plano ativo — execução não comprovada', state.steps));
+                }
+                if (state.phase === 'approval' && state.return_goal
+                        && typeof state.return_goal.goal === 'string') {
+                    collected.push(objectiveRecord(item.conversation, state.return_goal.goal,
+                        'active', 'Aguardando aprovação de ação', state.return_goal.steps));
+                }
+                if (state.phase === 'running') {
+                    collected.push(objectiveRecord(item.conversation,
+                        'Execução em curso ou interrompida; resultado ainda não verificado.',
+                        'active', 'Estado em execução', []));
+                }
+                if (state.effects_uncertain === true) {
+                    collected.push(objectiveRecord(item.conversation,
+                        'Resultado anterior incerto: inspecione antes de executar novamente.',
+                        'active', 'Recuperação requer atenção', []));
+                }
+                if (Array.isArray(state.paused_goals)) {
+                    for (const goal of state.paused_goals.slice(-6)) {
+                        if (!goal || typeof goal.goal !== 'string'
+                                || !['paused', 'abandoned'].includes(goal.status)) continue;
+                        collected.push(objectiveRecord(item.conversation, goal.goal,
+                            'paused', goal.status === 'paused' ? 'Pausado' : 'Abandonado',
+                            goal.steps));
+                    }
+                }
+            }
+            objectivesRecords = collected;
+            renderObjectives();
         }
     </script>
 </body>
