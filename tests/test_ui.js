@@ -1443,6 +1443,113 @@ test('D10: falha 409 na recuperação não libera execução pendente', async ()
     assert.match(conv.messages.at(-1).content, /operação ativa/i);
 });
 
+test('D: recuperação tardia após troca de chat não altera autorização pendente', async () => {
+    const ui = browser();
+    const original = ui.context.createConversation('tarefa interrompida');
+    original.pendingRunRecovery = true;
+    let release;
+    const paused = new Promise(resolve => { release = resolve; });
+    const urls = [];
+    ui.context.fetch = async (url, options) => {
+        urls.push({ url, options });
+        if (url.includes('/recover')) {
+            await paused;
+            return { ok: true, status: 200, json: async () => ({ recovered: true }) };
+        }
+        throw new Error('Endpoint inesperado ' + url);
+    };
+    ui.elements.get('userInput').value = 'sim';
+    const pending = ui.context.sendMsg();
+    await new Promise(resolve => setImmediate(resolve));
+    ui.context.newChat();
+    release();
+    await pending;
+    assert.equal(urls.length, 1);
+    assert.match(urls[0].url, /\/recover$/);
+    assert.equal(original.pendingRunRecovery, true);
+    assert.match(original.messages.at(-1).content, /interrompida/i);
+    assert.equal(original.messages.some(item => /liberado com segurança/.test(item.content)), false);
+});
+
+test('D: estado de missão não é atualizado por skills tardias de conversa anterior', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('missão em curso');
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'queued' };
+    let release;
+    const delayedSkills = new Promise(resolve => { release = resolve; });
+    const calls = [];
+    ui.context.fetch = async (url, options) => {
+        calls.push({ url, options });
+        if (url.endsWith('/agent/skills')) {
+            await delayedSkills;
+            return { ok: true, json: async () => ({ items: [
+                { mission_id: conv.activeMission.id, ready: true },
+            ] }) };
+        }
+        if (url.endsWith(conv.activeMission.id)) {
+            return { ok: true, json: async () => ({ status: 'ready' }) };
+        }
+        throw new Error('Endpoint inesperado: ' + url);
+    };
+    ui.elements.get('userInput').value = 'como está o progresso?';
+    const pending = ui.context.sendMsg();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(calls.some(item => item.url === '/agent/skills'), true);
+    ui.context.newChat();
+    release();
+    await pending;
+    assert.equal(conv.activeMission.status, 'queued');
+    assert.match(conv.messages.at(-1).content, /interrompida/i);
+});
+
+test('D: navegação cancela leitura de stream pendente sem salvar resposta velha', async () => {
+    const ui = browser();
+    let readStarted;
+    let finishRead;
+    let cancelCount = 0;
+    const readPending = new Promise(resolve => { finishRead = resolve; });
+    const reading = new Promise(resolve => { readStarted = resolve; });
+    const originalFetch = ui.context.fetch;
+    ui.context.fetch = async (url, options) => {
+        if (url !== '/chat/stream') return originalFetch(url, options);
+        return { ok: true, body: { getReader: () => ({
+            read() { readStarted(); return readPending; },
+            cancel() { cancelCount++; finishRead({ done: true }); return Promise.resolve(); },
+        }) } };
+    };
+    ui.elements.get('userInput').value = 'Explica funções em JavaScript';
+    const pending = ui.context.sendMsg();
+    await reading;
+    const previous = ui.context.getActiveConv();
+    ui.context.newChat();
+    await pending;
+    assert.equal(cancelCount, 1);
+    assert.equal(previous.messages.length, 2);
+    assert.match(previous.messages.at(-1).content, /interrompida/i);
+    assert.equal(ui.context.getActiveConv(), undefined);
+});
+
+test('D: recibos planejados e falhos não aparecem como sucesso executado', async () => {
+    const ui = browser();
+    ui.context.fetch = async () => ({
+        ok: true, status: 200, json: async () => ({
+            handled: true, reply: 'Plano e diagnóstico separados.',
+            events: [
+                { tool: 'projects.list', status: 'executed' },
+                { tool: 'developer.propose', status: 'planned' },
+                { tool: 'vision.inspect', status: 'failed' },
+            ],
+        }),
+    });
+    ui.elements.get('userInput').value = 'Quais ferramentas foram executadas?';
+    await ui.context.sendMsg();
+    const reply = ui.context.getActiveConv().messages.at(-1).content;
+    assert.match(reply, /✓ projects.list · executed/);
+    assert.match(reply, /… developer.propose · planned/);
+    assert.match(reply, /! vision.inspect · failed/);
+    assert.doesNotMatch(reply, /✓ vision.inspect/);
+});
+
 test('D12: recibo sem arquivo verificado não afirma integridade válida', () => {
     const ui = browser();
     const conv = ui.context.createConversation('imagem');

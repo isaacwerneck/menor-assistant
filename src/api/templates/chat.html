@@ -835,6 +835,16 @@
             const current = activeGeneration;
             generationSequence += 1;
             if (current.controller) current.controller.abort();
+            // Cancelar a leitura do stream no navegador não prova que o modelo
+            // ou uma ação no backend tenham sido interrompidos.
+            if (current.reader && typeof current.reader.cancel === 'function') {
+                try {
+                    const pendingCancel = current.reader.cancel();
+                    if (pendingCancel && typeof pendingCancel.catch === 'function') {
+                        pendingCancel.catch(() => {});
+                    }
+                } catch (_) { /* stream pode ter fechado antes do cancelamento */ }
+            }
             if (current.timer && typeof clearInterval === 'function') clearInterval(current.timer);
             const notice = 'Resposta interrompida no navegador. O servidor pode continuar ' +
                 'processando; nenhuma operação será repetida automaticamente.';
@@ -1497,11 +1507,12 @@
                         + 'Quer encerrar aquela tentativa sem repeti-la? Responda sim ou não.');
                     return true;
                 }
-                const recovery = await fetch('/agent/runs/' + encodeURIComponent(conv.id) + '/recover', {
+                const recovery = await turnFetch('/agent/runs/' + encodeURIComponent(conv.id) + '/recover', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ confirmed: true }),
                 });
                 const receipt = await recovery.json();
+                assertLiveTurn(conv);
                 if (recovery.status === 409) {
                     imageReply(conv, content,
                         'Ainda existe uma operação ativa nesta conversa. '
@@ -1564,9 +1575,14 @@
             }
             delete conv.pendingMemory;
             save();
-            const events = Array.isArray(result.events) ? result.events.map(
-                item => '✓ ' + item.tool + ' · ' + item.status,
-            ).join('\n') : '';
+            const events = Array.isArray(result.events) ? result.events
+                .filter(item => item && typeof item.tool === 'string'
+                    && typeof item.status === 'string')
+                .slice(0, 12).map(item => {
+                    const marker = item.status === 'executed' ? '✓'
+                        : item.status === 'planned' ? '…' : '!';
+                    return marker + ' ' + item.tool.slice(0, 80) + ' · ' + item.status.slice(0, 40);
+                }).join('\n') : '';
             imageReply(conv, content, result.reply + (events ? '\n\n' + events : ''),
                 result.image || '', result.artifact || null);
             return true;
@@ -1828,19 +1844,21 @@
                 return true;
             }
             if (/(como (est[aá]|ta)|status|andamento|progresso|ficou pronta|j[aá] terminou|conseguimos|deu certo|funcionou|instalou|baixou|modelo|ferramenta|e agora|falta)/i.test(message)) {
-                const response = await fetch('/agent/missions/' + active.id);
+                const response = await turnFetch('/agent/missions/' + active.id);
                 if (!response.ok) throw new Error('Não consegui consultar a missão.');
                 const mission = await response.json();
                 assertLiveTurn(conv);
-                active.status = mission.status;
                 let verifiedReady = mission.status === 'ready';
                 if (verifiedReady) {
-                    const skillsResponse = await fetch('/agent/skills');
+                    const skillsResponse = await turnFetch('/agent/skills');
                     if (!skillsResponse.ok) throw new Error('Não consegui verificar a skill.');
                     const skills = await skillsResponse.json();
+                    assertLiveTurn(conv);
                     verifiedReady = skills.items.some(item =>
                         item.mission_id === active.id && item.ready === true);
                 }
+                assertLiveTurn(conv);
+                active.status = mission.status;
                 const state = verifiedReady
                     ? 'O subagente local passou no teste e está disponível.'
                     : mission.status === 'ready'
@@ -1882,6 +1900,8 @@
                     : 'Preparei o diagnóstico do código, sem alterar a main.';
                 imageReply(conv, content, answer);
             } catch (failure) {
+                if (failure.name === 'AbortError') throw failure;
+                assertLiveTurn(conv);
                 imageReply(conv, content,
                     'Não consegui abrir uma correção automática: ' + failure.message);
             }
@@ -2090,6 +2110,7 @@
                 document.getElementById('generationStatus').textContent =
                     'Aguardando o início da resposta do Ollama…';
                 const reader = response.body.getReader();
+                generation.reader = reader;
                 const decoder = new TextDecoder('utf-8');
                 let fullReply = '';
 
@@ -2109,6 +2130,7 @@
                 }
 
                 fullReply += decoder.decode();
+                generation.reader = null;
                 botContent.textContent = routeNotice + fullReply;
                 if (!fullReply.trim()) throw new Error('O modelo retornou uma resposta vazia.');
                 conv.messages.push({ role: 'bot', content: routeNotice + fullReply });
