@@ -16,7 +16,7 @@ class DoctorTests(unittest.TestCase):
         response = connection.getresponse.return_value
         response.status = status
         response.read.return_value = json.dumps(payload if payload is not None else {
-            "status": "online", "ollama_status": "online",
+            "status": "online", "service": "Menor API", "ollama_status": "online",
         }).encode()
         return connection
 
@@ -33,12 +33,14 @@ class DoctorTests(unittest.TestCase):
 
     @patch("ops.doctor.http.client.HTTPConnection")
     def test_ollama_offline_is_not_reported_as_healthy(self, conn):
-        conn.return_value = self.fake_connection(payload={"status": "online", "ollama_status": "offline"})
+        conn.return_value = self.fake_connection(
+            payload={"status": "online", "service": "Menor API", "ollama_status": "offline"},
+        )
         self.assertEqual([c.status for c in doctor.check_api()], ["ok", "warning"])
 
     @patch("ops.doctor.http.client.HTTPConnection")
     def test_http_redirect_and_malformed_health_are_fail_closed(self, conn):
-        for status, payload in [(302, None), (200, {"status": "starting"}), (200, [])]:
+        for status, payload in [(302, None), (200, {"status": "starting"}), (200, {"status": "online"}), (200, [])]:
             with self.subTest(status=status, payload=payload):
                 conn.return_value = self.fake_connection(status, payload)
                 self.assertEqual([c.status for c in doctor.check_api()], ["critical", "skipped"])
