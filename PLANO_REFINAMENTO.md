@@ -430,3 +430,26 @@ candidato sem integrador auditado e autorização.
 
 A cobertura de CI usa mocks; a qualidade de personagens e sprites ainda
 precisa de imagem real e avaliador visual confiável no hardware.
+
+
+## R19 — Regressões de planejamento em vários assuntos
+
+Verificar transições entre documentos, música, robótica e dúvidas incidentais,
+sem prefixos de comando. Testar retomada com IDs reais e recusar IDs falsos.
+Confirmar que uma pergunta paralela não apaga o plano, que o modelo offline
+não cria estado incorreto e que uma aprovação de escrita não executa antes
+do consentimento. Verificar duplicação de turnos e logs sem segredos.
+
+Métricas de falhas são observabilidade, não prova de melhoria cognitiva;
+a avaliação qualitativa real do Ollama segue pendente no hardware.
+
+## R21 — Revisor de plano independente, sem confiança cega
+
+A revisão com segundo modelo local é um parecer, não uma garantia. A saída é
+validada por contrato estruturado e não pode selecionar ferramenta ou liberar
+aprovação. Na divergência, permite UMA reformulação sem efeitos colaterais;
+se persistir dúvida, a proposta é identificada como preliminar.
+
+Próximos testes: criar benchmarks inéditos de mudança de domínio, qualidade
+factual, latência no i7, consumo de RAM e risco de crítico superconfiante.
+Manter revisão desabilitada por padrão até essa validação real.

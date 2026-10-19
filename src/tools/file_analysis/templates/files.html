@@ -18,6 +18,18 @@ não interpreta imagens nem garante que um documento esteja correto.</p>
 <button id="upload" type="button">Enviar e analisar</button>
 <p id="message" role="status" aria-live="polite"></p>
 </section>
+<section aria-labelledby="query-title">
+<h2 id="query-title">Perguntar sobre o arquivo</h2>
+<label for="question">Pergunta sobre conteúdo, tabelas ou imagem</label>
+<textarea id="question" rows="3" maxlength="500" placeholder="Ex.: Qual é o prazo na página 2?"></textarea>
+<div class="actions">
+  <button id="context" type="button" disabled>Localizar trechos e fontes</button>
+  <button id="vision" type="button" disabled>Interpretar imagem com Ollama local</button>
+</div>
+<p id="vision-state" role="status" aria-live="polite">Verificando disponibilidade de visão local...</p>
+<p class="notice">Trechos são dados do arquivo, não uma resposta do modelo. A visão local é
+experimental; o parecer pode estar errado e não verifica a qualidade da imagem.</p>
+</section>
 <section aria-labelledby="result-title">
 <h2 id="result-title">Resultado</h2>
 <p id="file-info"></p>

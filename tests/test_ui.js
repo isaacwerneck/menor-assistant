@@ -17,6 +17,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
     const memories = [];
     const knowledgeActions = [];
     const imageCalls = [];
+    const agentCalls = [];
     const repairCalls = [];
     const missionCalls = [];
     let knowledgeItems = [{ id: '3.0123456789abcdef', text: 'Meu jogo usa Godot', date: '2026-10-18',
@@ -50,7 +51,10 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         FormData: class { constructor() { this.values = {}; } append(k, v) { this.values[k] = v; } },
         URL: { createObjectURL(value) { blob = value; return 'blob:test'; }, revokeObjectURL() {} },
         fetch: async (url, options) => {
-            if (url === '/agent/run') return { ok: true, json: async () => ({ handled: false }) };
+            if (url === '/agent/run') {
+                agentCalls.push(JSON.parse(options.body));
+                return { ok: true, json: async () => ({ handled: false }) };
+            }
             if (url === '/auth/status') {
                 return { ok: true, json: async () => ({ configured: true, authenticated: true }) };
             }
@@ -95,7 +99,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
                         question: 'Que imagem você quer? Me descreve a cena e o estilo.',
                     }) };
                 }
-                if (text.includes('cria uma imagem de')) {
+                if (text.includes('cria uma imagem de') || text.includes('gerar uma imagem de')) {
                     return { ok: true, json: async () => ({
                         decision: 'image_generate', prompt: body.message,
                     }) };
@@ -108,6 +112,9 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
                     }) };
                 }
                 return { ok: true, json: async () => ({ decision: 'chat' }) };
+            }
+            if (/^\/images\/files\/[a-f0-9]{32}$/.test(url)) {
+                return { ok: true, blob: async () => new Blob(['PNG mock'], { type: 'image/png' }) };
             }
             if (url === '/images/generate') {
                 imageCalls.push({ type: 'generate', body: JSON.parse(options.body) });
@@ -183,7 +190,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, repairCalls, missionCalls,
+    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, agentCalls, repairCalls, missionCalls,
         downloads, getBlob: () => blob };
 }
 
@@ -699,4 +706,74 @@ test('recusa da recuperação mantém tarefa travada sem invocar endpoint', asyn
     assert.deepEqual(calls, []);
     assert.equal(conv.pendingRunRecovery, undefined);
     assert.match(conv.messages.at(-1).content, /não liberei/i);
+});
+
+
+test('Chat D: pedido coloquial de img vai direto ao gerador, sem aprovação redundante', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'opa vc pode gerar uma img de um cachorro pra mim?';
+    await ui.context.sendMsg();
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 1);
+    assert.equal(ui.agentCalls.length, 0);
+    assert.equal(ui.routed.length, 0);
+    assert.equal(ui.context.getActiveConv().messages.at(-1).image,
+        '/images/files/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+});
+
+test('Chat D: cadê a imagem reexibe a última imagem, sem alucinar incapacidade', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'cadê a imagem que vc gerou? me manda';
+    await ui.context.sendMsg();
+    const answer = ui.context.getActiveConv().messages.at(-1);
+    assert.equal(answer.image, '/images/files/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    assert.match(answer.content, /última imagem salva/);
+    assert.equal(ui.agentCalls.length, 0);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 1);
+});
+
+test('Chat D: refinamento coloquial edita o resultado existente sem pedir upload', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value =
+        'o cachorro possui 3 patas, consegue arrumar pra ficar só 2? tem que ser adulto e cinza com preto';
+    await ui.context.sendMsg();
+    const edited = ui.imageCalls.filter(x => x.type === 'edit');
+    assert.equal(edited.length, 1);
+    assert.match(edited[0].body.values.prompt, /cachorro possui 3 patas/);
+    assert.equal(edited[0].body.values.file.size > 0, true);
+    assert.equal(ui.agentCalls.length, 0);
+    assert.equal(ui.context.getActiveConv().messages.at(-1).image,
+        '/images/files/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+});
+
+test('Chat D: criação de ferramenta de imagens continua sob autoridade do agente', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'quero criar uma ferramenta para gerar imagens';
+    await ui.context.sendMsg();
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 0);
+    assert.equal(ui.agentCalls.length, 1);
+});
+
+test('Chat D: aprovações de ação sensível não são confundidas com refinamento de imagem', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'eu aprovo';
+    await ui.context.sendMsg();
+    assert.equal(ui.agentCalls.length, 1);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
+});
+
+
+test('Chat D: pedido para corrigir bug de software não edita imagem recém-gerada', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'corrige esse bug no código do aplicativo';
+    await ui.context.sendMsg();
+    assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
+    assert.equal(ui.agentCalls.length, 1);
 });

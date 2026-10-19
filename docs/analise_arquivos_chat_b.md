@@ -71,7 +71,7 @@ Formatos:
 
 ## Dependências e validação
 
-Instalação **opcional** no ambiente de processamento (não há download de modelos):
+Instalação dos extratores (sem download de modelos; disponível automaticamente no deploy após merge):
 
 ```bash
 python -m pip install -r requirements-file-analysis.txt
@@ -80,8 +80,9 @@ python -m unittest discover -s tests -p 'test_file_analysis.py' -v
 
 O workflow isolado `.github/workflows/file-analysis.yml` executa os extratores
 com `pypdf`, `python-docx`, `openpyxl`, Pillow e geração de fixtures PDF via ReportLab.
-As bibliotecas do Word/Excel/PDF não foram adicionadas ao `requirements.txt` central
-para não alterar o ambiente de produção sem revisão.
+As bibliotecas do Word/Excel/PDF são agora incluídas por `requirements.txt` após revisão do PR,
+para que a API instalada pelo deploy automático consiga analisar esses formatos. O parser
+continua isolado em subprocesso, mas compartilha o ambiente virtual de dependências.
 
 ## Camada de upload e integração ainda necessária
 
@@ -176,9 +177,9 @@ Limites adicionais:
 
 ### Teste de integração no servidor (depois do merge)
 
-1. Instalar as dependências opcionais **após revisão**:
-   \`cd ~/menor-assistant && .venv/bin/pip install -r requirements-file-analysis.txt\`.
-2. Confirmar o deploy, os logs e a versão da API em execução.
+1. Confirmar que o deploy automático instalou `pypdf`, `python-docx` e `openpyxl` no `.venv`
+   após merge e reiniciou a API (não é necessário instalar os pacotes manualmente).
+2. Conferir os logs, os recursos consumidos e a versão da API em execução.
 3. Entrar normalmente no chat pelo navegador e abrir \`/files/view\`.
 4. Enviar PDF com duas páginas, DOCX com tabela e XLSX com duas abas.
    Conferir os recibos; a extração deve ser estruturada e documentar
@@ -189,3 +190,47 @@ Limites adicionais:
 **Critério de aceite:** não declarar OCR, compreensão visual,
 conexão com o agente nem resistência a arquivos hostis como
 capacidades validadas por esses testes.
+
+
+## Chat B v3 — consultas documentais e visão local na interface privada
+
+Este incremento não modifica o cérebro do Chat A. A página autenticada
+\`/files/view\` passa a oferecer duas ações explícitas após upload:
+
+- **Localizar trechos e fontes:** \`POST /files/{file_id}/context\` com JSON
+  \`{"question":"..." }\` até 500 caracteres. Usa o extrator isolado e
+  a seleção lexical \`src.tools.file_analysis.context.retrieve\`. Retorna
+  citações de página/bloco/linha/aba, ou \`no_text\` se não houver texto
+  (por exemplo, um PDF digitalizado). **Não é uma resposta do Qwen**.
+- **Interpretar imagem com Ollama local:** \`POST /files/{file_id}/vision\`,
+  mesmo contrato de pergunta. Exige modelo previamente instalado e
+  configurado em \`MENOR_VISION_MODEL\`. Verifica formato/integridade pelo
+  worker local antes de enviar pixels ao Ollama de loopback, não envia à
+  nuvem e não baixa modelos. O parecer mantém
+  \`validation.semantic_verified: false\` mesmo quando o JSON está correto.
+- \`GET /files/vision/status\` informa se o Ollama reporta o modelo.
+  **Modelo detectado ≠ entendimento ou precisão validados.**
+
+Todas as rotas exigem autenticação e verificam origem em requisições com
+\`Origin\`. Perguntas não entram em URLs ou arquivos do cérebro:
+vão no corpo JSON e têm comprimento controlado. O navegador usa
+\`textContent\` para mostrar resultados, nunca renderiza HTML extraído.
+O botão de visão fica desativado até o modelo estar disponível;
+o de contexto é usado apenas em documentos com texto.
+
+**O que ainda falta:** benchmark multimodal com imagens inéditas,
+OCR para PDFs digitalizados, uso desses resultados pelo chat principal
+do Chat A, e instalação/medição opcional de modelos no notebook.
+Em nenhuma situação esta UI conclui que o arquivo visual produzido
+está correto apenas porque um modelo retornou uma descrição.
+
+Revalidação após merge:
+
+\`\`\`bash
+python -m unittest discover -s tests -p 'test_file*.py' -v
+python -m unittest discover -s tests -p 'test_vision_tools.py' -v
+\`\`\`
+
+O CI cobre autenticação, prompt enviado apenas ao loopback, limite da
+pergunta, ausência de modelo, recuperação de referências e falha explícita.
+Benchmarks de qualidade e testes reais de RAM/CPU são uma etapa separada.

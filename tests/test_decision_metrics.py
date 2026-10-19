@@ -59,6 +59,14 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(report["error_types"]["RuntimeError"], 5)
         self.assertEqual(analyze(self.store)["decision_quality"]["failed"], 5)
 
+    def test_retention_is_bounded_for_long_running_server(self):
+        with patch("src.agent.quality_metrics.MAX_ROWS", 3):
+            for index in range(7):
+                self.metrics.record("conversation01", f"request{index:04}", {
+                    "handled": True, "phase": "goal",
+                })
+        self.assertEqual(self.metrics.report()["events"], 3)
+
     def test_symlink_database_is_rejected(self):
         folder = self.store._directories(("memoria",))
         outside = self.store.data_dir / "secret.txt"

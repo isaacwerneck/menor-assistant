@@ -102,3 +102,38 @@ executado anteriormente. Habilidades especializadas só contam quando passam
 benchmarks do objetivo; instalação de pesos e saída PNG válida não garantem
 compreensão de pixel art. Integradores alternativos e treinamento exigem
 avaliação separada, em vez de inferência automática baseada na existência do modelo.
+
+
+## I3 parcial — vários objetivos, execução tipada e observabilidade
+
+- [x] Memória de trabalho limitada a seis objetivos pausados por conversa,
+  com IDs verificáveis e retomada depois de reinício do servidor.
+- [x] Modelo pode propor começar, refinar, trocar ou retomar objetivo.
+  Python valida a referência antes de alterar estado.
+- [x] Resposta incidental e pesquisa não apagam o plano principal.
+- [x] Aprovação de uma ferramenta não apaga o objetivo que a originou.
+- [x] Decisão de ação pode selecionar ferramenta e argumentos do catálogo
+  real; código valida contrato e exige permissão para escrita.
+- [x] Benchmark de continuidade e métricas agregadas privadas, com sinais
+  de regressão e retenção limitada a 5.000 eventos.
+- [ ] Avaliar o Qwen real em centenas de diálogos inéditos e medir falsos
+  positivos de troca/retomada no notebook.
+- [ ] Tarefas de várias horas/dias e recuperação segura após interrupções.
+- [ ] Autoedição com propostas, testes independentes, PR, revisão e rollback,
+  sem liberar alterações automáticas irrestritas.
+
+Detalhes: docs/chat_a_objetivos_contextuais.md.
+
+## I3 — Revisão independente de planos (Chat A, PR #29)
+
+- [x] Um segundo julgamento Ollama, opcional, compara pedido atual com objetivo,
+  etapas e critérios, sem classificação rígida por gênero.
+- [x] Divergência produz no máximo uma reformulação. Ausência de informações
+  essenciais produz pergunta; modelo indisponível preserva resposta preliminar.
+- [x] Parecer nunca concede permissão de ferramenta, instalação ou publicação.
+- [x] Testes isolados para erro de domínio, resposta inválida, indisponibilidade
+  e impossibilidade de executar operações pela crítica.
+- [ ] Medir tempo e qualidade do segundo julgamento no servidor i7 antes de
+  ativá-lo para todos os pedidos. Por padrão fica desligado por custo de CPU.
+
+Detalhes: [revisão de planos](docs/chat_a_revisao_de_planos.md).

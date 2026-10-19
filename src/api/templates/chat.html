@@ -1116,6 +1116,46 @@
             sendMsg();
         }
 
+        // Conversa de imagens: pedidos explícitos não devem entrar no fluxo genérico de aprovação.
+        // Só reutilizamos URLs de imagens emitidas por este servidor, nunca URLs vindas do texto do LLM.
+        function recentImage(conv) {
+            const messages = conv.messages || [];
+            for (let i = messages.length - 1; i >= Math.max(0, messages.length - 10); i--) {
+                const item = messages[i];
+                if (item.role === 'bot' && /^\/images\/files\/[a-f0-9]{32}$/.test(item.image || '')) {
+                    return { ...item, distance: messages.length - 1 - i };
+                }
+            }
+            return null;
+        }
+
+        function normalizeImageRequest(message) {
+            return message.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        }
+
+        function imageTurnPriority(message, conv) {
+            const text = normalizeImageRequest(message);
+            const earlier = recentImage(conv);
+            const sensitive = /\b(ferramenta|skill|plugin|codigo|repositorio|software|programa|instalar|bug|erro|sistema|aplicativo|projeto|deploy|branch|github)\b/.test(text);
+            const asksHow = /^(como|me explica|explique|tutorial|ensina)\b/.test(text);
+            const subject = /\b(imagem|imagens|imgs?|foto|desenho|ilustracao|capa|arte|pixel.art)\b/.test(text);
+            const make = /\b(cria|crie|criar|faz|faca|fazer|gera|gere|gerar|desenha|desenhe)\b/.test(text);
+            const change = /\b(edita|editar|edite|modifica|modificar|transforma|arruma|arrumar|corrige|corrigir|ajusta|ajustar|troca|trocar|muda|mudar|remove|remover|tira|tirar|deixa|deixar|adiciona|adicionar)\b/.test(text);
+            const refine = !!earlier && earlier.distance <= 4 && change && !sensitive && !asksHow;
+            return {
+                route: !sensitive && !asksHow && ((subject && (make || change)) || refine),
+                forceEdit: refine && !(subject && make && !change),
+            };
+        }
+
+        function imageRecallRequest(message, conv) {
+            const text = normalizeImageRequest(message);
+            const earlier = recentImage(conv);
+            return !!earlier && earlier.distance <= 8
+                && /\b(cade|onde|mostra|mostrar|manda|mandar|envia|enviar|ver|reenvia)\b/.test(text)
+                && /\b(imagem|img|foto|arquivo|resultado|que voce gerou|que vc gerou)\b/.test(text);
+        }
+
         async function handleAgentTurn(conv, message, history, project, content) {
             if (conv.pendingRunRecovery) {
                 const choice = missionConsent(message);
@@ -1251,8 +1291,9 @@
             scrollToBottom();
         }
 
-        async function handleImageTurn(conv, message, content) {
+        async function handleImageTurn(conv, message, content, forceEdit = false) {
             const attachment = selectedImageFile;
+            const previous = recentImage(conv);
             const pending = conv.pendingImage;
             const normalized = message.trim().toLowerCase();
             if (pending && /^(cancela|cancelar|deixa|não precisa|nao precisa)$/.test(normalized)) {
@@ -1262,13 +1303,16 @@
                 return true;
             }
             let intent;
-            if (pending) {
+            if (forceEdit) {
+                intent = { decision: 'image_edit', prompt: message };
+            } else if (pending) {
                 intent = { decision: pending.kind === 'edit' ? 'image_edit' : 'image_generate',
                     prompt: message };
             } else {
                 try {
                     intent = await imageJson('/images/intent', {
-                        message, has_attachment: !!attachment,
+                        message: message.replace(/\bimgs?\b/gi, 'imagem'),
+                        has_attachment: !!attachment,
                     });
                 } catch (error) {
                     // Se o roteador de imagens falhar, não derrubar o chat de texto.
@@ -1284,7 +1328,7 @@
             }
             const kind = intent.decision === 'image_edit' || (attachment && intent.decision === 'chat')
                 ? 'edit' : 'generate';
-            if (kind === 'edit' && !attachment) {
+            if (kind === 'edit' && !attachment && !previous) {
                 conv.pendingImage = { kind: 'edit' };
                 imageReply(conv, content, 'Anexa a imagem que você quer editar.');
                 return true;
@@ -1299,8 +1343,17 @@
             try {
                 let result;
                 if (kind === 'edit') {
+                    let source = attachment;
+                    if (!source && previous) {
+                        const file = await fetch(previous.image, { credentials: 'same-origin' });
+                        if (!file.ok) throw new Error('A imagem anterior não está disponível. Anexa ela para editar.');
+                        source = await file.blob();
+                        if (!source.size || source.size > 12 * 1024 * 1024) {
+                            throw new Error('Arquivo anterior inválido ou muito grande. Anexa a imagem.');
+                        }
+                    }
                     const payload = new FormData();
-                    payload.append('file', attachment);
+                    payload.append('file', source, attachment ? attachment.name : 'imagem-anterior.png');
                     payload.append('prompt', prompt);
                     const response = await fetch('/images/edit', { method: 'POST', body: payload });
                     const data = await response.json();
@@ -1524,6 +1577,17 @@
             const botContent = appendMessage('bot', '', true);
 
             try {
+                const recent = recentImage(conv);
+                if (!conv.pendingMemory && imageRecallRequest(msg, conv)) {
+                    imageReply(conv, botContent,
+                        'Aqui está a última imagem salva. O arquivo existe, mas os detalhes visuais ainda não foram verificados.',
+                        recent.image, recent.artifact || null);
+                    return;
+                }
+                const imagePriority = imageTurnPriority(msg, conv);
+                if (!conv.pendingMemory && !conv.activeMission && !conv.pendingCapabilityOffer
+                    && (selectedImageFile || conv.pendingImage || imagePriority.route)
+                    && await handleImageTurn(conv, msg, botContent, imagePriority.forceEdit)) return;
                 if (await handleAgentTurn(conv, msg, history, project, botContent)) return;
                 if (!conv.pendingMemory && (await handleMissionTurn(conv, msg, botContent))) return;
                 if (!conv.pendingMemory && (await handleImageTurn(conv, msg, botContent))) return;

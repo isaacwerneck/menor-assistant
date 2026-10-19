@@ -67,3 +67,40 @@ precisa ser avaliada no notebook com o benchmark \`src/agent/lab.py --live\`.
 - Planejamento não instala nem implementa automaticamente ferramentas novas.
 - Futuras etapas: recuperação segura de interrupções, revisão independente de
   planos, armazenamento de decisões verificadas e avaliação do modelo real.
+
+## Contrato tipado de ferramentas
+
+O planejador pode incluir os campos de ferramenta e argumentos no movimento
+act. Recebe uma lista curta de nomes, descrições e parâmetros reais. O backend
+recusa nomes, chaves ou tipos de parâmetros não reconhecidos. Uma leitura pode
+produzir comprovante imediato; ferramentas de escrita apenas iniciam uma
+aprovação específica, sem executar durante o planejamento.
+
+A execução por etapas sem ferramenta selecionada ainda existe como fallback,
+mas recebe o objetivo pendente para não transformar respostas curtas em pedidos
+independentes. Antes de executar escrita, autorização pontual continua obrigatória.
+
+## Laboratório e métricas de qualidade
+
+O laboratório ganhou evaluate_continuity: decisões sobre troca, refinamento e
+retomada. A avaliação de Ollama pode ser feita com o módulo de lab e opções
+--live --continuity. Mede classificação, não sucesso de execução real.
+
+O módulo quality_metrics grava apenas hashes de IDs, fase, desfecho e tipo de
+exceção em SQLite privado (0600). Não registra prompts, respostas, arquivos,
+imagens ou tokens. Turnos repetidos não duplicam métricas. A retenção máxima
+é 5.000 eventos, dos quais 1.000 são usados em relatórios.
+
+A ferramenta system.diagnose agora inclui decision_quality: indicadores de
+falhas repetidas, pedidos não atendidos e excesso de planejamento. Essas
+métricas não consertam nem treinam o modelo sozinhas e não disparam PRs.
+
+## Critérios de conclusão deste incremento
+
+- Alternar objetivos sem perder os anteriores.
+- Retomar por ID real e rejeitar IDs alucinados.
+- Continuar um plano após pesquisa, aprovação ou recusa de uma ação.
+- Não executar escrita antes de consentimento.
+- Preservar idempotência após reinício.
+- Medir falhas sem persistir dados pessoais na auditoria.
+- Passar toda a suíte Python/JS/Bash do projeto.

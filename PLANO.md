@@ -382,3 +382,16 @@ Plano completo: [PLANO_INTELLIGENCE_ENGINE.md](PLANO_INTELLIGENCE_ENGINE.md).
 - [ ] Longa execução supervisionada de skills de diferentes domínios, PRs e treinamento curado.
 
 Ver [ciclo de capacidades](docs/ciclo_capacidades.md).
+
+
+## 19. Chat A: múltiplos objetivos e decisões fundamentadas
+
+- [x] Controlar vários objetivos na mesma conversa com troca/retomada.
+- [x] Preservar objetivo ao consultar ferramentas e aprovar uma ação.
+- [x] Escolher ferramenta existente por contrato validado sem supor execução.
+- [x] Medir falhas e pedidos não atendidos sem expor conteúdo privado.
+- [x] Casos de regressão de múltiplos domínios e qualidade de decisão.
+- [ ] Avaliação real no notebook e recuperação de missões interrompidas.
+- [ ] Refinamento automático supervisionado com PR, verificação e rollback.
+
+Ver docs/chat_a_objetivos_contextuais.md e PLANO_INTELLIGENCE_ENGINE.md.
