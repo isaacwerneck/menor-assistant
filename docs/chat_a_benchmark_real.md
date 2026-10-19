@@ -5,7 +5,7 @@ Este incremento adiciona `src/agent/benchmark.py` para identificar regressões a
 ## Execução
 
 ```bash
-python -m unittest tests.test_chat_a_benchmark -v
+python -m unittest discover -s tests -p 'test_chat_a_benchmark.py' -v
 python -m src.agent.benchmark --live > benchmark_baseline.json
 python -m src.agent.benchmark --live --compare-review > benchmark_review.json
 ```
