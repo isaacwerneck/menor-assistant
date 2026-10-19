@@ -24,7 +24,7 @@ O comando realiza somente leituras:
 - Espaço livre do volume de `MENOR_DATA_DIR` ou `~/menor-data` (sem listar dados).
 - `MemAvailable` do Linux (sem consultar processos).
 
-Todos os comandos têm timeout. O diagnóstico não lê tokens, não escreve arquivos,
+As chamadas HTTP e systemd têm timeout. O diagnóstico não lê tokens, não escreve arquivos,
 não faz chamadas externas e não mostra caminhos locais. O resultado JSON é
 adequado à futura interface de status; não o exponha numa rota pública sem
 controle de acesso. As classificações são `ok`, `warning`, `critical` e
