@@ -135,18 +135,28 @@ async function loadMissions() {
   drawMissions();
 }
 
-async function refresh() {
+// Reutiliza a atualização em andamento. A carga automática e um refresh
+// manual imediato não podem duplicar cartões nem disparar consultas concorrentes.
+let inFlightRefresh = null;
+function refresh() {
+  if (inFlightRefresh) return inFlightRefresh;
   targets.refresh.disabled = true;
   targets.status.textContent = "Consultando estados registrados…";
-  try {
-    const outcomes = await Promise.allSettled([loadGoals(), loadMissions()]);
-    const errors = outcomes.filter(x => x.status === "rejected").map(x => x.reason.message);
-    if (outcomes[0].status === "rejected") empty(targets.goals, errors[0], true);
-    if (outcomes[1].status === "rejected") empty(targets.missions,
-      outcomes[1].reason.message, true);
-    targets.status.textContent = errors.length ?
-      "Consulta parcial: " + errors.join(" ") : "Dados consultados. Nenhuma ação foi executada.";
-  } finally { targets.refresh.disabled = false; }
+  inFlightRefresh = (async () => {
+    try {
+      const outcomes = await Promise.allSettled([loadGoals(), loadMissions()]);
+      const errors = outcomes.filter(x => x.status === "rejected").map(x => x.reason.message);
+      if (outcomes[0].status === "rejected") empty(targets.goals, errors[0], true);
+      if (outcomes[1].status === "rejected") empty(targets.missions,
+        outcomes[1].reason.message, true);
+      targets.status.textContent = errors.length ?
+        "Consulta parcial: " + errors.join(" ") : "Dados consultados. Nenhuma ação foi executada.";
+    } finally {
+      targets.refresh.disabled = false;
+      inFlightRefresh = null;
+    }
+  })();
+  return inFlightRefresh;
 }
 
 targets.refresh.addEventListener("click", refresh);
