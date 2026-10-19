@@ -221,6 +221,26 @@ test('aprendizado supervisionado: só salva exemplo após consentimento explíci
     assert.equal(ui.elements.get('feedbackPanel').hidden, true);
 });
 
+test('falha de cognição economiza classificação dupla e encaminha para streaming', async () => {
+    const ui = browser();
+    const originalFetch = ui.context.fetch;
+    const calls = [];
+    ui.context.fetch = (url, options) => {
+        calls.push(url);
+        if (url === '/agent/run') return Promise.resolve({
+            ok: true, headers: { get: key => key === 'X-Menor-Fallback' ? 'stream' : null },
+            json: async () => ({ handled: false }),
+        });
+        return originalFetch(url, options);
+    };
+    ui.elements.get('userInput').value = 'Explique o algoritmo de busca binária';
+    await ui.context.sendMsg();
+    assert.equal(calls.includes('/agent/route'), false);
+    assert.equal(calls.includes('/images/intent'), false);
+    assert.equal(calls.filter(x => x === '/chat/stream').length, 1);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Olá/);
+});
+
 test('núcleo do servidor assume tarefa e mostra recibo sem chamar roteadores antigos', async () => {
     const ui = browser();
     ui.context.fetch = async () => ({ ok: true, json: async () => ({
