@@ -895,6 +895,60 @@ test('D08: trocar de imagem para correção de software não envia edição visu
     assert.equal(ui.agentCalls.length, 1);
 });
 
+test('cancelamento enquanto roteador responde não salva memória nem inicia segundo modelo', async () => {
+    const ui = browser();
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const originalFetch = ui.context.fetch;
+    const calls = [];
+    ui.context.fetch = (url, options) => {
+        calls.push(url);
+        if (url === '/agent/route') {
+            return gate.then(() => ({ ok: true, status: 200, json: async () => ({
+                decision: 'save', memory: { path: 'notas/resultado-velho.md' },
+            }) }));
+        }
+        return originalFetch(url, options);
+    };
+    ui.elements.get('userInput').value = 'Planeje um sistema para irrigação';
+    const running = ui.context.sendMsg();
+    // O próximo tick deve estar aguardando o roteador legado.
+    await new Promise(resolve => setImmediate(resolve));
+    const previous = ui.context.getActiveConv();
+    ui.context.newChat();
+    release();
+    await running;
+    assert.equal(ui.context.getActiveConv(), undefined);
+    assert.equal(previous.messages.length, 2);
+    assert.match(previous.messages.at(-1).content, /interrompida/i);
+    assert.equal(calls.includes('/chat/stream'), false);
+});
+
+test('cancelamento de geração visual não apaga anexo escolhido em outra conversa', async () => {
+    const ui = browser();
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const originalFetch = ui.context.fetch;
+    ui.context.fetch = (url, options) => {
+        if (url === '/images/generate') {
+            return gate.then(() => ({ ok: true, json: async () => ({
+                status: 'completed', url: '/images/files/' + 'a'.repeat(32),
+            }) }));
+        }
+        return originalFetch(url, options);
+    };
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na floresta';
+    const running = ui.context.sendMsg();
+    await new Promise(resolve => setImmediate(resolve));
+    const previous = ui.context.getActiveConv();
+    ui.context.newChat();
+    ui.context.selectedImageFile = new Blob(['novo arquivo']);
+    release();
+    await running;
+    assert.match(previous.messages.at(-1).content, /interrompida/i);
+    assert.equal(previous.messages.some(m => m.image), false);
+});
+
 test('trocar de conversa durante geração permite navegar e não contamina histórico', async () => {
     const ui = browser();
     let release;
