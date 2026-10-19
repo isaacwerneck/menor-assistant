@@ -87,6 +87,49 @@ class GoalReasonerTests(unittest.TestCase):
         self.assertEqual(current["goal_id"], first["goal_id"])
 
 
+class ToolSelectionContractTests(unittest.TestCase):
+    @patch("src.agent.intelligence.requests.post")
+    def test_model_can_select_only_catalog_tool_with_exact_arguments(self, post):
+        from test_intelligence import model_reply
+        proposal = {**decision("Listar projetos", move="act"),
+                    "tool": "projects.list", "arguments": {}}
+        post.return_value = model_reply(proposal)
+        allowed = [{
+            "name": "projects.list", "description": "Consulta projetos",
+            "arguments": [], "writes": False,
+        }]
+        result = intelligence.decide("Mostra projetos", tools=allowed)
+        self.assertEqual(result["tool"], "projects.list")
+        proposal["tool"] = "shell.exec"
+        post.return_value = model_reply(proposal)
+        self.assertIsNone(intelligence.decide("Mostra projetos", tools=allowed))
+        proposal["tool"] = "projects.list"
+        proposal["arguments"] = {"command": "rm -rf /"}
+        post.return_value = model_reply(proposal)
+        self.assertIsNone(intelligence.decide("Mostra projetos", tools=allowed))
+
+    @patch("src.agent.runner.perform")
+    def test_readonly_tool_returns_receipt_without_approval(self, perform):
+        perform.side_effect = [
+            {"status": "planned", "tool": "projects.list"},
+            {"status": "executed", "tool": "projects.list",
+             "result": [{"name": "Estudos"}]},
+        ]
+        state, reply = runner._selected_tool("projects.list", {})
+        self.assertEqual(state["phase"], "idle")
+        self.assertEqual(reply["events"][0]["status"], "executed")
+        self.assertIn("Estudos", reply["reply"])
+        self.assertEqual(perform.call_count, 2)
+
+    @patch("src.agent.runner.perform")
+    def test_write_tool_needs_approval_and_cannot_execute_early(self, perform):
+        perform.return_value = {"status": "planned", "tool": "projects.create"}
+        state, reply = runner._selected_tool("projects.create", {"name": "Estudos"})
+        self.assertEqual(state["phase"], "approval")
+        self.assertIn("Posso executar?", reply["reply"])
+        perform.assert_called_once_with("projects.create", {"name": "Estudos"}, dry_run=True)
+
+
 class ConversationContinuityTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
