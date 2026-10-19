@@ -102,6 +102,19 @@ class HarnessTests(unittest.TestCase):
             self.assertEqual(missions.return_value.begin.call_args.args[0], "images.generate")
             missions.return_value.decide.assert_not_called()
 
+    @patch("src.agent.runner.requests.post")
+    def test_planner_uses_ollama_schema_and_rejects_literal_action_template(self, post):
+        response = post.return_value.__enter__.return_value
+        response.json.return_value = {"message": {"content": '{"action":"tool|answer","arguments":[]}'}}
+        with self.assertRaises(ValueError):
+            runner._model_step("Liste projetos.", [], [])
+        payload = post.call_args.kwargs["json"]
+        choices = payload["format"]["oneOf"]
+        project = next(item for item in choices if item["properties"].get("tool") == {"const": "projects.list"})
+        self.assertEqual(project["properties"]["arguments"]["type"], "object")
+        self.assertEqual(project["properties"]["action"], {"const": "tool"})
+        self.assertNotIn("tool|answer", payload["messages"][0]["content"])
+
     def test_conversation_state_is_private_and_validated(self):
         with self.assertRaises(ValueError):
             self.store.inspect("../outside")

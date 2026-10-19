@@ -149,7 +149,7 @@ reproduz padrões de orquestração, sem adicionar SDK externo ou trocar o Qwen.
 | [Claude tool use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works) e [loops](https://claude.com/resources/articles/getting-started-with-loops) | Modelo pede ação, aplicação executa, resultado volta ao modelo; condições de parada | Loop local de até quatro passos, catálogo fechado e bloqueio de repetição |
 | [Antigravity Artifacts](https://antigravity.google/docs/artifacts) | Planos, diffs e arquivos como entregas revisáveis | Plano da missão e critérios apresentados antes da autorização; arquivo só após verificação |
 | [ChatGPT imagens](https://learn.chatgpt.com/docs/image-generation) | Ferramenta de geração/edição disponível na experiência de conversa | Capacidade do produto vem de executores reais, não de o modelo textual saber produzir pixels |
-| [Ollama tool calling](https://docs.ollama.com/capabilities/tool-calling) | Chamadas estruturadas e resultados de ferramentas | Nesta etapa usa JSON validado, compatível com o runtime já adotado; não presume suporte nativo de qualquer modelo |
+| [Ollama tool calling](https://docs.ollama.com/capabilities/tool-calling) e [structured outputs](https://docs.ollama.com/capabilities/structured-outputs) | Chamadas estruturadas e schema de saída imposto pelo runtime | Schema JSON restringe ação, nome da ferramenta e formato dos argumentos; validação adicional no backend |
 
 ### Diagnóstico confirmado do print
 
@@ -204,11 +204,18 @@ suposta incapacidade dos pesos do Qwen.
 5. Testes Python completos no Ubuntu, interface no Node e cenários Bash passam.
 6. API reiniciada publica o novo contrato; o git pull sozinho não é aceite.
 
-Validação em 18/10/2026: 147 testes Python no Ubuntu, 26 testes de interface
+O teste com o Qwen real revelou que JSON genérico podia copiar literalmente
+`tool|answer` e retornar argumentos como lista. O planejador agora envia schema
+JSON ao Ollama com ações e argumentos restritos ao catálogo, além de exemplos
+válidos no prompt. A validação do backend permanece obrigatória.
+
+Validação em 18/10/2026: 148 testes Python no Ubuntu, 26 testes de interface
 no Node, cenários Bash de deploy/controle e Flake8 com limite de 119 caracteres.
 A conversa do print foi reproduzida no navegador com dados isolados: oferta de
 capacidade, missão, coleta de requisitos e plano antes da aprovação; sem instalar
-modelo nem consultar o cérebro de produção.
+modelo nem consultar o cérebro de produção. Com o Qwen real, “Liste meus projetos”
+executou `projects.list` em dados temporários e concluiu usando o recibo observado.
+Start/stop/restart foram exercitados no servidor; API 0.4.0 e timers voltaram ativos.
 
 ### Próximas entregas, por ordem e com limites claros
 
