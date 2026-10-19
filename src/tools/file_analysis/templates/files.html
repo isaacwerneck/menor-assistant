@@ -3,48 +3,120 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Menor — Leitura local de arquivos</title>
+<meta name="theme-color" content="#0d0e16">
+<title>Arquivos — Menor AI</title>
 <link rel="stylesheet" href="/files/assets.css">
 </head>
 <body>
-<main>
-<h1>Análise local de arquivos</h1>
-<p>Os arquivos ficam apenas no servidor privado do Menor. A leitura extrai texto e estrutura,
-não interpreta imagens nem garante que um documento esteja correto.</p>
-<section aria-labelledby="upload-title">
-<h2 id="upload-title">Enviar arquivo</h2>
-<label for="file">Arquivo PDF, Word, Excel, imagem ou texto (até 8 MB)</label>
-<input id="file" type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp,.gif,.bmp,.txt,.md,.csv">
-<button id="upload" type="button">Enviar e analisar</button>
-<p id="message" role="status" aria-live="polite"></p>
-</section>
-<section aria-labelledby="query-title">
-<h2 id="query-title">Perguntar sobre o arquivo</h2>
-<label for="question">Pergunta sobre conteúdo, tabelas ou imagem</label>
-<textarea id="question" rows="3" maxlength="500" placeholder="Ex.: Qual é o prazo na página 2?"></textarea>
-<div class="actions">
-  <button id="context" type="button" disabled>Localizar trechos e fontes</button>
-  <button id="vision" type="button" disabled>Interpretar imagem com Ollama local</button>
+<a class="skip-link" href="#workspace">Ir para o conteúdo</a>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Área do Menor AI">
+    <a class="brand" href="/" aria-label="Menor AI — abrir conversas">
+      <span class="brand-mark" aria-hidden="true">M</span>
+      <span class="brand-name">Menor <span>AI</span></span>
+    </a>
+    <nav class="side-nav" aria-label="Navegação principal">
+      <a href="/">Conversas</a>
+      <span class="current" aria-current="page">Arquivos</span>
+    </nav>
+    <div class="side-footer">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>Área privada de arquivos</span>
+    </div>
+  </aside>
+  <div class="main-shell">
+    <header class="topbar">
+      <div class="topbar-leading">
+        <a class="back-link" href="/" aria-label="Voltar ao chat">←</a>
+        <span>Arquivos</span>
+      </div>
+      <span class="topbar-note">Ferramentas locais</span>
+    </header>
+    <main id="workspace" class="workspace">
+      <div class="page-intro">
+        <p class="eyebrow">MENOR AI / ARQUIVOS</p>
+        <h1>Análise de arquivos</h1>
+        <p>Envie um documento ou imagem e consulte o conteúdo usando as capacidades disponíveis no servidor.</p>
+      </div>
+      <div class="workspace-grid">
+        <div class="workflow-column">
+          <section class="panel" aria-labelledby="upload-title">
+            <div class="section-heading">
+              <span class="step" aria-hidden="true">01</span>
+              <div>
+                <h2 id="upload-title">Enviar arquivo</h2>
+                <p>PDF, Word, Excel, imagem ou texto de até 8 MB.</p>
+              </div>
+            </div>
+            <label for="file">Selecione um arquivo do dispositivo</label>
+            <input id="file" type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp,.gif,.bmp,.txt,.md,.csv">
+            <button id="upload" class="primary-action" type="button">Enviar e analisar</button>
+            <p id="message" role="status" aria-live="polite"></p>
+          </section>
+
+          <section class="panel" aria-labelledby="query-title">
+            <div class="section-heading">
+              <span class="step" aria-hidden="true">02</span>
+              <div>
+                <h2 id="query-title">Consultar conteúdo</h2>
+                <p>Localize trechos de documentos ou solicite uma observação visual.</p>
+              </div>
+            </div>
+            <label for="question">O que deseja saber sobre o arquivo?</label>
+            <textarea id="question" rows="3" maxlength="500"
+                placeholder="Ex.: Qual é o prazo mencionado na página 2?"></textarea>
+            <div class="actions">
+              <button id="context" type="button" disabled>Localizar trechos e fontes</button>
+              <button id="vision" type="button" disabled>Analisar imagem com Ollama</button>
+            </div>
+            <p id="vision-state" class="capability-state" role="status" aria-live="polite">Verificando disponibilidade de visão local...</p>
+            <fieldset class="ocr-panel">
+              <legend>Texto de PDF digitalizado (OCR)</legend>
+              <label for="ocr-page">Página (1 a 40)</label>
+              <div class="ocr-actions">
+                <input id="ocr-page" type="number" min="1" max="40" value="1" inputmode="numeric">
+                <button id="ocr" type="button" disabled>Reconhecer página</button>
+              </div>
+              <p id="ocr-state" class="capability-state" role="status" aria-live="polite">Verificando o OCR local...</p>
+            </fieldset>
+            <p class="notice">Trechos são dados do arquivo, não uma resposta do modelo. A visão e o OCR podem conter erros e não garantem verificação semântica.</p>
+          </section>
+
+          <section class="panel result-panel" aria-labelledby="result-title">
+            <div class="section-heading">
+              <span class="step" aria-hidden="true">03</span>
+              <div>
+                <h2 id="result-title">Resultado</h2>
+                <p>Inspeção técnica, trechos e evidências retornadas pelo servidor.</p>
+              </div>
+            </div>
+            <p id="file-info"></p>
+            <pre id="result" tabindex="0" aria-label="Resultado da análise">Nenhum arquivo analisado.</pre>
+            <button id="delete" class="danger-action" type="button" disabled>Excluir arquivo do servidor</button>
+          </section>
+        </div>
+        <aside class="context-column" aria-label="Sobre a análise">
+          <section class="info-panel">
+            <h2>Trabalhe com evidências</h2>
+            <p>Os arquivos ficam no armazenamento privado do Menor e são processados por ferramentas locais.</p>
+            <div class="info-divider"></div>
+            <h3>Documentos</h3>
+            <p>A leitura extrai estrutura e texto. Resultados exibem informações retornadas pelo parser, sem afirmar que o arquivo está correto.</p>
+            <h3>Imagens</h3>
+            <p>A análise depende de um modelo visual instalado no Ollama e não equivale a uma confirmação independente.</p>
+            <h3>OCR</h3>
+            <p>O reconhecimento de páginas digitalizadas é opcional e pode conter erros de transcrição.</p>
+          </section>
+          <a class="chat-return" href="/">Voltar às conversas <span aria-hidden="true">↗</span></a>
+        </aside>
+      </div>
+    </main>
+    <nav class="mobile-nav" aria-label="Navegação rápida">
+      <a href="/">Conversas</a>
+      <span aria-current="page">Arquivos</span>
+    </nav>
+  </div>
 </div>
-<p id="vision-state" role="status" aria-live="polite">Verificando disponibilidade de visão local...</p>
-<fieldset>
-<legend>OCR local de uma página PDF digitalizada</legend>
-<label for="ocr-page">Página (1 a 40)</label>
-<input id="ocr-page" type="number" min="1" max="40" value="1" inputmode="numeric">
-<button id="ocr" type="button" disabled>Reconhecer texto desta página</button>
-<p id="ocr-state" role="status" aria-live="polite">Verificando o OCR local...</p>
-</fieldset>
-<p class="notice">Trechos são dados do arquivo, não uma resposta do modelo. A visão local é
-experimental; o parecer pode estar errado e não verifica a qualidade da imagem.</p>
-</section>
-<section aria-labelledby="result-title">
-<h2 id="result-title">Resultado</h2>
-<p id="file-info"></p>
-<pre id="result" tabindex="0">Nenhum arquivo analisado.</pre>
-<button id="delete" type="button" disabled>Excluir arquivo do servidor</button>
-</section>
-<p><a href="/">Voltar ao chat</a></p>
-</main>
 <script defer src="/files/assets.js"></script>
 </body>
 </html>
