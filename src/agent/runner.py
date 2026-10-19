@@ -9,7 +9,7 @@ import requests
 
 from src.agent.delegation import generate_image
 from src.agent.artifacts import artifact_receipt, describe_artifact
-from src.agent.image_intent import image_intent, tool_intent, _normalize
+from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _normalize
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
 from src.agent.tasks import TaskStore
@@ -32,8 +32,14 @@ def _answer(reply, phase="idle", **state):
 
 def _begin_mission(message, history):
     # Histórico não deve converter análise de arquivos em geração de imagens.
-    capability = ("images.generate" if image_intent(message)["decision"] == "image_generate"
-                  else "programming")
+    if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") != "1":
+        # Compatibilidade do fluxo legado; nunca usado pelo planejador universal.
+        context = message + " " + " ".join(item["content"] for item in history[-4:])
+        capability = ("images.generate" if re.search(rf"\\b{IMAGE_TERMS}\\b", _normalize(context))
+                      else "programming")
+    else:
+        capability = ("images.generate" if image_intent(message)["decision"] == "image_generate"
+                      else "programming")
     mission = MissionStore().begin(capability, message[:600])
     return _answer(mission["question"], "mission", mission_id=mission["id"])
 
@@ -301,7 +307,12 @@ def _advance(state, message, history):
         if intelligent is not None:
             return intelligent
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
-        # Falha do LLM não autoriza heurísticas antigas a iniciar missões erradas.
+        # Ações antigas não são executadas sem interpretação universal.
+        # Consultas explícitas de pesquisa podem manter a rota segura.
+        if research.RESEARCH.search(message):
+            evidence = research.handle(message, history)
+            if evidence is not None:
+                return _answer(evidence["reply"])
         return {"phase": "idle"}, {"handled": False}
     if research.RESEARCH.search(message):
         evidence = research.handle(message, history)
