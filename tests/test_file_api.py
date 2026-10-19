@@ -150,7 +150,7 @@ class FileRoutesTests(unittest.TestCase):
         token = saved["file"]["file_id"]
         target = "/files/" + token + "/context"
         payload = json.dumps({"question": "Qual e o prazo de entrega?"}).encode()
-        self.assertEqual(request("POST", target, payload)[0], 401)
+        self.assertEqual(request("POST", target, payload, content_type="application/json")[0], 401)
         self.assertEqual(request("POST", target, payload, cookie=self.cookie,
                                  origin="https://evil.example")[0], 403)
         code, result = request("POST", target, payload, cookie=self.cookie,
@@ -217,7 +217,8 @@ class FileRoutesTests(unittest.TestCase):
                                      "OLLAMA_URL": "http://127.0.0.1:11434"}):
             with patch("src.tools.vision.requests.get", return_value=get_response):
                 with patch("src.tools.vision.requests.post", return_value=post_response) as post:
-                    self.assertEqual(request("POST", target, question)[0], 401)
+                    self.assertEqual(request("POST", target, question,
+                                             content_type="application/json")[0], 401)
                     self.assertEqual(request("POST", target, question, cookie=self.cookie,
                                              origin="https://evil.example",
                                              content_type="application/json")[0], 403)
