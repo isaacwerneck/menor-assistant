@@ -943,7 +943,16 @@
             const history = [];
             let remaining = 32000 - message.length;
             for (let i = messages.length - 1; i >= 0 && history.length < 20; i--) {
-                const content = messages[i].content.slice(-8000);
+                const artifact = messages[i].artifact;
+                const receipt = artifact?.kind === 'image'
+                    ? '\n[Recibo confirmado do servidor: arquivo de imagem gerado; pedido: '
+                        + (artifact.prompt || '').slice(0, 500) + '; tamanho: '
+                        + (artifact.actual_size || []).join('×')
+                        + '; integridade: ' + (artifact.file_verified ? 'válida' : 'não confirmada')
+                        + '; conteúdo visual: '
+                        + (artifact.content_verified ? 'revisado' : 'NÃO verificado')
+                        + '. A ferramenta de imagem foi usada nesta conversa.]' : '';
+                const content = (messages[i].content + receipt).slice(-8000);
                 if (!content.trim()) continue;
                 if (content.length > remaining) break;
                 history.unshift({ role: messages[i].role === 'bot' ? 'assistant' : 'user', content });
@@ -1004,7 +1013,7 @@
             showMessages();
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
-            conv.messages.forEach(m => appendMessage(m.role, m.content, false, m.image));
+            conv.messages.forEach(m => appendMessage(m.role, m.content, false, m.image, m.artifact));
             scrollToBottom();
         }
 
@@ -1072,7 +1081,7 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!isGenerating) sendMsg(); }
         }
 
-        function appendMessage(role, text, animate = false, imageUrl = '') {
+        function appendMessage(role, text, animate = false, imageUrl = '', artifact = null) {
             const container = document.getElementById('messagesContainer');
             const row = document.createElement('div');
             row.className = `message-row ${role}`;
@@ -1089,6 +1098,9 @@
                 image.src = imageUrl;
                 image.alt = 'Imagem gerada ou editada pelo Menor';
                 image.loading = 'lazy';
+                if (artifact?.actual_size && Math.max(...artifact.actual_size) <= 128) {
+                    image.style.imageRendering = 'pixelated';
+                }
                 content.appendChild(image);
             }
 
@@ -1135,7 +1147,8 @@
             const events = Array.isArray(result.events) ? result.events.map(
                 item => '✓ ' + item.tool + ' · ' + item.status,
             ).join('\n') : '';
-            imageReply(conv, content, result.reply + (events ? '\n\n' + events : ''), result.image || '');
+            imageReply(conv, content, result.reply + (events ? '\n\n' + events : ''),
+                result.image || '', result.artifact || null);
             return true;
         }
 
@@ -1170,16 +1183,21 @@
             return data;
         }
 
-        function imageReply(conv, content, message, imageUrl = '') {
+        function imageReply(conv, content, message, imageUrl = '', artifact = null) {
             content.textContent = message;
             if (imageUrl && /^\/images\/files\/[a-f0-9]{32}$/.test(imageUrl)) {
                 const image = document.createElement('img');
                 image.className = 'message-image';
                 image.src = imageUrl;
                 image.alt = 'Imagem criada pelo Menor';
+                if (artifact?.actual_size && Math.max(...artifact.actual_size) <= 128) {
+                    image.style.imageRendering = 'pixelated';
+                }
                 content.appendChild(image);
             }
-            conv.messages.push({ role: 'bot', content: message, ...(imageUrl ? { image: imageUrl } : {}) });
+            conv.messages.push({ role: 'bot', content: message,
+                ...(imageUrl ? { image: imageUrl } : {}),
+                ...(artifact ? { artifact } : {}) });
             save();
             scrollToBottom();
         }
@@ -1247,7 +1265,10 @@
                 }
                 delete conv.pendingImage;
                 clearImageAttachment();
-                imageReply(conv, content, kind === 'edit' ? 'Imagem editada.' : 'Imagem gerada.', result.url);
+                imageReply(conv, content,
+                    kind === 'edit' ? 'Imagem editada.' :
+                    'Arquivo de imagem gerado. Integridade verificada; o conteúdo ainda pode precisar de revisão.',
+                    result.url, result.artifact || null);
             } catch (failure) {
                 // Sem motor local, oferecer construir a habilidade em vez de rejeitar.
                 delete conv.pendingImage;
@@ -1442,7 +1463,7 @@
             if (!activeConvId) { createConversation(msg); }
             showMessages();
             document.getElementById('messagesContainer').replaceChildren();
-            getActiveConv().messages.forEach(m => appendMessage(m.role, m.content, false, m.image));
+            getActiveConv().messages.forEach(m => appendMessage(m.role, m.content, false, m.image, m.artifact));
 
             const conv = getActiveConv();
             const history = buildHistory(conv.messages, msg);
