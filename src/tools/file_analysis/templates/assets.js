@@ -9,15 +9,20 @@ const question = document.querySelector("#question");
 const context = document.querySelector("#context");
 const visual = document.querySelector("#vision");
 const visionState = document.querySelector("#vision-state");
+const ocrButton = document.querySelector("#ocr");
+const ocrPage = document.querySelector("#ocr-page");
+const ocrState = document.querySelector("#ocr-state");
 let fileId = null;
 let fileFormat = null;
 let visionAvailable = false;
+let ocrAvailable = false;
 
 function enableActions() {
   const present = Boolean(fileId);
   context.disabled = !present || ["png", "jpeg", "gif", "bmp", "webp"].includes(fileFormat);
   visual.disabled = !present || !visionAvailable ||
     !["png", "jpeg", "gif", "bmp", "webp"].includes(fileFormat);
+  ocrButton.disabled = !present || !ocrAvailable || fileFormat !== "pdf";
 }
 
 async function refreshVision() {
@@ -32,6 +37,46 @@ async function refreshVision() {
   }
   enableActions();
 }
+
+async function refreshOCR() {
+  try {
+    const state = await api("/files/ocr/status");
+    ocrAvailable = Boolean(state.installed);
+    ocrState.textContent = ocrAvailable ?
+      "OCR local disponível para teste; o texto pode conter erros." : state.reason;
+  } catch (error) {
+    ocrAvailable = false;
+    ocrState.textContent = "Não foi possível consultar o OCR local.";
+  }
+  enableActions();
+}
+
+async function recognizePage() {
+  if (!fileId || fileFormat !== "pdf") return;
+  const page = Number(ocrPage.value);
+  if (!Number.isInteger(page) || page < 1 || page > 40) {
+    message.textContent = "Informe uma página de 1 a 40.";
+    return;
+  }
+  ocrButton.disabled = true;
+  message.textContent = "Executando OCR local na página selecionada...";
+  try {
+    const receipt = await api("/files/" + fileId + "/ocr", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({page, language: "por"}),
+    });
+    result.textContent = JSON.stringify(receipt, null, 2);
+    message.textContent = "OCR concluído. O texto reconhecido não foi conferido.";
+  } catch (error) {
+    result.textContent = "OCR não foi concluído.";
+    message.textContent = "Falha no OCR: " + error.message;
+  } finally {
+    enableActions();
+  }
+}
+
+ocrButton.addEventListener("click", recognizePage);
+refreshOCR();
 
 async function ask(mode) {
   if (!fileId || !question.value.trim()) {

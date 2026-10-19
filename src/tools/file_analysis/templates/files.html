@@ -27,6 +27,13 @@ não interpreta imagens nem garante que um documento esteja correto.</p>
   <button id="vision" type="button" disabled>Interpretar imagem com Ollama local</button>
 </div>
 <p id="vision-state" role="status" aria-live="polite">Verificando disponibilidade de visão local...</p>
+<fieldset>
+<legend>OCR local de uma página PDF digitalizada</legend>
+<label for="ocr-page">Página (1 a 40)</label>
+<input id="ocr-page" type="number" min="1" max="40" value="1" inputmode="numeric">
+<button id="ocr" type="button" disabled>Reconhecer texto desta página</button>
+<p id="ocr-state" role="status" aria-live="polite">Verificando o OCR local...</p>
+</fieldset>
 <p class="notice">Trechos são dados do arquivo, não uma resposta do modelo. A visão local é
 experimental; o parecer pode estar errado e não verifica a qualidade da imagem.</p>
 </section>
