@@ -1,6 +1,5 @@
 """Regressões do leitor local: tipos, estrutura, privacidade e falhas explícitas."""
 import io
-import json
 import os
 from pathlib import Path
 import tempfile
