@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from src.agent.intelligence import decide
 
+
 @dataclass(frozen=True)
 class Case:
     name: str
