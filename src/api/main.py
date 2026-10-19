@@ -113,6 +113,24 @@ def agent_run(body: AgentRunRequest, request: Request):
         raise HTTPException(503, "Não consegui persistir a tarefa. Nenhuma nova execução foi autorizada.") from error
 
 
+class RecoverRunRequest(BaseModel):
+    confirmed: bool = False
+
+
+@app.post("/agent/runs/{session_id}/recover")
+def agent_run_recover(session_id: str, body: RecoverRunRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return TaskStore().recover(session_id, confirmed=body.confirmed)
+    except RunBusy as error:
+        raise HTTPException(409, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    except (sqlite3.Error, OSError) as error:
+        logger.warning("Recuperação da conversa falhou: %s", type(error).__name__)
+        raise HTTPException(503, "Não foi possível recuperar o estado da conversa.") from error
+
+
 @app.get("/agent/runs/{session_id}")
 def agent_run_state(session_id: str, request: Request):
     auth.require_owner(request)

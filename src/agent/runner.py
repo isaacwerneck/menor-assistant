@@ -465,6 +465,11 @@ def _advance(state, message, history):
 
 def run(session, turn, message, history, project=None, tasks=None):
     tasks = tasks or TaskStore()
+    with tasks.session_lock(session):
+        return _run_locked(session, turn, message, history, project, tasks)
+
+
+def _run_locked(session, turn, message, history, project, tasks):
     state, cached = tasks.claim(session, turn, {"message": message, "history": history, "project": project})
     if cached is not None:
         return cached
