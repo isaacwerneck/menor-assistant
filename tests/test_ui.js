@@ -777,3 +777,36 @@ test('Chat D: pedido para corrigir bug de software não edita imagem recém-gera
     assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
     assert.equal(ui.agentCalls.length, 1);
 });
+
+test('D01: sim sem aprovação pendente não autoriza missão nem memória', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'sim';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
+    assert.equal(ui.memories.length, 0);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate' || x.type === 'edit').length, 0);
+});
+
+test('D02: pedido de explicação não aprova plano sensível', async () => {
+    const ui = browser();
+    ui.context.createConversation('ferramenta');
+    const conv = ui.context.getActiveConv();
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.elements.get('userInput').value = 'que aprovação?';
+    await ui.context.sendMsg();
+    assert.equal(conv.activeMission.status, 'awaiting_approval');
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
+    assert.equal(ui.requests.length, 0);
+});
+
+test('D11: missão enfileirada não é apresentada como executada antes de consulta', async () => {
+    const ui = browser();
+    ui.context.createConversation('ferramenta');
+    const conv = ui.context.getActiveConv();
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'queued' };
+    ui.elements.get('userInput').value = 'já terminou?';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 0);
+    assert.equal(ui.requests.length, 0);
+});
