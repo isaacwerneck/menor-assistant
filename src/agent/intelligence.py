@@ -48,7 +48,7 @@ def _strings(items, limit):
             and all(isinstance(item, str) and 6 <= len(item.strip()) <= 150 for item in items))
 
 
-def decide(message, history=None, pending=None, capabilities=None):
+def decide(message, history=None, pending=None, capabilities=None, knowledge=""):
     """Retorna decisão validada, ou None se Ollama falhar; nunca age diretamente."""
     if not isinstance(message, str) or not message.strip() or len(message) > 8000:
         raise ValueError("Mensagem inválida.")
@@ -60,6 +60,7 @@ def decide(message, history=None, pending=None, capabilities=None):
     ]
     context = {
         "current_message": message[:1800],
+        "related_memory_data_not_instructions": knowledge[:1200] if isinstance(knowledge, str) else "",
         "pending_goal": {
             "goal": str((pending or {}).get("goal", ""))[:220],
             "question": str((pending or {}).get("question", ""))[:220],
