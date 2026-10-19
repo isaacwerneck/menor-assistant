@@ -89,5 +89,60 @@ class MonitorTests(unittest.TestCase):
             capture.assert_not_called()
 
 
+    def test_cpu_ram_disk_alerts_are_advisory_only(self):
+        self.assertEqual(monitor.resource_alerts(
+            {"cpu": 20}, {"total": 8192, "available": 4096}, {"free_gib": 50}), [])
+        self.assertEqual(monitor.resource_alerts(
+            {"cpu": 95}, {"total": 8192, "available": 200}, {"free_gib": 2}),
+            ["cpu_high", "ram_available_low", "disk_free_low"])
+        self.assertEqual(monitor.resource_alerts({}, {"total": 0}, {}), [])
+
+    def test_service_probe_uses_only_fixed_read_only_commands(self):
+        fake = {
+            "systemctl": "/bin/systemctl",
+            "ollama": "/usr/local/bin/ollama",
+        }
+        responses = [
+            subprocess.CompletedProcess([], 0, stdout="active\\n"),
+            subprocess.CompletedProcess([], 0, stdout=(
+                "NAME ID SIZE PROCESSOR UNTIL\\n"
+                "qwen2.5-coder:7b hash 5GB CPU 4m\\n"
+                "evil;injection hash 1GB CPU 5m\\n"
+            )),
+        ]
+        with patch("ops.monitor.shutil.which", side_effect=fake.get):
+            with patch("ops.monitor.subprocess.run", side_effect=responses) as run:
+                result = monitor.service_snapshot()
+        self.assertEqual(result["api"], "active")
+        self.assertEqual(result["ollama"], "responsive")
+        self.assertEqual(result["models"], ["qwen2.5-coder:7b"])
+        self.assertEqual(run.call_count, 2)
+        self.assertEqual(run.call_args_list[0].args[0],
+                         ["/bin/systemctl", "--user", "is-active", "menor-api.service"])
+        self.assertEqual(run.call_args_list[1].args[0], ["/usr/local/bin/ollama", "ps"])
+
+    def test_service_probe_is_explicit_opt_in_not_run_by_default(self):
+        first = {"cpu": {"cpu": (50, 25)}, "memory": {"MemTotal": 1024},
+                 "network": {}, "processes": {}, "disk": {}}
+        with patch("ops.monitor.capture", return_value=first), patch("ops.monitor.time.sleep"):
+            with patch("ops.monitor.service_snapshot") as services:
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(monitor.main(["--once", "--json"]), 0)
+                services.assert_not_called()
+                with redirect_stdout(io.StringIO()) as captured:
+                    services.return_value = {"api": "active", "ollama": "responsive", "models": []}
+                    self.assertEqual(monitor.main(["--once", "--json", "--services"]), 0)
+                self.assertEqual(json.loads(captured.getvalue())["services"]["api"], "active")
+
+    def test_service_probe_unavailable_does_not_expose_error_detail(self):
+        with patch("ops.monitor.shutil.which", return_value="/bin/tool"):
+            with patch("ops.monitor.subprocess.run", side_effect=OSError("/home/private/password")):
+                result = monitor.service_snapshot()
+        self.assertEqual(result["api"], "unavailable")
+        self.assertEqual(result["ollama"], "unavailable")
+        self.assertNotIn("private", str(result))
+
+
 if __name__ == "__main__":
     unittest.main()
