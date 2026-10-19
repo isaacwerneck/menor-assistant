@@ -76,6 +76,12 @@ class FileQuestion(BaseModel):
         return value.strip()
 
 
+class FileContextRequest(FileQuestion):
+    # OCR é uma opção explícita do proprietário, nunca ativada por inferência.
+    ocr_page: int | None = Field(default=None, ge=1, le=MAX_PAGES, strict=True)
+    ocr_language: Literal["por", "eng", "por+eng"] = "por"
+
+
 def _valid_id(file_id):
     if FILE_ID.fullmatch(file_id) is None:
         raise HTTPException(404, "Arquivo não encontrado.")
@@ -121,12 +127,14 @@ async def file_vision_status(request: Request):
 
 
 @router.post("/files/{file_id}/context")
-async def file_context(file_id: str, body: FileQuestion, request: Request):
+async def file_context(file_id: str, body: FileContextRequest, request: Request):
     """Seleciona trechos ancorados; não interpreta nem responde com LLM."""
     auth.require_owner(request)
     _valid_id(file_id)
     try:
-        output = await asyncio.to_thread(retrieve_context, file_id, body.question)
+        output = await asyncio.to_thread(
+            retrieve_context, file_id, body.question,
+            ocr_page=body.ocr_page, ocr_language=body.ocr_language)
     except FileRejected as exc:
         raise HTTPException(404, "Arquivo não encontrado ou inválido.") from exc
     except ValueError as exc:
@@ -134,7 +142,7 @@ async def file_context(file_id: str, body: FileQuestion, request: Request):
     except OSError as exc:
         logger.warning("Contexto documental indisponível: %s", type(exc).__name__)
         raise HTTPException(503, "Leitor documental indisponível.") from exc
-    if output["status"] == "failed":
+    if output["status"] in ("failed", "ocr_unavailable"):
         return JSONResponse(status_code=503, content=output)
     return output
 
