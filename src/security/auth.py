@@ -71,13 +71,14 @@ def public_origin():
     labels = host.split(".")
     if all(label.isdecimal() for label in labels):
         raise RuntimeError("MENOR_PUBLIC_ORIGIN precisa ser um domínio DNS, não IP.")
+    invalid_label = any(
+        not label or len(label) > 63 or label.startswith("-") or label.endswith("-")
+        or any(char not in "abcdefghijklmnopqrstuvwxyz0123456789-" for char in label)
+        for label in labels
+    )
     if (parsed.scheme != "https" or parsed.netloc != host or
-            len(labels) < 2 or any(not label or len(label) > 63 or
-            label[0] == "-" or label[-1] == "-" or
-            any(not (char.isascii() and (char.isalnum() or char == "-"))
-                for char in label) for label in labels) or
-            parsed.path or parsed.query or parsed.fragment or parsed.username or
-            parsed.password or parsed.port):
+            len(labels) < 2 or invalid_label or parsed.path or parsed.query or
+            parsed.fragment or parsed.username or parsed.password or parsed.port):
         raise RuntimeError("MENOR_PUBLIC_ORIGIN inválida: HTTPS com hostname, sem path/porta.")
     return value
 

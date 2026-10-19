@@ -58,7 +58,6 @@ class RemoteLabTests(unittest.TestCase):
     def setUp(self):
         remote_lab._CALLS.clear()
 
-
     def test_unauthenticated_page_and_model_compare_are_private(self):
         # Never expose private lab via the public domain without owner login.
         with patch("src.api.remote_lab.auth.require_owner",
@@ -122,11 +121,11 @@ class RemoteLabTests(unittest.TestCase):
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["reply"], "Tudo bem.")
-        request = post.call_args
-        self.assertTrue(request.args[0].endswith("/api/chat"))
-        self.assertEqual(request.kwargs["json"]["options"]["num_predict"], 256)
-        self.assertEqual(request.kwargs["json"]["stream"], False)
-        self.assertEqual(request.kwargs["timeout"], (4, 50))
+        call = post.call_args
+        self.assertTrue(call.args[0].endswith("/api/chat"))
+        self.assertEqual(call.kwargs["json"]["options"]["num_predict"], 256)
+        self.assertEqual(call.kwargs["json"]["stream"], False)
+        self.assertEqual(call.kwargs["timeout"], (4, 50))
         self.assertNotIn("raw_message", str(response.json()))
 
     @patch("src.api.remote_lab.auth.require_owner")

@@ -92,9 +92,12 @@ class PublicOriginTests(unittest.TestCase):
             auth.check_origin(request(host="localhost:8000", scheme="http",
                                       origin="http://localhost:8000"))
             response = MagicMock()
-            auth.set_session_cookie(response,
+            auth.set_session_cookie(
+                response,
                 request(host="localhost:8000", scheme="http",
-                        origin="http://localhost:8000"), "opaque")
+                        origin="http://localhost:8000"),
+                "opaque",
+            )
             self.assertFalse(response.set_cookie.call_args.kwargs["secure"])
 
 
