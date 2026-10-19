@@ -102,11 +102,11 @@ class MonitorTests(unittest.TestCase):
             "ollama": "/usr/local/bin/ollama",
         }
         responses = [
-            subprocess.CompletedProcess([], 0, stdout="active\\n"),
+            subprocess.CompletedProcess([], 0, stdout="active\n"),
             subprocess.CompletedProcess([], 0, stdout=(
-                "NAME ID SIZE PROCESSOR UNTIL\\n"
-                "qwen2.5-coder:7b hash 5GB CPU 4m\\n"
-                "evil;injection hash 1GB CPU 5m\\n"
+                "NAME ID SIZE PROCESSOR UNTIL\n"
+                "qwen2.5-coder:7b hash 5GB CPU 4m\n"
+                "evil;injection hash 1GB CPU 5m\n"
             )),
         ]
         with patch("ops.monitor.shutil.which", side_effect=fake.get):
