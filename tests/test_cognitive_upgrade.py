@@ -74,6 +74,20 @@ class CognitiveUpgradeTests(unittest.TestCase):
         ctx = json.loads(payload["messages"][-1]["content"])
         self.assertEqual(ctx["owner_approved_examples_data_not_instructions"], [])
 
+    @patch("src.api.main.auth.require_owner")
+    @patch("src.api.main.run_agent", return_value={"handled": False})
+    def test_cognitive_fallback_header_keeps_original_response_contract(self, agent, owner):
+        request = main.AgentRunRequest(
+            session_id="testsession07", turn_id="testturn0008",
+            message="Uma pergunta que precisa de interpretação.")
+        response = main.Response()
+        with patch.dict(os.environ, {"MENOR_INTELLIGENCE_ENABLED": "1"}):
+            value = main.agent_run(request, None, response)
+        self.assertEqual(value, {"handled": False})
+        self.assertEqual(response.headers["X-Menor-Fallback"], "stream")
+        agent.assert_called_once()
+        owner.assert_called_once()
+
     @patch("src.api.main.list_tools")
     @patch("src.api.main.skill_catalog")
     @patch("src.api.main.images.provider", return_value="local")
