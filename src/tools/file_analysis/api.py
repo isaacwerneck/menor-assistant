@@ -7,6 +7,7 @@ a leitura do stream, antes de executar qualquer parser.
 import asyncio
 import logging
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -15,7 +16,8 @@ from pydantic import BaseModel, Field, field_validator
 from src.security import auth
 from src.tools.file_analysis import service
 from src.tools.file_analysis.context import retrieve as retrieve_context
-from src.tools.file_analysis.contracts import FILE_ID, FileRejected, MAX_BYTES
+from src.tools.file_analysis import ocr
+from src.tools.file_analysis.contracts import FILE_ID, FileRejected, MAX_BYTES, MAX_PAGES
 from src.tools import vision
 
 router = APIRouter(tags=["Arquivos privados"])
@@ -77,6 +79,38 @@ class FileQuestion(BaseModel):
 def _valid_id(file_id):
     if FILE_ID.fullmatch(file_id) is None:
         raise HTTPException(404, "Arquivo não encontrado.")
+
+
+class OCRRequest(BaseModel):
+    page: int = Field(default=1, ge=1, le=MAX_PAGES)
+    language: Literal["por", "eng", "por+eng"] = "por"
+
+
+@router.get("/files/ocr/status")
+async def file_ocr_status(request: Request):
+    auth.require_owner(request)
+    return await asyncio.to_thread(ocr.status)
+
+
+@router.post("/files/{file_id}/ocr")
+async def file_ocr_page(file_id: str, body: OCRRequest, request: Request):
+    """OCR manual de uma página por vez; nunca equivale a transcrição conferida."""
+    auth.require_owner(request)
+    _valid_id(file_id)
+    try:
+        result = await asyncio.to_thread(ocr.ocr_page, file_id, body.page, body.language)
+    except FileRejected as exc:
+        raise HTTPException(404, "Arquivo PDF não encontrado ou inválido.") from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except OSError as exc:
+        logger.warning("OCR local indisponível: %s", type(exc).__name__)
+        raise HTTPException(503, "OCR local indisponível.") from exc
+    if result["status"] == "unavailable":
+        return JSONResponse(status_code=503, content=result)
+    if result["status"] == "failed":
+        return JSONResponse(status_code=503, content=result)
+    return result
 
 
 @router.get("/files/vision/status")
