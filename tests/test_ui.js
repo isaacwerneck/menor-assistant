@@ -631,3 +631,15 @@ test('prints: ordem direta para baixar o modelo autoriza plano pendente', async 
     assert.equal(ui.missionCalls.filter(item => item.type === 'approve').length, 1);
     assert.equal(conv.activeMission.status, 'queued');
 });
+
+test('pergunta apos autorizacao consulta missao e nao promete nada via Qwen', async () => {
+    const ui = browser();
+    ui.context.createConversation('pixel art');
+    const conv = ui.context.getActiveConv();
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'queued' };
+    ui.elements.get('userInput').value = 'conseguimos fazer cara?';
+    await ui.context.sendMsg();
+    assert.equal(ui.requests.length, 0);
+    assert.equal(ui.routed.length, 0);
+    assert.match(conv.messages.at(-1).content, /subagente local/);
+});
