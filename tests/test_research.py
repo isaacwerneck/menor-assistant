@@ -241,7 +241,7 @@ class BuilderTests(unittest.TestCase):
         run.side_effect = [
             MagicMock(returncode=0, stdout="container", stderr=""),
             MagicMock(returncode=0, stdout="0\n", stderr=""),
-            MagicMock(returncode=0, stdout="", stderr="Ran 2 tests in 0.001s\nOK"),
+            MagicMock(returncode=0, stdout='{"passed":true,"discovered":2,"ran":2,"failures":0,"errors":0}', stderr=""),
             MagicMock(returncode=0, stdout="", stderr=""),
         ]
         with patch.dict(os.environ, {"MENOR_GITHUB_TOKEN": "never-copy"}):
