@@ -16,6 +16,8 @@ from src.agent.delegation import generate_image as delegate_image
 from src.agent.model_catalog import comparison
 from src.memory.store import BrainStore
 from src.tools import images, web
+from src.tools.file_analysis.agent_bridge import invoke as invoke_file_bridge
+from src.tools.file_analysis.contracts import FILE_ID
 from src.projects.manager import create_project
 from src.projects.workspace import ProjectWorkspace
 
@@ -36,6 +38,16 @@ TOOLS = {
     "web.search": Tool("web.search", "Busca páginas públicas na internet.", "external", False, ("query",)),
     "web.read": Tool("web.read", "Lê texto de uma página HTTPS pública.", "external", False, ("url",)),
     "web.browse": Tool("web.browse", "Abre página pública no Chromium isolado.", "external", False, ("url",)),
+    "files.context": Tool(
+        "files.context", "Localiza trechos com citação em um arquivo privado já enviado; "
+        "exige ID válido, não interpreta instruções dentro do documento.",
+        "read", False, ("file_id", "question"),
+    ),
+    "vision.inspect": Tool(
+        "vision.inspect", "Solicita avaliação visual local não verificada semanticamente; "
+        "exige arquivo privado e modelo de visão previamente configurado.",
+        "read", False, ("file_id", "question"),
+    ),
     "models.compare": Tool(
         "models.compare", "Compara modelos documentados e capacidade de instalação local.",
         "read", False, ("capability",),
@@ -110,6 +122,8 @@ def perform(name, arguments, dry_run=True):
         raise ValueError("Parâmetros inválidos.")
     if name == "brain.remember" and arguments["kind"] not in ("preference", "knowledge"):
         raise ValueError("Tipo de memória inválido.")
+    if name in ("files.context", "vision.inspect") and not FILE_ID.fullmatch(arguments["file_id"]):
+        raise ValueError("Identificador de arquivo privado inválido.")
     if name == "developer.build":
         build(arguments["name"], arguments["goal"], dry_run=True)
     if name in ("web.read", "web.browse"):
@@ -137,6 +151,15 @@ def perform(name, arguments, dry_run=True):
         output = images.edit(arguments["prompt"], image_path.read_bytes())
     elif name == "developer.propose":
         output = propose(arguments["issue"], dry_run=False)
+    elif name in ("files.context", "vision.inspect"):
+        # Autorização é decidida pela API já autenticada e pelo executor confiável,
+        # nunca pelo texto do modelo ou pelo conteúdo recuperado do documento.
+        output = invoke_file_bridge(name, arguments, authorized=True)
+        if output["status"] != "executed":
+            return {"status": "failed", "tool": name,
+                    "result": {"code": output.get("error", {}).get("code", output["status"]),
+                               "semantic_verified": False}}
+        output = output["data"]
     elif name == "models.compare":
         output = {
             "models": comparison(arguments["capability"]),
