@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.agent import intelligence, plan_review, runner
+from src.agent import plan_review, runner
 from src.agent.tasks import TaskStore
 
 
@@ -136,8 +136,12 @@ class CriticRunnerTests(unittest.TestCase):
     })
     @patch("src.agent.runner.intelligence.decide")
     def test_only_one_revision_attempt_and_invalid_tool_never_runs(self, decide, review):
-        decide.side_effect = [proposal(), {**proposal("act"), "tool": "projects.create",
-                                                   "arguments": {"name": "teste"}}]
+        decide.side_effect = [
+            proposal(), {
+                **proposal("act"), "tool": "projects.create",
+                "arguments": {"name": "teste"},
+            },
+        ]
         with patch("src.agent.runner.perform") as tool:
             result = runner.run(self.session, "criticTurn001", "Criar analisador", [], tasks=self.tasks)
         self.assertEqual(result["phase"], "goal")
