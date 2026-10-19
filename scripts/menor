@@ -43,8 +43,17 @@ case "${1:-status}" in
         fi
         exec python3 -m ops.monitor "$@"
         ;;
+    benchmark|latencia)
+        shift
+        root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+        cd "$root"
+        if [[ -x "$root/.venv/bin/python" ]]; then
+            exec "$root/.venv/bin/python" -m ops.model_latency "$@"
+        fi
+        exec python3 -m ops.model_latency "$@"
+        ;;
     *)
-        echo "Uso: menor {start|stop|restart|status|monitor [--once|--json|--interval SEGUNDOS|--speed-test]}" >&2
+        echo "Uso: menor {start|stop|restart|status|monitor [--once|--services|--speed-test]|benchmark --live}" >&2
         exit 2
         ;;
 esac

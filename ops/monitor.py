@@ -115,6 +115,58 @@ def process_ranking(before, after, elapsed, limit=6):
             "ram": sorted(ranked, key=lambda x: (-x["ram_mib"], x["pid"]))[:limit]}
 
 
+def resource_alerts(cpu, memory, disk):
+    """Somente sinais locais: limiares informativos, sem reinício automático."""
+    alerts = []
+    if cpu.get("cpu", 0) >= 90:
+        alerts.append("cpu_high")
+    total = memory.get("total", 0)
+    available = memory.get("available", 0)
+    if total > 0 and available / total < 0.10:
+        alerts.append("ram_available_low")
+    free = disk.get("free_gib")
+    if isinstance(free, (int, float)) and free < 5:
+        alerts.append("disk_free_low")
+    return alerts
+
+
+def service_snapshot():
+    """Consulta opcional de serviços locais; nenhum endereço ou argumento do usuário."""
+    states = {"api": "unavailable", "ollama": "unavailable", "models": []}
+    systemctl = shutil.which("systemctl")
+    if systemctl:
+        try:
+            result = subprocess.run(
+                [systemctl, "--user", "is-active", "menor-api.service"],
+                capture_output=True, text=True, timeout=2, check=False,
+            )
+            state = result.stdout.strip()
+            states["api"] = state if state in {
+                "active", "inactive", "failed", "activating", "deactivating"} else "unknown"
+        except (OSError, subprocess.TimeoutExpired):
+            states["api"] = "unavailable"
+    ollama = shutil.which("ollama")
+    if ollama:
+        try:
+            result = subprocess.run(
+                [ollama, "ps"], capture_output=True, text=True,
+                timeout=3, check=False,
+            )
+            if result.returncode == 0:
+                states["ollama"] = "responsive"
+                for line in result.stdout.splitlines()[1:12]:
+                    model = line.split(maxsplit=1)[0] if line.strip() else ""
+                    if 1 <= len(model) <= 80 and all(
+                            ch.isascii() and (ch.isalnum() or ch in "._:-") for ch in model):
+                        states["models"].append(model)
+                states["models"] = states["models"][:6]
+            else:
+                states["ollama"] = "unavailable"
+        except (OSError, subprocess.TimeoutExpired):
+            states["ollama"] = "unavailable"
+    return states
+
+
 def sample(previous, current, elapsed):
     """Produz métricas normalizadas com fonte e unidade explícitas."""
     memory = current["memory"]
@@ -131,10 +183,14 @@ def sample(previous, current, elapsed):
                        "tx_mib_s": round(max(0, tx - old_tx) / MIB / elapsed, 3),
                        "rx_total_mib": round(rx / MIB, 1),
                        "tx_total_mib": round(tx / MIB, 1)}
+    cpu = cpu_percent(previous["cpu"], current["cpu"])
+    ram = {"total": round(total / MIB, 1), "used": round(used / MIB, 1),
+           "available": round(available / MIB, 1)}
     return {
-        "cpu_pct": cpu_percent(previous["cpu"], current["cpu"]),
-        "ram_mib": {"total": round(total / MIB, 1), "used": round(used / MIB, 1),
-                    "available": round(available / MIB, 1)},
+        "cpu_pct": cpu,
+        "load_avg": current.get("load_avg", []),
+        "alerts": resource_alerts(cpu, ram, current["disk"]),
+        "ram_mib": ram,
         "swap_mib": {"total": round(swap / MIB, 1),
                      "used": round(max(0, swap - memory.get("SwapFree", 0)) / MIB, 1)},
         "network": speed,
@@ -151,8 +207,12 @@ def capture():
                 "free_gib": round(usage.free / MIB / 1024, 1)}
     except OSError:
         disk = {}
+    try:
+        load_avg = [round(value, 2) for value in os.getloadavg()]
+    except OSError:
+        load_avg = []
     return {"cpu": cpu_times(), "memory": meminfo(), "network": network_bytes(),
-            "processes": process_snapshot(), "disk": disk}
+            "processes": process_snapshot(), "disk": disk, "load_avg": load_avg}
 
 
 def render(metrics):
@@ -166,10 +226,16 @@ def render(metrics):
             f"disponível: {mem['available']:.0f} MiB  "
             f"swap: {swap['used']:.0f}/{swap['total']:.0f} MiB",
             "Disco (home): " + json.dumps(metrics["disk"], ensure_ascii=False),
+            "Carga do sistema (1/5/15 min): " + str(metrics.get("load_avg", [])),
+            "Alertas informativos: " + ", ".join(metrics.get("alerts", [])),
             "Rede (tráfego local; não é teste de velocidade da internet):"]
     for name, rates in sorted(metrics["network"].items()):
         head.append(f"  {name}: ↓ {rates['rx_mib_s']:.3f} MiB/s "
                     f"↑ {rates['tx_mib_s']:.3f} MiB/s")
+    if "services" in metrics:
+        health = metrics["services"]
+        head.append("Serviços locais: API " + health["api"] + " | Ollama " + health["ollama"])
+        head.append("Modelos carregados (ollama ps): " + ", ".join(health["models"]))
     for key, title in (("cpu", "Processos por CPU"), ("ram", "Processos por RAM")):
         head.append(title + " | PID | nome | CPU% | RAM MiB")
         for item in metrics["processes"][key]:
@@ -207,6 +273,8 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true", help="Amostras JSON sem dados privados.")
     parser.add_argument("--speed-test", action="store_true",
                         help="Executa teste EXTERNO ativo (consome dados e internet); não é automático.")
+    parser.add_argument("--services", action="store_true",
+                        help="Consulta sistema e Ollama locais sem reiniciar, instalar ou alterar serviços.")
     args = parser.parse_args(argv)
     if not 0.5 <= args.interval <= 60:
         parser.error("Intervalo precisa estar entre 0.5 e 60 segundos.")
@@ -225,6 +293,8 @@ def main(argv=None):
             current = capture()
             elapsed = max(time.monotonic() - start, 0.001)
             data = sample(previous, current, elapsed)
+            if args.services:
+                data["services"] = service_snapshot()
             if args.json:
                 print(json.dumps(data, ensure_ascii=False), flush=True)
             else:
