@@ -37,6 +37,7 @@ from src.tools.design import plan_tool
 from src.tools import images, local_images, web
 from src.tools.file_analysis.api import router as file_analysis_router
 from src.api.workspace import router as workspace_router
+from src.api.system_workspace import router as system_workspace_router
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ app = FastAPI(
 
 app.include_router(file_analysis_router)
 app.include_router(workspace_router)
+app.include_router(system_workspace_router)
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
