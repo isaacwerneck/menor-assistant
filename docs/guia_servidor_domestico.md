@@ -94,6 +94,11 @@ Se a API já estiver aberta manualmente na porta 8000, encerre esse processo ant
 
 ### Fluxo após cada push
 
+O deploy automático acontece quando o commit é **publicado na `main`** (por push direto
+ou merge de um PR revisado). Um commit apenas local ou em branch de trabalho não
+atualiza a produção. Não é necessário rodar `git pull` ou reiniciar a API
+manualmente a cada versão.
+
 1. `menor-deploy.timer` consulta o GitHub cerca de 30 segundos após cada execução.
 2. `scripts/deploy.sh` trava execuções concorrentes e recusa branch diferente de
    `main`, alterações locais (inclusive arquivos não ignorados) ou commits locais
@@ -102,10 +107,12 @@ Se a API já estiver aberta manualmente na porta 8000, encerre esse processo ant
    um pull sem criar commits de merge.
 4. Havendo uma revisão ainda não aplicada, instala `requirements.txt` no `.venv`,
    executa os testes Python e os cenários de deploy isolados, recarrega os units
-   e reinicia `menor-api.service`.
+   e executa `bash scripts/menor reiniciar` (o mesmo efeito de `menor reiniciar`),
+   reiniciando a API e garantindo que os timers disponíveis estão ativos.
 5. Confere `/health` e o serviço ativo antes de gravar a revisão aplicada em
    `.git/menor-deployed-revision`. Sem mudanças, não reinstala nem reinicia.
-   Se falhar, registra o erro no journal e tenta novamente no próximo ciclo.
+   Se os testes, o reinício ou a verificação falharem, não marca a revisão como
+   implantada; registra o erro no journal e tenta novamente no próximo ciclo.
 
 Os testes do deploy criam repositórios temporários e simulam instalação/restart;
 não alteram o serviço real. O GitHub Actions roda Flake8 e os mesmos testes em
@@ -120,6 +127,7 @@ journalctl --user -u menor-deploy.service -n 80 --no-pager
 journalctl --user -u menor-api.service -n 80 --no-pager
 systemctl --user list-timers menor-deploy.timer
 systemctl --user start menor-deploy.service   # conferir mudanças agora
+menor reiniciar                             # reiniciar API manualmente, se necessário
 systemctl --user stop menor-deploy.timer     # pausar atualizações
 systemctl --user start menor-deploy.timer    # retomar
 ```
