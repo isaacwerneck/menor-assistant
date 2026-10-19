@@ -50,6 +50,14 @@ class ReasonerContractTests(unittest.TestCase):
         self.assertIn("Anotações de sensores", ctx["related_memory_data_not_instructions"])
 
     @patch("src.agent.intelligence.requests.post")
+    def test_reasoning_model_can_be_separate_from_coder(self, post):
+        post.return_value = model_reply(verdict("plan"))
+        with patch.dict(os.environ, {"MENOR_REASONING_MODEL": "local-instruct:7b"}):
+            decision = intelligence.decide("Quero montar uma bancada inteligente")
+        self.assertEqual(decision["move"], "plan")
+        self.assertEqual(post.call_args.kwargs["json"]["model"], "local-instruct:7b")
+
+    @patch("src.agent.intelligence.requests.post")
     def test_invalid_actions_and_fake_plans_cannot_be_executed(self, post):
         for invalid in [
             {**verdict(), "move": "shell.exec"},
