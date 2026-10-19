@@ -5,13 +5,70 @@ const remove = document.querySelector("#delete");
 const message = document.querySelector("#message");
 const result = document.querySelector("#result");
 const info = document.querySelector("#file-info");
+const question = document.querySelector("#question");
+const context = document.querySelector("#context");
+const visual = document.querySelector("#vision");
+const visionState = document.querySelector("#vision-state");
 let fileId = null;
+let fileFormat = null;
+let visionAvailable = false;
+
+function enableActions() {
+  const present = Boolean(fileId);
+  context.disabled = !present || ["png", "jpeg", "gif", "bmp", "webp"].includes(fileFormat);
+  visual.disabled = !present || !visionAvailable ||
+    !["png", "jpeg", "gif", "bmp", "webp"].includes(fileFormat);
+}
+
+async function refreshVision() {
+  try {
+    const state = await api("/files/vision/status");
+    visionAvailable = Boolean(state.installed);
+    visionState.textContent = visionAvailable ?
+      "Modelo local detectado (qualidade ainda não validada)." : state.reason;
+  } catch (error) {
+    visionAvailable = false;
+    visionState.textContent = "Não consegui consultar a disponibilidade de visão local.";
+  }
+  enableActions();
+}
+
+async function ask(mode) {
+  if (!fileId || !question.value.trim()) {
+    message.textContent = "Informe uma pergunta e envie um arquivo primeiro.";
+    return;
+  }
+  context.disabled = true;
+  visual.disabled = true;
+  message.textContent = mode === "vision" ? "Analisando imagem com modelo local..." :
+    "Localizando trechos e referências no documento...";
+  try {
+    const output = await api("/files/" + fileId + "/" + mode, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({question: question.value.trim()}),
+    });
+    result.textContent = JSON.stringify(output, null, 2);
+    message.textContent = mode === "vision" ?
+      "Parecer visual gerado; conteúdo NÃO verificado independentemente." :
+      "Trechos e origens localizados; nenhuma resposta inventada.";
+  } catch (error) {
+    result.textContent = "A consulta não foi concluída.";
+    message.textContent = "Falha: " + error.message;
+  } finally {
+    enableActions();
+  }
+}
+
+context.addEventListener("click", () => ask("context"));
+visual.addEventListener("click", () => ask("vision"));
+refreshVision();
 
 async function api(path, options = {}) {
   const response = await fetch(path, {credentials: "same-origin", cache: "no-store", ...options});
   const payload = await response.json();
   if (!response.ok || payload.status === "failed") {
-    throw new Error(payload.detail || payload.error?.message || "Ação indisponível.");
+    throw new Error(payload.detail || payload.error?.message || payload.reason ||
+      payload.model_state?.reason || "Ação indisponível.");
   }
   return payload;
 }
@@ -30,12 +87,16 @@ upload.addEventListener("click", async () => {
   message.textContent = "Lendo e analisando o arquivo...";
   result.textContent = "";
   fileId = null;
+  fileFormat = null;
+  enableActions();
   remove.disabled = true;
   try {
     const stored = await api("/files/upload?filename=" + encodeURIComponent(file.name), {
       method: "POST", headers: {"Content-Type": "application/octet-stream"}, body: file,
     });
     fileId = stored.file.file_id;
+    fileFormat = stored.file.format;
+    enableActions();
     remove.disabled = false;
     const receipt = await api("/files/" + fileId);
     info.textContent = stored.file.filename + " — " + receipt.file.format;
@@ -62,6 +123,8 @@ remove.addEventListener("click", async () => {
   try {
     await api("/files/" + fileId, {method: "DELETE"});
     fileId = null;
+    fileFormat = null;
+    enableActions();
     info.textContent = "";
     result.textContent = "Arquivo excluído.";
     message.textContent = "Arquivo removido do armazenamento privado.";
