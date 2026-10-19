@@ -1,0 +1,10 @@
+*{box-sizing:border-box}
+body{font:16px/1.5 system-ui,sans-serif;margin:0;background:#f6f7f8;color:#19212c}
+main{max-width:830px;margin:0 auto;padding:24px 16px}
+section{background:white;padding:20px;border:1px solid #dedfe3;border-radius:12px;margin:20px 0}
+input{display:block;width:100%;margin:12px 0}
+button{padding:10px 15px;border:0;border-radius:8px;background:#1e435c;color:white;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+pre{background:#f4f5f6;border:1px solid #e1e1e1;border-radius:8px;white-space:pre-wrap;
+overflow-wrap:anywhere;max-height:55vh;overflow:auto;padding:14px;font-size:13px}
+#message{min-height:1.5em}
