@@ -218,7 +218,7 @@ test('Chat E: documento privado anexa ID validado sem fingir análise ou executa
     assert.equal(ui.fileUploads[0].options.credentials, 'same-origin');
     assert.equal(ui.fileUploads[0].options.headers['Content-Type'], 'application/octet-stream');
     assert.equal(ui.fileUploads[0].options.body, privateFile);
-    assert.match(ui.elements.get('documentStatus').textContent, /ainda não foi analisado/i);
+    assert.match(ui.elements.get('documentStatus').textContent, /não foi analisado/i);
     assert.equal(ui.agentCalls.length, 0); // armazenamento não dispara modelo
     ui.elements.get('userInput').value = 'Qual é o prazo deste contrato?';
     await ui.context.sendMsg();
