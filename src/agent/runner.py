@@ -240,7 +240,7 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
     """Revisa apenas decisões de planejamento, com no máximo UMA reformulação."""
     if not plan_review.should_review(decision):
         return decision, "disabled"
-    verdict = plan_review.review(message, decision)
+    verdict = plan_review.review(message, decision, pending=pending)
     status = verdict["verdict"]
     if status == "ok":
         return decision, "reviewed"
