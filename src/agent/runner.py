@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import sqlite3
 
 import requests
 
@@ -14,6 +15,7 @@ from src.agent.tasks import TaskStore
 from src.agent import research, intelligence
 from src.agent.approval import decision as approval_decision
 from src.memory.search import contextual_knowledge
+from src.memory.semantic import relevant_context
 from src.tools import images
 from src.tools.registry import TOOLS, list_tools, perform
 
@@ -204,9 +206,14 @@ def _understand(state, message, history):
     pending = state if state["phase"] == "goal" else None
     try:
         # Notas do cérebro são dados de contexto; não autorizam uma nova ferramenta.
-        facts = contextual_knowledge(message)
-    except (OSError, ValueError):
-        facts = ""
+        semantic = relevant_context(message)
+        lexical = contextual_knowledge(message)
+        facts = (semantic + "\n" + lexical).strip()[:1200] if semantic else lexical
+    except (requests.RequestException, OSError, ValueError, sqlite3.Error):
+        try:
+            facts = contextual_knowledge(message)
+        except (OSError, ValueError, sqlite3.Error):
+            facts = ""
     try:
         from src.agent.skills import catalog
         skills = catalog()

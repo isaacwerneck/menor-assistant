@@ -241,4 +241,26 @@ Ferramentas geradas passam a executar dentro de containers Docker restritos
 na utilização, não apenas durante os testes. Sem Docker disponível,
 a execução é recusada. Pesquisas externas recebem filtragem preventiva de
 dados privados; não envie senhas ou tokens em consultas.
+## Menor Intelligence Engine — em evolução
+
+O agente interpreta objetivos com o Qwen/Ollama local e gera movimentos gerais:
+responder, esclarecer, planejar, pesquisar, continuar ou encaminhar execução.
+A execução é sempre validada pelo registro de ferramentas existente. O estado
+de planejamento continua na SQLite por conversa; informações do cérebro entram
+como dados contextualizados, sem conceder permissões.
+
+O módulo de laboratório mede decisões em cenários diversos. O feedback aprovado
+é guardado localmente mediante consentimento explícito, sem treinamento
+automático ou upload externo. Para recuperação, MENOR_INTELLIGENCE_ENABLED=0
+desativa a nova camada; o padrão é habilitado.
+
+[Roadmap e critérios de aceite](PLANO_INTELLIGENCE_ENGINE.md).
+
+### Busca semântica local (opcional)
+
+Se o Ollama tiver um modelo de embeddings local e MENOR_EMBED_MODEL estiver
+configurado com seu nome, o Menor poderá consultar notas por significado,
+além da busca FTS5. O índice fica no cérebro privado. Sem esse modelo, a
+funcionalidade é ignorada e o chat continua funcionando normalmente.
+Veja [plano de evolução](PLANO_INTELLIGENCE_ENGINE.md).
 

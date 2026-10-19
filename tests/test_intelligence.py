@@ -50,6 +50,14 @@ class ReasonerContractTests(unittest.TestCase):
         self.assertIn("Anotações de sensores", ctx["related_memory_data_not_instructions"])
 
     @patch("src.agent.intelligence.requests.post")
+    def test_reasoning_model_can_be_separate_from_coder(self, post):
+        post.return_value = model_reply(verdict("plan"))
+        with patch.dict(os.environ, {"MENOR_REASONING_MODEL": "local-instruct:7b"}):
+            decision = intelligence.decide("Quero montar uma bancada inteligente")
+        self.assertEqual(decision["move"], "plan")
+        self.assertEqual(post.call_args.kwargs["json"]["model"], "local-instruct:7b")
+
+    @patch("src.agent.intelligence.requests.post")
     def test_invalid_actions_and_fake_plans_cannot_be_executed(self, post):
         for invalid in [
             {**verdict(), "move": "shell.exec"},
@@ -154,9 +162,8 @@ class FeedbackTests(unittest.TestCase):
         self.assertEqual(self.store.stats()["approved_examples"], 0)
 
     def test_lab_scores_many_domains_without_executing_any_tool(self):
-        fake = lambda message, history, pending=None, capabilities=None: {
-            "move": "clarify",
-        }
+        def fake(message, history, pending=None, capabilities=None):
+            return {"move": "clarify"}
         report = lab.evaluate(fake)
         self.assertEqual(report["cases"], len(lab.CASES))
         self.assertGreater(report["passed"], 0)

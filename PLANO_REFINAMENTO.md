@@ -409,4 +409,11 @@ Critérios automáticos:
    sugeridos por um LLM; assumir que o filtro não cobre todos os segredos.
 
 Ainda é necessário medir comportamento no notebook real após merge.
+## R12 — Entendimento universal e avaliação
 
+Cobrir mensagens de gêneros inéditos, mudança de assunto, correções de objetivo,
+perguntas incompletas, modelo lento/offline e tentativas de executar algo sem
+permissão. O cérebro não deve inventar execução nem salvar automaticamente
+exemplos para treinamento. Separar score de intenção de sucesso real da tarefa.
+Comparar versões do Qwen com desafios inéditos e evitar otimização apenas dos
+prints fornecidos pelo usuário.
