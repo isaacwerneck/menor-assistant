@@ -13,6 +13,7 @@ from src.agent.custom_runtime import run as run_custom_skill
 from src.agent.diagnostics import analyze
 from src.agent.self_edit import propose
 from src.agent.delegation import generate_image as delegate_image
+from src.agent.model_catalog import comparison
 from src.memory.store import BrainStore
 from src.tools import images, web
 from src.projects.manager import create_project
@@ -35,11 +36,15 @@ TOOLS = {
     "web.search": Tool("web.search", "Busca páginas públicas na internet.", "external", False, ("query",)),
     "web.read": Tool("web.read", "Lê texto de uma página HTTPS pública.", "external", False, ("url",)),
     "web.browse": Tool("web.browse", "Abre página pública no Chromium isolado.", "external", False, ("url",)),
+    "models.compare": Tool(
+        "models.compare", "Compara modelos documentados e capacidade de instalação local.",
+        "read", False, ("capability",),
+    ),
     "system.diagnose": Tool(
         "system.diagnose", "Resume falhas das ferramentas em auditoria local.", "read", False, (),
     ),
     "images.generate": Tool(
-        "images.generate", "Gera imagem com motor externo configurado.", "external", True, ("prompt",),
+        "images.generate", "Gera imagem via subagente local e informa qualidade da revisão.", "write", True, ("prompt",),
     ),
     "images.edit": Tool(
         "images.edit", "Edita imagem já salva pelo Menor.", "external", True, ("image_id", "prompt"),
@@ -131,6 +136,11 @@ def perform(name, arguments, dry_run=True):
         output = images.edit(arguments["prompt"], image_path.read_bytes())
     elif name == "developer.propose":
         output = propose(arguments["issue"], dry_run=False)
+    elif name == "models.compare":
+        output = {
+            "models": comparison(arguments["capability"]),
+            "note": "Alternativas documentadas, não benchmarks locais nem instaladores aprovados.",
+        }
     elif name == "system.diagnose":
         output = analyze()
     elif name == "projects.list":
