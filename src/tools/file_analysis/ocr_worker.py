@@ -4,7 +4,6 @@ Isolamento parcial: processos limitados e diretório temporário privado.
 Executáveis do sistema devem ser instalados apenas com autorização do dono.
 """
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
