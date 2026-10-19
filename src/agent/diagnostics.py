@@ -1,11 +1,21 @@
 """Diagnóstico de execuções locais com dados mínimos e sem conteúdo pessoal."""
 import json
 import stat
+import sqlite3
 from collections import Counter
 
 from src.memory.store import BrainStore
+from src.agent.quality_metrics import DecisionMetrics
 
 MAX_RECENT = 200
+
+
+def _attach_decisions(report, store):
+    try:
+        report["decision_quality"] = DecisionMetrics(store).report()
+    except (OSError, ValueError, sqlite3.Error):
+        report["decision_quality"] = {"status": "unavailable"}
+    return report
 
 
 def analyze(store=None):
@@ -14,7 +24,7 @@ def analyze(store=None):
     if path.is_symlink():
         raise ValueError("Auditoria não confiável.")
     if not path.exists():
-        return {"events": 0, "failures": 0, "issues": [], "status": "no-data"}
+        return _attach_decisions({"events": 0, "failures": 0, "issues": [], "status": "no-data"}, store)
     if not stat.S_ISREG(path.lstat().st_mode):
         raise ValueError("Auditoria inválida.")
     if path.stat().st_size > 2 * 1024 * 1024:
@@ -41,9 +51,9 @@ def analyze(store=None):
         }
         for name, count in failures.most_common(10)
     ]
-    return {
+    return _attach_decisions({
         "events": len(events),
         "failures": sum(failures.values()),
         "issues": issues,
         "status": "needs-review" if issues else "ok",
-    }
+    }, store)
