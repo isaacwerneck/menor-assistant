@@ -1136,7 +1136,7 @@
         function imageTurnPriority(message, conv) {
             const text = normalizeImageRequest(message);
             const earlier = recentImage(conv);
-            const sensitive = /\b(ferramenta|skill|plugin|codigo|repositorio|software|programa|instalar)\b/.test(text);
+            const sensitive = /\b(ferramenta|skill|plugin|codigo|repositorio|software|programa|instalar|bug|erro|sistema|aplicativo|projeto|deploy|branch|github)\b/.test(text);
             const asksHow = /^(como|me explica|explique|tutorial|ensina)\b/.test(text);
             const subject = /\b(imagem|imagens|imgs?|foto|desenho|ilustracao|capa|arte|pixel.art)\b/.test(text);
             const make = /\b(cria|crie|criar|faz|faca|fazer|gera|gere|gerar|desenha|desenhe)\b/.test(text);
