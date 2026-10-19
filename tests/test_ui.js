@@ -847,3 +847,104 @@ test('D08: trocar de imagem para correção de software não envia edição visu
     assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
     assert.equal(ui.agentCalls.length, 1);
 });
+
+test('D14: nova conversa mantém histórico e imagem da conversa anterior', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    const first = ui.context.getActiveConv();
+    const original = first.messages.at(-1).image;
+    ui.context.newChat();
+    ui.elements.get('userInput').value = 'Explica uma função Python';
+    await ui.context.sendMsg();
+    const second = ui.context.getActiveConv();
+    assert.notEqual(second.id, first.id);
+    assert.equal(first.messages.at(-1).image, original);
+    assert.equal(second.messages.some(m => m.image === original), false);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 1);
+});
+
+test('D14: voltar à conversa anterior restaura mensagens e artefatos sem execução', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    const first = ui.context.getActiveConv();
+    const image = first.messages.at(-1).image;
+    ui.context.newChat();
+    ui.elements.get('userInput').value = 'Explica uma função Python';
+    await ui.context.sendMsg();
+    ui.context.openConv(first.id);
+    assert.equal(ui.context.getActiveConv().id, first.id);
+    assert.equal(ui.context.getActiveConv().messages.at(-1).image, image);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 1);
+});
+
+test('D14: nova conversa não herda aprovação sensível pendente de outra', async () => {
+    const ui = browser();
+    const first = ui.context.createConversation('ferramenta');
+    first.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.context.newChat();
+    ui.elements.get('userInput').value = 'sim';
+    await ui.context.sendMsg();
+    assert.notEqual(ui.context.getActiveConv().id, first.id);
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
+    assert.equal(first.activeMission.status, 'awaiting_approval');
+});
+
+test('D14: nova conversa não herda esclarecimento de imagem pendente', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'quero q vc crie uma imagem pra mim';
+    await ui.context.sendMsg();
+    const first = ui.context.getActiveConv();
+    assert.equal(first.pendingImage.kind, 'generate');
+    ui.context.newChat();
+    ui.elements.get('userInput').value = 'Explica uma função Python';
+    await ui.context.sendMsg();
+    assert.equal(ui.context.getActiveConv().pendingImage, undefined);
+    assert.equal(first.pendingImage.kind, 'generate');
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 0);
+});
+
+test('D10: recusa de recuperação não chama endpoint nem libera replay', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('tarefa interrompida');
+    conv.pendingRunRecovery = true;
+    const calls = [];
+    ui.context.fetch = async url => { calls.push(url); throw new Error('unexpected request'); };
+    ui.elements.get('userInput').value = 'não';
+    await ui.context.sendMsg();
+    assert.equal(calls.length, 0);
+    assert.equal(conv.pendingRunRecovery, undefined);
+});
+
+test('D12: recibo visual no histórico explicita ausência de revisão do conteúdo', () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('capa');
+    conv.messages.push({
+        role: 'bot', content: 'Arquivo gerado.',
+        image: '/images/files/' + 'a'.repeat(32),
+        artifact: { kind: 'image', prompt: 'capa vermelha',
+            actual_size: [512, 512], file_verified: true, content_verified: false },
+    });
+    const history = ui.context.buildHistory(conv.messages, 'ficou perfeito?');
+    assert.match(history.at(-1).content, /conteúdo visual: NÃO verificado/);
+    assert.match(history.at(-1).content, /capa vermelha/);
+});
+
+test('D14: troca de conversa durante requisição não redireciona resposta pendente', async () => {
+    const ui = browser();
+    let finish;
+    const originalFetch = ui.context.fetch;
+    ui.context.fetch = (url, options) => url === '/chat/stream'
+        ? new Promise(resolve => { finish = resolve; }) : originalFetch(url, options);
+    ui.elements.get('userInput').value = 'oi';
+    const pending = ui.context.sendMsg();
+    await new Promise(resolve => setImmediate(resolve));
+    const first = ui.context.getActiveConv();
+    ui.context.newChat();
+    assert.equal(ui.context.getActiveConv().id, first.id);
+    finish({ ok: false, json: async () => ({ detail: 'Serviço indisponível' }) });
+    await pending;
+    assert.equal(first.messages.length, 1);
+    assert.equal(ui.context.getActiveConv().id, first.id);
+});
