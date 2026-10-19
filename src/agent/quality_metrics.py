@@ -16,6 +16,7 @@ PHASES = {"idle", "goal", "approval", "mission", "image_offer", "image_scene",
           "failed", "blocked", "running"}
 OUTCOMES = {"handled", "unhandled", "failed"}
 MAX_RECENT = 1000
+MAX_ROWS = 5000
 
 
 class DecisionMetrics:
@@ -71,6 +72,12 @@ class DecisionMetrics:
                 "INSERT OR IGNORE INTO decisions VALUES (?,?,?,?,?,?)",
                 (self._hash(session), self._hash(turn), int(time.time()), phase, outcome, error_type),
             )
+            # Retenção limitada para um servidor que fica ligado por meses.
+            db.execute(
+                "DELETE FROM decisions WHERE rowid NOT IN ("
+                "SELECT rowid FROM decisions ORDER BY created_at DESC, rowid DESC LIMIT ?)",
+                (MAX_ROWS,),
+            )
 
     def report(self):
         path = self.store.brain_dir / "memoria" / "decision_metrics.sqlite"
@@ -85,7 +92,7 @@ class DecisionMetrics:
         with closing(self._connect()) as db:
             rows = db.execute(
                 "SELECT phase,outcome,error_type FROM decisions "
-                "ORDER BY created_at DESC LIMIT ?", (MAX_RECENT,),
+                "ORDER BY created_at DESC, rowid DESC LIMIT ?", (MAX_RECENT,),
             ).fetchall()
         outcomes = Counter(row[1] for row in rows)
         phases = Counter(row[0] for row in rows)
