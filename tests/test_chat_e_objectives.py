@@ -42,7 +42,10 @@ class ObjectivesDashboardTests(unittest.TestCase):
         self.assertNotIn("onclick=", HTML)
         self.assertNotIn("innerHTML", JS)
         self.assertIn("textContent", JS)
-        self.assertIn('method: "POST"', JS) if False else self.assertNotIn('method: "POST"', JS)
+        self.assertNotIn('method: "POST"', JS)
+        self.assertIn('href="/workspace/objectives"',
+                      (Path(__file__).resolve().parents[1] / "src/api/templates/chat.html")
+                      .read_text(encoding="utf-8"))
 
     def test_server_sources_and_nonfiction(self):
         self.assertIn('"/agent/missions"', JS)
@@ -63,8 +66,7 @@ class ObjectivesDashboardTests(unittest.TestCase):
                 for path in ("/workspace/objectives", "/workspace/assets.js", "/workspace/assets.css"):
                     self.assertEqual(request("GET", path)[0], 401)
                     self.assertEqual(request("GET", path, cookie=cookie)[0], 200)
-                headers = main.workspace_router  # Check routing is registered and import available.
-                self.assertIsNotNone(headers)
+                self.assertIsNotNone(main.workspace_router)
 
 
 if __name__ == "__main__":
