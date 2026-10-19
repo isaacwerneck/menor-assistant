@@ -6,7 +6,8 @@ from unittest.mock import patch
 from test_file_api import FileRoutesTests, request
 
 
-class ContextOcrApiTests(FileRoutesTests):
+class ContextOcrApiTests(unittest.TestCase):
+    setUp = FileRoutesTests.setUp
     def test_explicit_ocr_parameters_and_owner_boundary(self):
         saved_status, saved = request("POST", "/files/upload?filename=nota.txt",
                                       b"Nota privada", cookie=self.cookie)
