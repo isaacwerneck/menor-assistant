@@ -1,6 +1,5 @@
 """Opt-in local Ollama benchmark: no network in CI and no secret payloads."""
 import io
-import json
 import os
 import unittest
 from contextlib import redirect_stdout
