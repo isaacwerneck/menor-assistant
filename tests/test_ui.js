@@ -810,3 +810,41 @@ test('D11: missão enfileirada não é apresentada como executada antes de consu
     assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 0);
     assert.equal(ui.requests.length, 0);
 });
+
+test('D04: recusa de plano sensível não executa e mantém histórico da conversa', async () => {
+    const ui = browser();
+    ui.context.createConversation('ferramenta');
+    const conv = ui.context.getActiveConv();
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    const previous = { role: 'user', content: 'Quero criar uma ferramenta de imagens' };
+    conv.messages.push(previous);
+    ui.elements.get('userInput').value = 'não';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 1);
+    assert.equal(ui.missionCalls.at(-1).data.approved, false);
+    assert.equal(conv.messages[0].content, previous.content);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate' || x.type === 'edit').length, 0);
+});
+
+test('D06: reexibir imagem preserva URL original e não gera outro artefato', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    const original = ui.context.getActiveConv().messages.at(-1).image;
+    ui.elements.get('userInput').value = 'cadê a imagem que vc gerou? me manda';
+    await ui.context.sendMsg();
+    assert.equal(ui.context.getActiveConv().messages.at(-1).image, original);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 1);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
+});
+
+test('D08: trocar de imagem para correção de software não envia edição visual', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'corrige esse bug no código do aplicativo';
+    await ui.context.sendMsg();
+    assert.equal(ui.imageCalls.filter(x => x.type === 'edit').length, 0);
+    assert.equal(ui.agentCalls.length, 1);
+    assert.equal(ui.repairCalls.length, 0);
+});
