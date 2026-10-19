@@ -88,7 +88,6 @@ class MonitorTests(unittest.TestCase):
                 monitor.main(["--interval", "0", "--once"])
             capture.assert_not_called()
 
-
     def test_cpu_ram_disk_alerts_are_advisory_only(self):
         self.assertEqual(monitor.resource_alerts(
             {"cpu": 20}, {"total": 8192, "available": 4096}, {"free_gib": 50}), [])
