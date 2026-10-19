@@ -103,6 +103,27 @@ benchmarks do objetivo; instalação de pesos e saída PNG válida não garantem
 compreensão de pixel art. Integradores alternativos e treinamento exigem
 avaliação separada, em vez de inferência automática baseada na existência do modelo.
 
+
+## I3 parcial — vários objetivos, execução tipada e observabilidade
+
+- [x] Memória de trabalho limitada a seis objetivos pausados por conversa,
+  com IDs verificáveis e retomada depois de reinício do servidor.
+- [x] Modelo pode propor começar, refinar, trocar ou retomar objetivo.
+  Python valida a referência antes de alterar estado.
+- [x] Resposta incidental e pesquisa não apagam o plano principal.
+- [x] Aprovação de uma ferramenta não apaga o objetivo que a originou.
+- [x] Decisão de ação pode selecionar ferramenta e argumentos do catálogo
+  real; código valida contrato e exige permissão para escrita.
+- [x] Benchmark de continuidade e métricas agregadas privadas, com sinais
+  de regressão e retenção limitada a 5.000 eventos.
+- [ ] Avaliar o Qwen real em centenas de diálogos inéditos e medir falsos
+  positivos de troca/retomada no notebook.
+- [ ] Tarefas de várias horas/dias e recuperação segura após interrupções.
+- [ ] Autoedição com propostas, testes independentes, PR, revisão e rollback,
+  sem liberar alterações automáticas irrestritas.
+
+Detalhes: docs/chat_a_objetivos_contextuais.md.
+
 ## I3 — Revisão independente de planos (Chat A, PR #29)
 
 - [x] Um segundo julgamento Ollama, opcional, compara pedido atual com objetivo,

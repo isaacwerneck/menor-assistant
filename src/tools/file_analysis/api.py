@@ -10,10 +10,13 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, Field, field_validator
 
 from src.security import auth
 from src.tools.file_analysis import service
-from src.tools.file_analysis.contracts import FileRejected, MAX_BYTES
+from src.tools.file_analysis.context import retrieve as retrieve_context
+from src.tools.file_analysis.contracts import FILE_ID, FileRejected, MAX_BYTES
+from src.tools import vision
 
 router = APIRouter(tags=["Arquivos privados"])
 logger = logging.getLogger(__name__)
@@ -58,6 +61,67 @@ def file_css(request: Request):
 def file_capabilities(request: Request):
     auth.require_owner(request)
     return service.capabilities()
+
+
+class FileQuestion(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+
+    @field_validator("question")
+    @classmethod
+    def nonempty(cls, value):
+        if not value.strip():
+            raise ValueError("A pergunta não pode ser vazia.")
+        return value.strip()
+
+
+def _valid_id(file_id):
+    if FILE_ID.fullmatch(file_id) is None:
+        raise HTTPException(404, "Arquivo não encontrado.")
+
+
+@router.get("/files/vision/status")
+async def file_vision_status(request: Request):
+    """A disponibilidade do Ollama é informativa: não é benchmark visual."""
+    auth.require_owner(request)
+    return await asyncio.to_thread(vision.status)
+
+
+@router.post("/files/{file_id}/context")
+async def file_context(file_id: str, body: FileQuestion, request: Request):
+    """Seleciona trechos ancorados; não interpreta nem responde com LLM."""
+    auth.require_owner(request)
+    _valid_id(file_id)
+    try:
+        output = await asyncio.to_thread(retrieve_context, file_id, body.question)
+    except FileRejected as exc:
+        raise HTTPException(404, "Arquivo não encontrado ou inválido.") from exc
+    except ValueError as exc:
+        raise HTTPException(422, "Pergunta documental inválida.") from exc
+    except OSError as exc:
+        logger.warning("Contexto documental indisponível: %s", type(exc).__name__)
+        raise HTTPException(503, "Leitor documental indisponível.") from exc
+    if output["status"] == "failed":
+        return JSONResponse(status_code=503, content=output)
+    return output
+
+
+@router.post("/files/{file_id}/vision")
+async def file_vision(file_id: str, body: FileQuestion, request: Request):
+    """Visão só com modelo local já instalado e resultado claramente não verificado."""
+    auth.require_owner(request)
+    _valid_id(file_id)
+    try:
+        output = await asyncio.to_thread(vision.inspect_image, file_id, body.question)
+    except FileRejected as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except (OSError, ValueError) as exc:
+        logger.warning("Análise visual indisponível: %s", type(exc).__name__)
+        raise HTTPException(503, "Análise visual local indisponível.") from exc
+    if output["status"] == "unavailable":
+        return JSONResponse(status_code=503, content=output)
+    if output["status"] == "failed":
+        return JSONResponse(status_code=502, content=output)
+    return output
 
 
 @router.post("/files/upload", status_code=201)

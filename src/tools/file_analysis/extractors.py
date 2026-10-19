@@ -179,11 +179,33 @@ def _image(data, expected):
             frames = getattr(pic, "n_frames", 1)
             color_mode = pic.mode
             pic.verify()
+        sprite_metrics = None
+        if width <= 256 and height <= 256 and frames == 1:
+            # Paleta é uma medição objetiva; não prova que há um personagem.
+            with Image.open(io.BytesIO(data)) as pixels:
+                rgba = pixels.convert("RGBA")
+                histogram = rgba.getcolors(maxcolors=257)
+                palette_count = len(histogram) if histogram is not None else None
+                if histogram is not None:
+                    transparent = sum(count for count, color in histogram if color[3] == 0)
+                    partial_alpha = sum(count for count, color in histogram if 0 < color[3] < 255)
+                else:
+                    transparent, partial_alpha = None, None
+                visible_bounds = rgba.getchannel("A").getbbox()
+                bounds = list(visible_bounds) if transparent and visible_bounds else None
+                sprite_metrics = {
+                    "unique_rgba_colors": palette_count,
+                    "more_than_256_colors": histogram is None,
+                    "fully_transparent_pixels": transparent,
+                    "partially_transparent_pixels": partial_alpha,
+                    "nontransparent_bounds": bounds,
+                }
     except (OSError, UnidentifiedImageError, Image.DecompressionBombError) as exc:
         raise FileRejected("Imagem inválida ou danificada.") from exc
     return {
         "structure": [{"type": "image", "format": actual, "width": width,
-                       "height": height, "frames": frames, "mode": color_mode}],
+                       "height": height, "frames": frames, "mode": color_mode,
+                       "sprite_metrics": sprite_metrics}],
         "metadata": {"width": width, "height": height, "format": actual},
         "truncated": False,
         "evidence": [{"kind": "image_integrity", "verified": True,
