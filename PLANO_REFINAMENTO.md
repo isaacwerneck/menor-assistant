@@ -430,3 +430,14 @@ candidato sem integrador auditado e autorização.
 
 A cobertura de CI usa mocks; a qualidade de personagens e sprites ainda
 precisa de imagem real e avaliador visual confiável no hardware.
+
+## R21 — Revisor de plano independente, sem confiança cega
+
+A revisão com segundo modelo local é um parecer, não uma garantia. A saída é
+validada por contrato estruturado e não pode selecionar ferramenta ou liberar
+aprovação. Na divergência, permite UMA reformulação sem efeitos colaterais;
+se persistir dúvida, a proposta é identificada como preliminar.
+
+Próximos testes: criar benchmarks inéditos de mudança de domínio, qualidade
+factual, latência no i7, consumo de RAM e risco de crítico superconfiante.
+Manter revisão desabilitada por padrão até essa validação real.
