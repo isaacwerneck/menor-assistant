@@ -12,7 +12,7 @@ from PIL import Image
 
 from src.api import main
 from src.security import auth
-from src.tools.file_analysis.contracts import MAX_BYTES
+from src.tools.file_analysis.contracts import FileRejected, MAX_BYTES
 from test_auth_memory import call
 
 
@@ -143,7 +143,6 @@ class FileRoutesTests(unittest.TestCase):
         self.assertEqual(request("GET", "/files/" + token, cookie=self.cookie)[0], 404)
         self.assertEqual(request("DELETE", "/files/" + token, cookie=self.cookie)[0], 404)
 
-
     def test_file_context_finds_real_text_with_source_and_without_model(self):
         status, saved = request("POST", "/files/upload?filename=relatorio.md",
                                 b"Projeto Menor\nPrazo de entrega: sexta-feira.", cookie=self.cookie)
@@ -234,11 +233,10 @@ class FileRoutesTests(unittest.TestCase):
                                  b"texto", cookie=self.cookie)
         self.assertEqual(status, 201, stored)
         target = "/files/" + stored["file"]["file_id"] + "/vision"
-        with patch("src.tools.file_analysis.api.vision.inspect_image", side_effect=ValueError("not image")):
+        with patch("src.tools.file_analysis.api.vision.inspect_image", side_effect=FileRejected("not image")):
             code, _ = request("POST", target, b'{"question":"Explique"}',
                               cookie=self.cookie, content_type="application/json")
-        self.assertEqual(code, 503)
-
+        self.assertEqual(code, 422)
 
 
 if __name__ == "__main__":
