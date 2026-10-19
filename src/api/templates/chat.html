@@ -588,7 +588,7 @@
             .input-area { padding: 8px 12px 10px; }
             .input-wrapper { padding: 9px 10px; }
             .mobile-nav {
-                display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+                display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
                 gap: 2px; min-height: 56px;
                 padding: 4px 6px max(5px, env(safe-area-inset-bottom));
                 border-top: 1px solid rgba(184, 173, 226, .13);
@@ -652,6 +652,7 @@
         </div>
         <nav class="app-nav" aria-label="Navegação principal">
             <span class="app-nav-current" aria-current="page">Conversa</span>
+            <a href="/workspace/objectives">Objetivos</a>
             <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
@@ -709,6 +710,7 @@
         <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
         <nav class="mobile-nav" aria-label="Navegação rápida">
             <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas">Conversas</button>
+            <a href="/workspace/objectives">Objetivos</a>
             <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
