@@ -5,8 +5,6 @@ No external network calls; never writes to a user config file implicitly.
 import argparse
 import ipaddress
 import json
-import os
-import sys
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit

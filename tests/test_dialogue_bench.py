@@ -14,7 +14,9 @@ class DialogueBenchTests(unittest.TestCase):
     def test_mocked_benchmark_catches_wrong_reply_and_preserves_no_tool_execution(self):
         called = []
 
-        def wrong_model(message, history, capabilities=None, tools=None):
+        def wrong_model(message, history, capabilities=None, tools=None, preferences=None, feedback_examples=None):
+            self.assertEqual(preferences, "")
+            self.assertEqual(feedback_examples, [])
             called.append((message, history, capabilities, tools))
             return {"move": "answer", "relation": "start", "reply": "Não sei"}
 

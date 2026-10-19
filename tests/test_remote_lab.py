@@ -97,6 +97,7 @@ class RemoteLabTests(unittest.TestCase):
         self.assertEqual(decide.call_args.kwargs["tools"], [])
         self.assertEqual(decide.call_args.kwargs["feedback_examples"], [])
         self.assertEqual(decide.call_args.kwargs["knowledge"], "")
+        self.assertEqual(decide.call_args.kwargs["preferences"], "")
         owner.assert_called_once()
 
     @patch("src.api.remote_lab.auth.require_owner")

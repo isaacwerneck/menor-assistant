@@ -38,6 +38,15 @@ class ContextEngineTests(unittest.TestCase):
         self.assertLessEqual(sum(len(x["content"]) for x in result), 500)
         self.assertNotIn("mapeamento", " ".join(x["content"] for x in result))
 
+    def test_long_turn_keeps_final_correction_with_explicit_omission(self):
+        history = [{"role": "user", "content": "Projeto inicial Farol. " + "detalhe " * 250
+                    + "Correção final: Aurora, Ubuntu 22.04."}]
+        result = select_history(history, "Qual é o projeto?", max_chars=500)
+        self.assertLessEqual(len(result[0]["content"]), 500)
+        self.assertIn("Projeto inicial Farol", result[0]["content"])
+        self.assertIn("Correção final: Aurora, Ubuntu 22.04.", result[0]["content"])
+        self.assertIn("[trecho omitido]", result[0]["content"])
+
     def test_relevance_uses_unicode_not_keyword_routing(self):
         self.assertIn("distribuicao", terms("Distribuição?"))
         self.assertNotIn("qual", terms("Qual distribuição?"))

@@ -100,6 +100,22 @@ class ResearchTests(unittest.TestCase):
         self.assertIsNone(result["saved"])
         self.assertEqual(list(BrainStore().brain_dir.glob("conhecimentos/*/*.md")), [])
 
+    @patch.object(research, "investigate")
+    @patch.object(research, "plan", return_value={"action": "chat", "query": ""})
+    def test_research_word_in_negation_never_overrides_chat_decision(self, plan, investigate):
+        self.assertIsNone(research.handle("Não pesquise; apenas analise o texto fornecido.", []))
+        plan.assert_called_once()
+        investigate.assert_not_called()
+
+    @patch.object(research, "handle", return_value=None)
+    @patch.object(runner, "image_intent", return_value={"decision": "none"})
+    @patch.object(runner, "tool_intent", return_value=None)
+    def test_legacy_runner_allows_research_to_decline(self, tool, image, handle):
+        with patch.dict(os.environ, {"MENOR_INTELLIGENCE_ENABLED": "0"}):
+            _, response = runner._advance({"phase": "idle"}, "Não pesquise este texto.", [])
+        self.assertFalse(response["handled"])
+        handle.assert_called_once()
+
     @patch.object(research, "handle")
     def test_runner_routes_explicit_study_before_tool_building(self, handle):
         handle.return_value = {"reply": "Estudo com fontes.", "saved": None}

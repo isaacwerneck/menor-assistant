@@ -144,3 +144,25 @@ Detalhes: docs/chat_a_objetivos_contextuais.md.
   ativá-lo para todos os pedidos. Por padrão fica desligado por custo de CPU.
 
 Detalhes: [revisão de planos](docs/chat_a_revisao_de_planos.md).
+
+## Prioridade operacional — contexto e latência (19/10/2026)
+
+A avaliação remota encontrou espera elevada, perda de instruções finais,
+preferências ausentes no planejador e pesquisa disparada por palavra negada.
+As correções e observações estão no
+[relatório integrado](docs/chat_a_benchmark_real.md#avaliação-integrada-remota--19102026).
+
+- [x] Preservar pedido atual, fim dos turnos longos e memória já selecionada.
+- [x] Aplicar preferências no planejador e manter laboratório sem dados privados.
+- [x] Reduzir instruções redundantes, exigir JSON tipado e permitir resposta mínima.
+- [x] Compartilhar orçamento de histórico com o fallback e remover convite repetitivo.
+- [x] Respeitar decisão de não pesquisar; invalidar embeddings após troca de modelo.
+- [x] Ampliar lint para módulos operacionais e regressões dos caminhos corrigidos.
+- [ ] Confirmar revisão efetivamente carregada: laboratório retornou 404 no servidor.
+- [ ] Comparar modelo direto, planejador e chat completo após deploy, com casos inéditos.
+- [ ] Medir ganho real de latência/qualidade e consumo de recursos antes de trocar modelo.
+- [ ] Validar tarefa completa com pesquisa, arquivo sintético e ferramenta com recibo.
+
+Prioridade: estabilizar e medir o núcleo antes de expandir modelos, integrações
+ou autoedição. O objetivo Jarvis pessoal permanece; ganho cognitivo não é
+declarado a partir da quantidade de features ou de testes com mocks.

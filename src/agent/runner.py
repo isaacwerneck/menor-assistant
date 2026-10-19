@@ -454,7 +454,8 @@ def _advance(state, message, history, project=None):
         return {"phase": "idle"}, {"handled": False}
     if research.RESEARCH.search(message):
         evidence = research.handle(message, history)
-        return _answer(evidence["reply"])
+        if evidence is not None:
+            return _answer(evidence["reply"])
     if re.search(r"\b(autoanalise|autoanalisa|se analise|melhore seu|melhore voce|se melhore|corrija seu)\b", normal):
         return _tool_loop(message, history)
     building = tool_intent(message)

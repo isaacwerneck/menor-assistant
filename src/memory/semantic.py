@@ -94,9 +94,18 @@ class SemanticIndex:
             raise ValueError("Consulta semântica inválida.")
         if not isinstance(limit, int) or not 1 <= limit <= 5:
             raise ValueError("Limite inválido.")
+        model = os.environ["MENOR_EMBED_MODEL"].strip()
         with _LOCK:
             passages = _chunks(self.store)
             with closing(self._connect()) as conn:
+                # Vetores de modelos diferentes não compartilham o mesmo espaço semântico.
+                with conn:
+                    conn.execute("CREATE TABLE IF NOT EXISTS embedding_model (name TEXT NOT NULL)")
+                    stored_model = conn.execute("SELECT name FROM embedding_model").fetchone()
+                    if stored_model != (model,):
+                        conn.execute("DELETE FROM chunks")
+                        conn.execute("DELETE FROM embedding_model")
+                        conn.execute("INSERT INTO embedding_model VALUES (?)", (model,))
                 keys = set((source, line) for source, line, _ in passages)
                 with conn:
                     for source, line in conn.execute("SELECT source, line FROM chunks").fetchall():

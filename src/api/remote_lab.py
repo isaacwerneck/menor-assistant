@@ -90,7 +90,7 @@ def _planner(payload):
         payload.message,
         [item.model_dump() for item in payload.history],
         tools=[], capabilities=[], knowledge="", feedback_examples=[],
-        paused_goals=[], pending=None, last_result=None,
+        paused_goals=[], pending=None, last_result=None, preferences="",
     )
     if result is None:
         return {"status": "no_valid_decision", "reply":

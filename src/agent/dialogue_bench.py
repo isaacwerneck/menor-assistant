@@ -84,7 +84,8 @@ def evaluate_dialogues(decider=intelligence.decide, cases=DIALOGUES):
     for case in cases:
         history = [{"role": role, "content": text} for role, text in case.turns]
         try:
-            result = decider(case.request, history, capabilities=[], tools=[])
+            result = decider(case.request, history, capabilities=[], tools=[],
+                             preferences="", feedback_examples=[])
         except (ValueError, OSError, TypeError):
             result = None
         move = result.get("move") if isinstance(result, dict) else None

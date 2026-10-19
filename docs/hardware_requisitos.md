@@ -7,7 +7,13 @@
 
 ## Modelos Hugging Face Recomendados (Inferência em CPU com AVX-512)
 
-Com 32 GB de RAM e AVX-512, é possível rodar modelos de até 14B com ótima velocidade em CPU:
+Os candidatos abaixo são referências de planejamento, não benchmarks deste notebook.
+Caber na RAM não comprova velocidade, qualidade ou capacidade de usar ferramentas.
+Na avaliação remota de 19/10/2026, o servidor reportou somente
+`qwen2.5-coder:7b`; pedidos curtos também apresentaram espera perceptível.
+Antes de trocar o modelo, comparar inferência direta e planejador em `/lab/view`
+com os mesmos casos, versão e carga. Não aumentar parâmetros como tentativa
+presumida de resolver latência. Valores de RAM abaixo são estimativas antigas:
 
 | Modelo | Parâmetros | Quantização | Uso de RAM | Foco |
 | :--- | :--- | :--- | :--- | :--- |
@@ -16,4 +22,6 @@ Com 32 GB de RAM e AVX-512, é possível rodar modelos de até 14B com ótima ve
 | **Llama 3.1** | 8B | GGUF Q4_K_M | ~6.0 GB | Conversação e planejamento geral |
 | **Phi-4** | 14B | GGUF Q4_K_M | ~9.8 GB | Lógica e matemática |
 
-> **Vantagem dos 32 GB**: Permite rodar o modelo de 14B, o Whisper (áudio) e o TTS simultaneamente, restando mais de 15 GB de folga.
+> A memória disponível depende de quantização, janela de contexto, caches e serviços
+> concorrentes. A execução simultânea de 14B, Whisper e TTS e a folga de 15 GB
+> não foram medidas; não são requisitos validados ou promessa de desempenho.
