@@ -11,6 +11,7 @@ import sys
 from PIL import Image
 
 from src.agent.model_catalog import MODEL_IMAGE_REPO
+from src.agent.artifacts import format_image
 from src.tools import local_images
 from src.tools.images import _prompt, _save
 
@@ -58,11 +59,12 @@ def generate(arguments):
     tensor = pipeline.generate(prompt, width=512, height=512,
                                num_inference_steps=steps, num_images_per_prompt=1)
     picture = Image.fromarray(tensor.data[0])
+    picture, formatting = format_image(picture, prompt)
     output = io.BytesIO()
     picture.save(output, format="PNG")
     return {
         "status": "completed", "kind": "generate", "prompt": prompt,
-        **_save(output.getvalue()),
+        **formatting, **_save(output.getvalue()),
     }
 
 
