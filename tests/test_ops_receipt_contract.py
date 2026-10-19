@@ -104,8 +104,8 @@ class ReceiptContractTests(unittest.TestCase):
         self.assertEqual(contract.agent_result(answer).status, "ok")
         self.assertEqual(contract.agent_result({**answer, "reply": ""}).status, "critical")
         self.assertEqual(contract.agent_result({**answer, "handled": 1}).status, "critical")
-        self.assertEqual(contract.agent_result({**answer, "events": [{"tool": "projects.list",
-                                                                       "status": "planned"}]}).status, "critical")
+        event = {"tool": "projects.list", "status": "planned"}
+        self.assertEqual(contract.agent_result({**answer, "events": [event]}).status, "critical")
 
     def test_unhandled_without_reply_is_valid(self):
         self.assertEqual(contract.agent_result({"handled": False, "phase": "idle"}).status, "ok")
