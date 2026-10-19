@@ -4,7 +4,7 @@ Um arquivo tecnicamente válido não significa que a cena solicitada foi atendid
 """
 import re
 
-SIZES = re.compile(r"(?<!\d)(\d{2,4})\s*[x×]\s*(\d{2,4})(?!\d)", re.I)
+SIZES = re.compile(r"(?<!\d)(\d{1,4})\s*[x×]\s*(\d{1,4})(?!\d)", re.I)
 
 
 def requested_size(prompt):
