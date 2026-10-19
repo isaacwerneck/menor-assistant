@@ -1,5 +1,12 @@
 # MENOR INTELLIGENCE ENGINE — Arquitetura e roadmap
 
+> **Direção consolidada em 19/10/2026:** [Plano integrado A–E](docs/plano_integrado_a_e.md).
+> O Menor interpreta por modelo e contexto, não por palavras isoladas; aprendizado
+> é supervisionado e nenhuma inferência concede permissão. A lista histórica
+> abaixo preserva decisões e entregas anteriores, mas não é comprovação de 100%
+> nem substitui critérios atuais de aceite e validação no Ubuntu.
+
+
 ## Objetivo
 
 O Menor deve entender objetivos de qualquer área, manter contexto entre turnos,

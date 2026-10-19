@@ -129,11 +129,17 @@ def main(argv=None):
     parser.add_argument("--live", action="store_true", help="Executa modelo local contra cenários")
     parser.add_argument("--continuity", action="store_true",
                         help="Avalia troca, refinamento e retomada de objetivos")
+    parser.add_argument("--dialogues", action="store_true",
+                        help="Avalia diálogos multidomínio e respostas factuais focais")
     args = parser.parse_args(argv)
     if not args.live:
         print("Passe --live para avaliar o modelo local; nada foi executado.")
         return 0
-    result = evaluate_continuity() if args.continuity else evaluate()
+    if args.dialogues:
+        from src.agent.dialogue_bench import evaluate_dialogues
+        result = evaluate_dialogues()
+    else:
+        result = evaluate_continuity() if args.continuity else evaluate()
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["score"] >= 0.6 else 1
 
