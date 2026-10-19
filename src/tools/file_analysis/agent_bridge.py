@@ -63,8 +63,18 @@ def _context_data(receipt, file_id):
                 return None
         except (TypeError, ValueError):
             return None
+        source = item.get("source", "extracted")
+        if source not in ("ocr", "extracted"):
+            return None
+        if source == "ocr":
+            if (anchor.get("kind") != "ocr_pdf_page"
+                    or anchor.get("ocr_quality_verified") is not False
+                    or type(anchor.get("page")) is not int
+                    or type(anchor.get("start")) is not int
+                    or citation != f"file:{file_id}:ocr:page:{anchor['page']}:{anchor['start']}"):
+                return None
         selected.append({"text": text, "citation": citation, "anchor": anchor,
-                         "source": "ocr" if item.get("source") == "ocr" else "extracted"})
+                         "source": source})
     if sum(len(item["text"]) for item in selected) > 4000:
         return None
     return {
@@ -72,6 +82,7 @@ def _context_data(receipt, file_id):
                  "format": str(info.get("format", ""))[:16]},
         "items": selected,
         "source_truncated": receipt.get("source_truncated") is True,
+        "ocr_source_truncated": receipt.get("ocr_source_truncated") is True,
         "selection_truncated": receipt.get("selection_truncated") is True,
         "content_kind": "mixed_or_ocr_text" if any(x["source"] == "ocr" for x in selected)
                         else "extracted_text",

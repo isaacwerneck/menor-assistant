@@ -15,7 +15,9 @@ def document(text=""):
 
 
 def ocr_result(text="Prazo de entrega sexta-feira"):
-    return {"status": "executed", "file": {"file_id": ID, "sha256": HASH},
+    return {"tool": "files.ocr", "status": "executed",
+            "file": {"file_id": ID, "sha256": HASH, "format": "pdf"},
+            "evidence": [{"kind": "ocr_pdf_page", "page": 1, "sha256": HASH}],
             "page": 1, "language": "por", "text": text,
             "validation": {"file_verified": True, "ocr_quality_verified": False}}
 
@@ -63,6 +65,43 @@ class OcrContextTests(unittest.TestCase):
         result = retrieve(ID, "Prazo", ocr_page=1)
         self.assertEqual(result["status"], "ocr_unavailable")
         self.assertFalse(result["grounded"])
+
+    @patch("src.tools.file_analysis.context.service.inspect")
+    @patch("src.tools.file_analysis.ocr.ocr_page")
+    def test_ocr_evidence_mismatch_rejected(self, ocr, inspect):
+        inspect.return_value = document()
+        for change in (
+            {"kind": "other", "page": 1, "sha256": HASH},
+            {"kind": "ocr_pdf_page", "page": 2, "sha256": HASH},
+            {"kind": "ocr_pdf_page", "page": 1, "sha256": "0" * 64},
+        ):
+            ocr.return_value = ocr_result()
+            ocr.return_value["evidence"] = [change]
+            self.assertEqual(retrieve(ID, "Prazo", ocr_page=1)["status"], "failed")
+
+    @patch("src.tools.file_analysis.context.service.inspect")
+    @patch("src.tools.file_analysis.ocr.ocr_page")
+    def test_malformed_receipt_is_rejected(self, ocr, inspect):
+        inspect.return_value = document()
+        for value in (None, [], "executed"):
+            ocr.return_value = value
+            self.assertEqual(retrieve(ID, "Prazo", ocr_page=1)["status"], "failed")
+
+    @patch("src.tools.file_analysis.context.service.inspect")
+    @patch("src.tools.file_analysis.ocr.ocr_page")
+    def test_ocr_truncation_exposed(self, ocr, inspect):
+        inspect.return_value = document()
+        ocr.return_value = ocr_result()
+        ocr.return_value["truncated"] = True
+        result = retrieve(ID, "Prazo", ocr_page=1)
+        self.assertTrue(result["ocr_source_truncated"])
+
+    @patch("src.tools.file_analysis.context.service.inspect")
+    def test_invalid_ocr_language_rejected(self, inspect):
+        for language in (None, [], "fra", "por;eng"):
+            with self.assertRaises(ValueError):
+                retrieve(ID, "Prazo", ocr_page=1, ocr_language=language)
+        inspect.assert_not_called()
 
     @patch("src.tools.file_analysis.context.service.inspect")
     def test_reject_invalid_page_before_parsing(self, inspect):
