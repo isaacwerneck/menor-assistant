@@ -77,8 +77,9 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="")
         with requests.post(
             os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/chat",
             json={
-                "model": os.environ.get("OLLAMA_ROUTER_MODEL",
-                                        os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")),
+                "model": os.environ.get("MENOR_REASONING_MODEL") or os.environ.get(
+                    "OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
+                ),
                 "messages": [{"role": "system", "content": SYSTEM}, *turns,
                              {"role": "user", "content": json.dumps(context, ensure_ascii=False)}],
                 "format": "json", "stream": False,
