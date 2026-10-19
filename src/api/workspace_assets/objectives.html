@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d0e16">
+  <title>Objetivos — Menor AI</title>
+  <link rel="stylesheet" href="/workspace/assets.css">
+</head>
+<body>
+<a href="#content" class="skip-link">Ir ao conteúdo</a>
+<div class="shell">
+  <aside class="sidebar">
+    <a href="/" class="brand" aria-label="Menor AI — conversas">
+      <span class="mark" aria-hidden="true">M</span><span>Menor <span class="quiet">AI</span></span>
+    </a>
+    <nav aria-label="Navegação principal" class="side-links">
+      <a href="/">Conversas</a>
+      <span aria-current="page">Objetivos</span>
+      <a href="/files/view">Arquivos</a>
+    </nav>
+    <p class="sidebar-foot">Dados da sessão privada</p>
+  </aside>
+  <div class="main-shell">
+    <header class="topbar">
+      <div class="topbar-name"><a href="/" aria-label="Voltar ao chat">←</a> Objetivos e tarefas</div>
+      <span class="topbar-tag">Consulta somente leitura</span>
+    </header>
+    <main id="content" class="content">
+      <div class="intro">
+        <div><p class="eyebrow">MENOR AI / ATIVIDADES</p>
+          <h1>Seus objetivos</h1>
+          <p>Acompanhe estados que o Menor registrou de verdade, sem progresso estimado.</p>
+        </div>
+        <button type="button" id="refresh">Atualizar</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite">Consultando atividades…</p>
+      <section aria-labelledby="goals-title" class="section">
+        <div class="section-heading">
+          <div><h2 id="goals-title">Objetivos das conversas</h2>
+            <p>Estados disponíveis das conversas salvas neste navegador.</p></div>
+        </div>
+        <div id="goals" class="cards" aria-live="polite"></div>
+      </section>
+      <section aria-labelledby="missions-title" class="section">
+        <div class="section-heading with-filter">
+          <div><h2 id="missions-title">Missões de ferramentas</h2>
+            <p>Até 20 missões recentes, conforme o servidor.</p></div>
+          <div class="select-box"><label for="mission-filter">Mostrar</label>
+            <select id="mission-filter">
+              <option value="all">Todas</option>
+              <option value="active">Em andamento</option>
+              <option value="complete">Finalizadas</option>
+            </select>
+          </div>
+        </div>
+        <div id="missions" class="cards" aria-live="polite"></div>
+      </section>
+      <p class="source-note">Os dados acima vêm de <code>/agent/runs</code> e <code>/agent/missions</code>.
+        Uma missão disponível não significa que tenha sido executada no hardware.
+        Aprovações, recuperação e execução continuam exclusivamente na conversa original.</p>
+    </main>
+    <nav class="mobile-nav" aria-label="Navegação rápida">
+      <a href="/">Conversas</a><span aria-current="page">Objetivos</span>
+      <a href="/files/view">Arquivos</a>
+    </nav>
+  </div>
+</div>
+<script src="/workspace/assets.js" defer></script>
+</body>
+</html>
