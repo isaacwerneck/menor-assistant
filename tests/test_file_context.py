@@ -35,10 +35,12 @@ class GroundedContextTests(unittest.TestCase):
     def test_xlsx_preserves_sheet_row_and_column(self, inspect):
         inspect.return_value = receipt("xlsx", [
             {"type": "sheet", "name": "Contas", "rows": [
-                {"number": 1, "cells": [{"column": "A", "value": "Cliente"},
-                                         {"column": "B", "value": "Valor"}]},
-                {"number": 7, "cells": [{"column": "A", "value": "Energia"},
-                                         {"column": "B", "value": 235}]},
+                {"number": 1, "cells": [
+                    {"column": "A", "value": "Cliente"},
+                    {"column": "B", "value": "Valor"}]},
+                {"number": 7, "cells": [
+                    {"column": "A", "value": "Energia"},
+                    {"column": "B", "value": 235}]},
             ]},
         ])
         result = retrieve("a" * 32, "Quanto custa Energia?", max_items=1)
