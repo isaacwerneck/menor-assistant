@@ -190,3 +190,47 @@ Limites adicionais:
 **Critério de aceite:** não declarar OCR, compreensão visual,
 conexão com o agente nem resistência a arquivos hostis como
 capacidades validadas por esses testes.
+
+
+## Chat B v3 — consultas documentais e visão local na interface privada
+
+Este incremento não modifica o cérebro do Chat A. A página autenticada
+\`/files/view\` passa a oferecer duas ações explícitas após upload:
+
+- **Localizar trechos e fontes:** \`POST /files/{file_id}/context\` com JSON
+  \`{"question":"..." }\` até 500 caracteres. Usa o extrator isolado e
+  a seleção lexical \`src.tools.file_analysis.context.retrieve\`. Retorna
+  citações de página/bloco/linha/aba, ou \`no_text\` se não houver texto
+  (por exemplo, um PDF digitalizado). **Não é uma resposta do Qwen**.
+- **Interpretar imagem com Ollama local:** \`POST /files/{file_id}/vision\`,
+  mesmo contrato de pergunta. Exige modelo previamente instalado e
+  configurado em \`MENOR_VISION_MODEL\`. Verifica formato/integridade pelo
+  worker local antes de enviar pixels ao Ollama de loopback, não envia à
+  nuvem e não baixa modelos. O parecer mantém
+  \`validation.semantic_verified: false\` mesmo quando o JSON está correto.
+- \`GET /files/vision/status\` informa se o Ollama reporta o modelo.
+  **Modelo detectado ≠ entendimento ou precisão validados.**
+
+Todas as rotas exigem autenticação e verificam origem em requisições com
+\`Origin\`. Perguntas não entram em URLs ou arquivos do cérebro:
+vão no corpo JSON e têm comprimento controlado. O navegador usa
+\`textContent\` para mostrar resultados, nunca renderiza HTML extraído.
+O botão de visão fica desativado até o modelo estar disponível;
+o de contexto é usado apenas em documentos com texto.
+
+**O que ainda falta:** benchmark multimodal com imagens inéditas,
+OCR para PDFs digitalizados, uso desses resultados pelo chat principal
+do Chat A, e instalação/medição opcional de modelos no notebook.
+Em nenhuma situação esta UI conclui que o arquivo visual produzido
+está correto apenas porque um modelo retornou uma descrição.
+
+Revalidação após merge:
+
+\`\`\`bash
+python -m unittest discover -s tests -p 'test_file*.py' -v
+python -m unittest discover -s tests -p 'test_vision_tools.py' -v
+\`\`\`
+
+O CI cobre autenticação, prompt enviado apenas ao loopback, limite da
+pergunta, ausência de modelo, recuperação de referências e falha explícita.
+Benchmarks de qualidade e testes reais de RAM/CPU são uma etapa separada.
