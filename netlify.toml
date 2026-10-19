@@ -1,0 +1,17 @@
+# Somente landing page. NÃO faça proxy de /chat ou /agent para o backend.
+# Netlify proxy pode expirar após ~26 s, interrompendo inferência longa do Ollama.
+[build]
+command = "python3 scripts/build_netlify_site.py"
+publish = "dist"
+
+[build.environment]
+PYTHON_VERSION = "3.12"
+
+[[headers]]
+for = "/*"
+[headers.values]
+  Content-Security-Policy = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; upgrade-insecure-requests"
+  X-Content-Type-Options = "nosniff"
+  X-Frame-Options = "DENY"
+  Referrer-Policy = "no-referrer"
+  Cache-Control = "public, max-age=300"

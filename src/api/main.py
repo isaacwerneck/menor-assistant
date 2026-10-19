@@ -39,6 +39,7 @@ from src.tools.file_analysis.api import router as file_analysis_router
 from src.api.workspace import router as workspace_router
 from src.api.system_workspace import router as system_workspace_router
 from src.api.private_diagnostics import router as private_diagnostics_router
+from src.api.remote_lab import router as remote_lab_router
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ app.include_router(file_analysis_router)
 app.include_router(workspace_router)
 app.include_router(system_workspace_router)
 app.include_router(private_diagnostics_router)
+app.include_router(remote_lab_router)
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
@@ -584,8 +586,10 @@ def route_intent(body: IntentRequest, request: Request):
 
 
 def require_chat_access(request: Request):
-    # A compatibilidade do chat anterior se mantém até a primeira configuração.
-    if auth.configured():
+    # Na rede privada sem proprietário configurado permanece o onboarding.
+    # Quando houver URL pública configurada, nunca oferecer chat anônimo
+    # mesmo que o dono ainda não tenha terminado a configuração local.
+    if auth.configured() or auth.public_origin():
         auth.require_owner(request)
 
 

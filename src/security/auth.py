@@ -11,6 +11,7 @@ import os
 import secrets
 import threading
 import time
+from urllib.parse import urlsplit
 
 from fastapi import HTTPException
 
@@ -55,17 +56,66 @@ def _private_network(request):
         return False
 
 
+def public_origin():
+    """Origem HTTPS canônica configurada no servidor, nunca em headers recebidos.
+
+    Sem variável, mantém o comportamento local já existente.
+    """
+    value = os.environ.get("MENOR_PUBLIC_ORIGIN", "").strip()
+    if not value:
+        return None
+    if len(value) > 253 or value != value.lower():
+        raise RuntimeError("MENOR_PUBLIC_ORIGIN inválida: use https://subdominio.exemplo.com.")
+    parsed = urlsplit(value)
+    host = parsed.hostname or ""
+    labels = host.split(".")
+    if all(label.isdecimal() for label in labels):
+        raise RuntimeError("MENOR_PUBLIC_ORIGIN precisa ser um domínio DNS, não IP.")
+    if (parsed.scheme != "https" or parsed.netloc != host or
+            len(labels) < 2 or any(not label or len(label) > 63 or
+            label[0] == "-" or label[-1] == "-" or
+            any(not (char.isascii() and (char.isalnum() or char == "-"))
+                for char in label) for label in labels) or
+            parsed.path or parsed.query or parsed.fragment or parsed.username or
+            parsed.password or parsed.port):
+        raise RuntimeError("MENOR_PUBLIC_ORIGIN inválida: HTTPS com hostname, sem path/porta.")
+    return value
+
+
 def check_origin(request):
-    """Prevenir POST cross-origin. Host/Origin devem corresponder exatamente."""
+    """Sem confiar em X-Forwarded-Host/Proto, preserva a origem HTTPS pública."""
+    canonical = public_origin()
     origin = request.headers.get("origin")
+    host = request.headers.get("host", "")
+    if canonical:
+        expected_host = urlsplit(canonical).hostname
+        if host == expected_host:
+            # Para host público, exigir prova de origem em qualquer escrita.
+            # Cookies SameSite=Strict continuam sendo uma defesa adicional.
+            if request.method.upper() not in ("GET", "HEAD", "OPTIONS"):
+                if origin != canonical:
+                    raise HTTPException(403, "Origem HTTPS pública não autorizada.")
+            elif origin and origin != canonical:
+                raise HTTPException(403, "Origem HTTPS pública não autorizada.")
+            return
+        # Só o loopback pode ser usado como hostname alternativo no host.
+        # O túnel usa o hostname público; não admitir Host arbitrário do cliente.
+        if host not in ("127.0.0.1", "127.0.0.1:8000", "localhost", "localhost:8000"):
+            raise HTTPException(403, "Hostname público não autorizado.")
+        if not request.client or request.client.host not in ("127.0.0.1", "::1"):
+            raise HTTPException(403, "Acesso local indisponível.")
     if origin:
-        expected = f"{request.url.scheme}://{request.headers.get('host', '')}"
+        expected = f"{request.url.scheme}://{host}"
         if origin.rstrip("/") != expected:
             raise HTTPException(403, "Origem não autorizada.")
 
 
 def create_owner(request, password):
     """Permite a configuração inicial por UI apenas em rede privada (primeiro usuário)."""
+    # Nunca deixar Cloudflare publicar /auth/setup: o conector enxerga
+    # loopback no servidor, portanto request.client.is_private não basta.
+    if public_origin():
+        raise HTTPException(403, "Crie a senha localmente antes de ativar o acesso externo.")
     if not _private_network(request):
         raise HTTPException(403, "Configuração inicial disponível apenas em rede privada.")
     check_origin(request)
@@ -155,5 +205,8 @@ def require_owner(request):
 def set_session_cookie(response, request, token):
     response.set_cookie(
         COOKIE_NAME, token, max_age=SESSION_SECONDS, httponly=True,
-        secure=request.url.scheme == "https", samesite="strict", path="/",
+        secure=(request.url.scheme == "https" or
+                (public_origin() is not None and
+                 request.headers.get("host") == urlsplit(public_origin()).hostname)),
+        samesite="strict", path="/",
     )
