@@ -287,6 +287,15 @@ def _advance(state, message, history):
             + json.dumps(receipt["result"], ensure_ascii=False)[:6000],
         )
         result["events"] = [{"tool": receipt["tool"], "status": receipt["status"]}]
+        if receipt["tool"] == "images.generate" and receipt["status"] == "executed":
+            proof = artifact_receipt(receipt["result"])
+            current["last_result"] = proof
+            result["artifact"] = proof
+            result["image"] = proof["url"]
+            result["reply"] = (
+                "Imagem produzida e recibo salvo. A integridade do arquivo "
+                "não comprova o assunto, cores nem estilo solicitados."
+            )
         return current, result
     if state["phase"] == "mission":
         return _mission_turn(state, message)
