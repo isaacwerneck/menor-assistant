@@ -942,11 +942,13 @@ test('cancelamento de geração visual não apaga anexo escolhido em outra conve
     await new Promise(resolve => setImmediate(resolve));
     const previous = ui.context.getActiveConv();
     ui.context.newChat();
-    ui.context.selectedImageFile = new Blob(['novo arquivo']);
+    ui.context.imageSelected({ files: [{ name: 'novo.png', type: 'image/png', size: 123 }] });
     release();
     await running;
     assert.match(previous.messages.at(-1).content, /interrompida/i);
     assert.equal(previous.messages.some(m => m.image), false);
+    assert.equal(ui.elements.get('imageAttachmentName').hidden, false);
+    assert.match(ui.elements.get('imageAttachmentName').textContent, /novo.png/);
 });
 
 test('trocar de conversa durante geração permite navegar e não contamina histórico', async () => {
