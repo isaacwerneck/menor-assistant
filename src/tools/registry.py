@@ -44,7 +44,8 @@ TOOLS = {
         "system.diagnose", "Resume falhas das ferramentas em auditoria local.", "read", False, (),
     ),
     "images.generate": Tool(
-        "images.generate", "Gera imagem via subagente local e informa qualidade da revisão.", "write", True, ("prompt",),
+        "images.generate", "Gera imagem via subagente local e informa limites de revisão.",
+        "write", True, ("prompt",),
     ),
     "images.edit": Tool(
         "images.edit", "Edita imagem já salva pelo Menor.", "external", True, ("image_id", "prompt"),
