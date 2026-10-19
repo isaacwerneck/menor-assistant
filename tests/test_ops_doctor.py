@@ -2,7 +2,6 @@
 
 import io
 import json
-import subprocess
 import unittest
 from contextlib import redirect_stdout
 from unittest.mock import MagicMock, patch
