@@ -1022,3 +1022,212 @@ test('D14: aprovação pendente permanece isolada após alternar e voltar', asyn
     assert.equal(first.activeMission.status, 'awaiting_approval');
     assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
 });
+
+
+test('Chat E: objetivos consultam estado real, sem percentuais fabricados', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('Meu projeto <img src=x>');
+    const calls = [];
+    ui.context.fetch = async url => {
+        calls.push(url);
+        assert.equal(url, '/agent/runs/' + conv.id);
+        return { ok: true, status: 200, json: async () => ({
+            phase: 'goal', goal: 'Planejar aplicativo', steps: ['Pesquisar bibliotecas', 'Testar no servidor'],
+            paused_goals: [{ id: 'teste', goal: 'Outro objetivo', status: 'paused', steps: ['Revisar ideia'] }],
+        }) };
+    };
+    await ui.context.openObjectives();
+    const list = ui.elements.get('objectivesList');
+    assert.equal(calls.length, 1);
+    assert.equal(list.children.length, 2);
+    assert.equal(list.children[0].children[1].textContent, 'Planejar aplicativo');
+    assert.equal(list.children[0].children[3].children[0].textContent, 'Pesquisar bibliotecas');
+    assert.match(list.children[0].children[0].textContent, /execução não comprovada/i);
+    assert.doesNotMatch(list.children[0].children[0].textContent, /%/);
+    ui.context.setObjectiveFilter('paused');
+    assert.equal(list.children.length, 1);
+    assert.equal(list.children[0].children[1].textContent, 'Outro objetivo');
+});
+
+test('Chat E: indisponibilidade é exibida sem declarar objetivo concluído', async () => {
+    const ui = browser();
+    ui.context.createConversation('Conversa não disponível');
+    ui.context.fetch = async () => { throw new Error('offline'); };
+    await ui.context.openObjectives();
+    const list = ui.elements.get('objectivesList');
+    assert.equal(list.children.length, 1);
+    assert.match(list.children[0].children[1].textContent, /não foi possível consultar/i);
+    assert.match(list.children[0].children[0].textContent, /indisponível/i);
+});
+
+test('Chat E: consulta de objetivos nunca invoca execução ou recuperação', async () => {
+    const ui = browser();
+    ui.context.createConversation('Objetivo real');
+    const calls = [];
+    ui.context.fetch = async (url, options) => {
+        calls.push({ url, options });
+        return { ok: true, status: 200, json: async () => ({ phase: 'idle' }) };
+    };
+    await ui.context.openObjectives();
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /^\/agent\/runs\/[a-z0-9]+$/);
+    assert.equal(calls[0].options.method, undefined);
+    assert.equal(calls[0].options.credentials, 'same-origin');
+    assert.match(ui.elements.get('objectivesList').textContent, /nenhum objetivo registrado/i);
+});
+
+test('Chat E: painel completo preserva metas pausadas de sessões ociosas', async () => {
+    const javascript = fs.readFileSync(path.join(__dirname,
+        '../src/api/workspace_assets/assets.js'), 'utf8');
+    const elements = new Map();
+    function element(tag = 'div') {
+        return {
+            tag, textContent: '', className: '', children: [], disabled: false, value: 'all',
+            append(...items) { this.children.push(...items); },
+            replaceChildren(...items) { this.children = [...items]; },
+            get childNodes() { return this.children; },
+            addEventListener() {},
+        };
+    }
+    for (const name of ['goals', 'missions', 'status', 'refresh', 'mission-filter']) {
+        elements.set(name, element());
+    }
+    const conv = { id: 'abcde12345', title: 'Conversa de testes' };
+    const requests = [];
+    const context = vm.createContext({
+        document: {
+            getElementById(id) { return elements.get(id); },
+            createElement: element,
+        },
+        localStorage: { getItem() { return JSON.stringify([conv]); } },
+        fetch: async (url, options) => {
+            requests.push({ url, options });
+            return { ok: true, status: 200, json: async () => url === '/agent/missions'
+                ? { items: [] } : { phase: 'idle', paused_goals: [
+                    { goal: 'Meta anteriormente pausada', steps: ['Revisar escopo'] },
+                ] } };
+        },
+        Date, encodeURIComponent, console,
+    });
+    vm.runInContext(javascript, context);
+    await context.refresh();
+    const items = elements.get('goals').children;
+    assert.equal(items.length, 1);
+    assert.equal(items[0].children[0].textContent, 'Meta anteriormente pausada');
+    assert.match(items[0].children[1].textContent, /paused/);
+    assert.equal(items[0].children[3].children[0].textContent, 'Revisar escopo');
+    assert.ok(requests.every(request => request.options.method === undefined));
+    assert.ok(requests.every(request => request.options.credentials === 'same-origin'));
+});
+
+test('D01: confirmação solta não cria autorização nem execução supervisionada', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'eu aprovo';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.length, 0);
+    assert.equal(ui.repairCalls.length, 0);
+    assert.equal(ui.memories.length, 0);
+});
+
+test('D02: pergunta de autorização conserva estado sem baixar ou enfileirar', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('missão');
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.elements.get('userInput').value = 'que aprovação?';
+    await ui.context.sendMsg();
+    assert.equal(conv.activeMission.status, 'awaiting_approval');
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
+    assert.match(conv.messages.at(-1).content, /não iniciei|ainda não iniciei/i);
+});
+
+test('D03: autorização explícita é idempotente após a missão entrar na fila', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('missão');
+    conv.activeMission = { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'awaiting_approval' };
+    ui.elements.get('userInput').value = 'eu aprovo';
+    await ui.context.sendMsg();
+    assert.equal(conv.activeMission.status, 'queued');
+    ui.elements.get('userInput').value = 'eu aprovo';
+    await ui.context.sendMsg();
+    assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 1);
+});
+
+test('D05: pedido de imagem incompleto não gera arquivo até receber detalhes', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'quero q vc crie uma imagem pra mim';
+    await ui.context.sendMsg();
+    const conv = ui.context.getActiveConv();
+    assert.equal(conv.pendingImage.kind, 'generate');
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 0);
+    assert.match(conv.messages.at(-1).content, /imagem|descrev|cena/i);
+});
+
+test('D06: imagem de outra conversa não é recuperada por confirmação genérica', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
+    await ui.context.sendMsg();
+    const previous = ui.context.getActiveConv();
+    ui.context.newChat();
+    ui.elements.get('userInput').value = 'cadê a imagem que vc gerou? me manda';
+    await ui.context.sendMsg();
+    const current = ui.context.getActiveConv();
+    assert.notEqual(current.id, previous.id);
+    assert.equal(current.messages.some(x => x.image), false);
+    assert.equal(ui.imageCalls.filter(x => x.type === 'generate').length, 1);
+});
+
+test('D09: histórico enviado ao agente contém apenas mensagens da conversa ativa', async () => {
+    const ui = browser();
+    const first = ui.context.createConversation('segredo da primeira conversa');
+    first.messages.push({ role: 'user', content: 'contexto exclusivo da primeira conversa' });
+    ui.context.newChat();
+    const second = ui.context.createConversation('segunda conversa');
+    second.messages.push({ role: 'user', content: 'contexto exclusivo da segunda conversa' });
+    ui.elements.get('userInput').value = 'me ajude com esse assunto';
+    await ui.context.sendMsg();
+    assert.equal(ui.agentCalls.length, 1);
+    const history = JSON.stringify(ui.agentCalls[0].history);
+    assert.match(history, /contexto exclusivo da segunda conversa/);
+    assert.doesNotMatch(history, /contexto exclusivo da primeira conversa/);
+});
+
+test('D10: falha 409 na recuperação não libera execução pendente', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('interrompida');
+    conv.pendingRunRecovery = true;
+    const calls = [];
+    ui.context.fetch = async url => {
+        calls.push(url);
+        return { ok: false, status: 409, json: async () => ({ detail: 'active' }) };
+    };
+    ui.elements.get('userInput').value = 'sim';
+    await ui.context.sendMsg();
+    assert.equal(calls.length, 1);
+    assert.match(calls[0], /\/recover$/);
+    assert.equal(conv.pendingRunRecovery, true);
+    assert.match(conv.messages.at(-1).content, /operação ativa/i);
+});
+
+test('D12: recibo sem arquivo verificado não afirma integridade válida', () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('imagem');
+    conv.messages.push({ role: 'bot', content: 'Resultado parcial.',
+        artifact: { kind: 'image', prompt: 'cartaz azul', actual_size: [256, 256],
+            file_verified: false, content_verified: false } });
+    const history = ui.context.buildHistory(conv.messages, 'posso publicar?');
+    assert.match(history.at(-1).content, /integridade: não confirmada/);
+    assert.match(history.at(-1).content, /conteúdo visual: NÃO verificado/);
+});
+
+test('D14: histórico de cada conversa mantém sua própria ordem cronológica', () => {
+    const ui = browser();
+    const first = ui.context.createConversation('primeira');
+    first.messages.push({ role: 'user', content: 'primeiro A' }, { role: 'bot', content: 'segundo A' });
+    ui.context.newChat();
+    const second = ui.context.createConversation('segunda');
+    second.messages.push({ role: 'user', content: 'primeiro B' }, { role: 'bot', content: 'segundo B' });
+    const a = ui.context.buildHistory(first.messages, 'continua A');
+    const b = ui.context.buildHistory(second.messages, 'continua B');
+    assert.deepEqual(Array.from(a, x => x.content), ['primeiro A', 'segundo A']);
+    assert.deepEqual(Array.from(b, x => x.content), ['primeiro B', 'segundo B']);
+});
