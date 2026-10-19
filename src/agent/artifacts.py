@@ -4,7 +4,7 @@ Um arquivo tecnicamente válido não significa que a cena solicitada foi atendid
 """
 import re
 
-SIZES = re.compile(r"(?<!\d)(\d{2,4})\s*[x×]\s*(\d{2,4})(?!\d)", re.I)
+SIZES = re.compile(r"(?<!\d)(\d{1,4})\s*[x×]\s*(\d{1,4})(?!\d)", re.I)
 
 
 def requested_size(prompt):
@@ -63,8 +63,9 @@ def artifact_receipt(produced):
         "file_verified": bool(review.get("passed")),
         "content_verified": review.get("content_verified") is True,
         "content_description": str(visual.get("description", ""))[:500],
-        "vision_model_assessment": visual.get("model_matches_brief")
-                                   if visual.get("available") else None,
+        "vision_model_assessment": (
+            visual.get("model_matches_brief") if visual.get("available") else None
+        ),
         "limitation": (
             "Arquivo válido não confirma que o tema, as cores ou o estilo pedidos aparecem na imagem."
         ),

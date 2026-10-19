@@ -417,3 +417,16 @@ permissão. O cérebro não deve inventar execução nem salvar automaticamente
 exemplos para treinamento. Separar score de intenção de sucesso real da tarefa.
 Comparar versões do Qwen com desafios inéditos e evitar otimização apenas dos
 prints fornecidos pelo usuário.
+
+## R14 — Incidente: textura em vez de mago 32×32 e perda de contexto
+
+Regressões independentes do assunto: (1) pedir artefato com resolução explícita;
+(2) garantir dimensões reais e recibo de arquivo; (3) perguntar em linguagem
+natural pelo último resultado após reiniciar o servidor; (4) não negar ter
+executado ferramenta com comprovante persistido; (5) nunca confundir
+integridade do arquivo com fidelidade visual; (6) comparar várias alternativas
+antes de tratar catálogo fixo como universo de modelos; (7) nunca instalar
+candidato sem integrador auditado e autorização.
+
+A cobertura de CI usa mocks; a qualidade de personagens e sprites ainda
+precisa de imagem real e avaliador visual confiável no hardware.

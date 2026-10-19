@@ -78,6 +78,26 @@ class TaskStore:
             db.execute("UPDATE sessions SET state=? WHERE id=?", (json.dumps(state), session))
             db.execute("UPDATE turns SET result=? WHERE session=? AND id=?", (encoded, session, turn))
 
+    def record_artifact(self, session, receipt):
+        """Guarda recibo produzido no backend mesmo se a imagem veio por outra rota."""
+        self._id(session)
+        if (not isinstance(receipt, dict) or receipt.get("kind") != "image"
+                or not isinstance(receipt.get("id"), str)
+                or len(receipt["id"]) != 32):
+            raise ValueError("Recibo inválido.")
+        with closing(self._connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT state FROM sessions WHERE id=?", (session,)).fetchone()
+            state = json.loads(row[0]) if row else {"phase": "idle"}
+            if state.get("phase") == "running":
+                raise RunBusy("Conversa está executando outra tarefa.")
+            state["last_result"] = receipt
+            db.execute(
+                "INSERT INTO sessions VALUES (?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state",
+                (session, json.dumps(state, ensure_ascii=False)),
+            )
+        return receipt
+
     def inspect(self, session):
         self._id(session)
         with closing(self._connect()) as db:

@@ -1258,7 +1258,7 @@
                     if (!response.ok) throw new Error(data.detail || 'Erro ao editar imagem.');
                     result = data;
                 } else {
-                    result = await imageJson('/images/generate', { prompt });
+                    result = await imageJson('/images/generate', { prompt, session_id: conv.id });
                 }
                 if (result.status !== 'completed' || !result.url) {
                     throw new Error('O motor não confirmou a imagem.');
@@ -1267,7 +1267,7 @@
                 clearImageAttachment();
                 imageReply(conv, content,
                     kind === 'edit' ? 'Imagem editada.' :
-                    'Arquivo de imagem gerado. Integridade verificada; o conteúdo ainda pode precisar de revisão.',
+                    'Imagem gerada. Arquivo verificado; a cena e o estilo ainda podem precisar de revisão.',
                     result.url, result.artifact || null);
             } catch (failure) {
                 // Sem motor local, oferecer construir a habilidade em vez de rejeitar.

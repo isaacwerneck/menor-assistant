@@ -264,3 +264,12 @@ além da busca FTS5. O índice fica no cérebro privado. Sem esse modelo, a
 funcionalidade é ignorada e o chat continua funcionando normalmente.
 Veja [plano de evolução](PLANO_INTELLIGENCE_ENGINE.md).
 
+### Recibos de artefatos e qualidade de imagens — PR #16
+
+O Menor agora registra a última saída de imagem na conversa, incluindo tamanho,
+modelo e limitações, para responder perguntas sobre o que realmente executou.
+O subagente aplica dimensões solicitadas (por exemplo, PNG 32×32 real) e
+adapta prompts em português com Ollama local. Uma revisão visual opcional
+requer configurar MENOR_VISION_MODEL com modelo multimodal local instalado;
+sem isso, a qualidade do conteúdo não é considerada verificada. Compare
+alternativas e limites em [ciclo de capacidades](docs/ciclo_capacidades.md).

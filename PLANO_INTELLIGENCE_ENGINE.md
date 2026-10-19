@@ -93,3 +93,12 @@ instalado para interpretar objetivos e conversas. Se não estiver definido,
 o motor usa OLLAMA_ROUTER_MODEL ou OLLAMA_MODEL. Isso permite comparar modelos
 instruct sem substituir o Qwen Coder utilizado para código. Não baixa nem
 treina modelos automaticamente; benchmarks reais continuam necessários.
+
+## I2/I4/I5 — Critério novo de capacidades demonstradas
+
+A evolução tipo Codex usa [ciclo universal de capacidades](docs/ciclo_capacidades.md).
+O estado deve manter resultados concretos e permitir perguntas sobre
+executado anteriormente. Habilidades especializadas só contam quando passam
+benchmarks do objetivo; instalação de pesos e saída PNG válida não garantem
+compreensão de pixel art. Integradores alternativos e treinamento exigem
+avaliação separada, em vez de inferência automática baseada na existência do modelo.

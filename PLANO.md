@@ -370,3 +370,15 @@ Uma capacidade só é concluída depois de teste real; aprender notas não trein
 - [ ] Avaliar e calibrar entendimento com Ollama real e dados inéditos no notebook.
 
 Plano completo: [PLANO_INTELLIGENCE_ENGINE.md](PLANO_INTELLIGENCE_ENGINE.md).
+
+## 18. Correção sistêmica do ciclo de subagentes e imagens — PR #16
+
+- [x] Guardar recibos verificáveis de artefatos por conversa e recuperar no turno seguinte.
+- [x] Gerar arquivos nas dimensões solicitadas e revisar tamanho + integridade.
+- [x] Não confundir PNG válido com aderência ao briefing; revisão visual local é opcional.
+- [x] Preparar briefing para gerador local em outro idioma via Ollama e tentar corrigir feedback limitado.
+- [x] Comparar várias famílias/modelos documentados, destacando instalação NÃO suportada.
+- [ ] Pesquisa de modelos autônoma e atualizada, avaliação visual confiável e benchmark no notebook.
+- [ ] Longa execução supervisionada de skills de diferentes domínios, PRs e treinamento curado.
+
+Ver [ciclo de capacidades](docs/ciclo_capacidades.md).

@@ -71,6 +71,7 @@ def catalog(missions=None):
             "description": DESCRIPTIONS[capability],
             "status": state,
             "ready": bool(ready),
+            "quality_status": "not_evaluated_for_specific_styles",
             "mission_id": mission["id"] if mission else None,
             "worker": "openvino-sd15-int8" if capability == "images.generate" else None,
             "offline": capability == "images.generate",

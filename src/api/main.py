@@ -271,6 +271,8 @@ def mission_approve(mission_id: str, body: MissionApprovalRequest, request: Requ
 
 class ImageRequest(BaseModel):
     prompt: str = Field(min_length=6, max_length=2000)
+    session_id: str | None = Field(default=None, min_length=8, max_length=80,
+                                   pattern=r"^[a-zA-Z0-9_-]+$")
 
 
 class ImageIntentRequest(BaseModel):
@@ -313,8 +315,15 @@ def images_generate(body: ImageRequest, request: Request):
             delegate_image(body.prompt)
             if images.provider() == "local" else images.generate(body.prompt)
         )
+        proof = artifact_receipt(result)
+        if body.session_id:
+            try:
+                TaskStore().record_artifact(body.session_id, proof)
+            except (RunBusy, OSError, ValueError, sqlite3.Error) as error:
+                logger.warning("Imagem pronta, mas recibo da conversa indisponível: %s",
+                               type(error).__name__)
         record("images.generate", "executed", ["prompt"])
-        return {**result, "artifact": artifact_receipt(result)}
+        return {**result, "artifact": proof}
     except (images.ImageUnavailable, ValueError, OSError) as error:
         record("images.generate", "failed", ["prompt"])
         image_error(error)
