@@ -255,3 +255,12 @@ automático ou upload externo. Para recuperação, MENOR_INTELLIGENCE_ENABLED=0
 desativa a nova camada; o padrão é habilitado.
 
 [Roadmap e critérios de aceite](PLANO_INTELLIGENCE_ENGINE.md).
+
+### Busca semântica local (opcional)
+
+Se o Ollama tiver um modelo de embeddings local e MENOR_EMBED_MODEL estiver
+configurado com seu nome, o Menor poderá consultar notas por significado,
+além da busca FTS5. O índice fica no cérebro privado. Sem esse modelo, a
+funcionalidade é ignorada e o chat continua funcionando normalmente.
+Veja [plano de evolução](PLANO_INTELLIGENCE_ENGINE.md).
+
