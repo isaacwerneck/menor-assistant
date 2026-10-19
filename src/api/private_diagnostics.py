@@ -5,6 +5,7 @@ de coleta do navegador. Ela não instala, reinicia, nem testa inferência Ollama
 """
 import asyncio
 import logging
+import threading
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -16,7 +17,16 @@ from src.security import auth
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Observabilidade privada"])
 _HEADERS = {"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"}
-_CONCURRENT = asyncio.Semaphore(2)
+# Uma vaga pertence à thread real até o fim do probe. Um timeout HTTP não
+# libera uma vaga enquanto o trabalho em execução ainda não terminou.
+_SLOTS = threading.BoundedSemaphore(2)
+
+
+def _run_with_slot():
+    try:
+        return run_checks()
+    finally:
+        _SLOTS.release()
 
 
 @router.get("/ops/diagnostics")
@@ -25,9 +35,22 @@ async def diagnostics(request: Request):
     auth.require_owner(request)
     # Evita múltiplos probes concorrentes solicitados por sessões autenticadas.
     # Nunca aceita parâmetros do cliente como portas, comandos ou diretórios.
+    # Falhar imediatamente quando todas as verificações já estão ocupadas.
+    # Não agendar threads adicionais para aguardarem indefinidamente.
+    if not _SLOTS.acquire(blocking=False):
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "error": "diagnostics_unavailable"},
+            headers=_HEADERS,
+        )
     try:
-        async with _CONCURRENT:
-            report = await asyncio.wait_for(asyncio.to_thread(run_checks), timeout=9.0)
+        # shield impede que o timeout cancele a tarefa que libera a vaga.
+        worker = asyncio.create_task(asyncio.to_thread(_run_with_slot))
+    except Exception:
+        _SLOTS.release()
+        raise
+    try:
+        report = await asyncio.wait_for(asyncio.shield(worker), timeout=9.0)
         snapshot = build_snapshot(doctor_report=report)
         if (snapshot.get("contract") != "menor.ops.observability"
                 or snapshot.get("read_only") is not True):
