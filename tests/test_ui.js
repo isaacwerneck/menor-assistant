@@ -1022,3 +1022,100 @@ test('D14: aprovação pendente permanece isolada após alternar e voltar', asyn
     assert.equal(first.activeMission.status, 'awaiting_approval');
     assert.equal(ui.missionCalls.filter(x => x.type === 'approve').length, 0);
 });
+
+
+test('Chat E: objetivos consultam estado real, sem percentuais fabricados', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('Meu projeto <img src=x>');
+    const calls = [];
+    ui.context.fetch = async url => {
+        calls.push(url);
+        assert.equal(url, '/agent/runs/' + conv.id);
+        return { ok: true, status: 200, json: async () => ({
+            phase: 'goal', goal: 'Planejar aplicativo', steps: ['Pesquisar bibliotecas', 'Testar no servidor'],
+            paused_goals: [{ id: 'teste', goal: 'Outro objetivo', status: 'paused', steps: ['Revisar ideia'] }],
+        }) };
+    };
+    await ui.context.openObjectives();
+    const list = ui.elements.get('objectivesList');
+    assert.equal(calls.length, 1);
+    assert.equal(list.children.length, 2);
+    assert.equal(list.children[0].children[1].textContent, 'Planejar aplicativo');
+    assert.equal(list.children[0].children[3].children[0].textContent, 'Pesquisar bibliotecas');
+    assert.match(list.children[0].children[0].textContent, /execução não comprovada/i);
+    assert.doesNotMatch(list.children[0].children[0].textContent, /%/);
+    ui.context.setObjectiveFilter('paused');
+    assert.equal(list.children.length, 1);
+    assert.equal(list.children[0].children[1].textContent, 'Outro objetivo');
+});
+
+test('Chat E: indisponibilidade é exibida sem declarar objetivo concluído', async () => {
+    const ui = browser();
+    ui.context.createConversation('Conversa não disponível');
+    ui.context.fetch = async () => { throw new Error('offline'); };
+    await ui.context.openObjectives();
+    const list = ui.elements.get('objectivesList');
+    assert.equal(list.children.length, 1);
+    assert.match(list.children[0].children[1].textContent, /não foi possível consultar/i);
+    assert.match(list.children[0].children[0].textContent, /indisponível/i);
+});
+
+test('Chat E: consulta de objetivos nunca invoca execução ou recuperação', async () => {
+    const ui = browser();
+    ui.context.createConversation('Objetivo real');
+    const calls = [];
+    ui.context.fetch = async (url, options) => {
+        calls.push({ url, options });
+        return { ok: true, status: 200, json: async () => ({ phase: 'idle' }) };
+    };
+    await ui.context.openObjectives();
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /^\/agent\/runs\/[a-z0-9]+$/);
+    assert.equal(calls[0].options.method, undefined);
+    assert.equal(calls[0].options.credentials, 'same-origin');
+    assert.match(ui.elements.get('objectivesList').textContent, /nenhum objetivo registrado/i);
+});
+
+test('Chat E: painel completo preserva metas pausadas de sessões ociosas', async () => {
+    const javascript = fs.readFileSync(path.join(__dirname,
+        '../src/api/workspace_assets/assets.js'), 'utf8');
+    const elements = new Map();
+    function element(tag = 'div') {
+        return {
+            tag, textContent: '', className: '', children: [], disabled: false, value: 'all',
+            append(...items) { this.children.push(...items); },
+            replaceChildren(...items) { this.children = [...items]; },
+            get childNodes() { return this.children; },
+            addEventListener() {},
+        };
+    }
+    for (const name of ['goals', 'missions', 'status', 'refresh', 'mission-filter']) {
+        elements.set(name, element());
+    }
+    const conv = { id: 'abcde12345', title: 'Conversa de testes' };
+    const requests = [];
+    const context = vm.createContext({
+        document: {
+            getElementById(id) { return elements.get(id); },
+            createElement: element,
+        },
+        localStorage: { getItem() { return JSON.stringify([conv]); } },
+        fetch: async (url, options) => {
+            requests.push({ url, options });
+            return { ok: true, status: 200, json: async () => url === '/agent/missions'
+                ? { items: [] } : { phase: 'idle', paused_goals: [
+                    { goal: 'Meta anteriormente pausada', steps: ['Revisar escopo'] },
+                ] } };
+        },
+        Date, encodeURIComponent, console,
+    });
+    vm.runInContext(javascript, context);
+    await context.refresh();
+    const items = elements.get('goals').children;
+    assert.equal(items.length, 1);
+    assert.equal(items[0].children[0].textContent, 'Meta anteriormente pausada');
+    assert.match(items[0].children[1].textContent, /paused/);
+    assert.equal(items[0].children[3].children[0].textContent, 'Revisar escopo');
+    assert.ok(requests.every(request => request.options.method === undefined));
+    assert.ok(requests.every(request => request.options.credentials === 'same-origin'));
+});
