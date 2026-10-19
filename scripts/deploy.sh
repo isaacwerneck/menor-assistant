@@ -81,7 +81,8 @@ main() {
     bash tests/test_deploy.sh
     bash tests/test_control.sh
     systemctl --user daemon-reload
-    systemctl --user restart menor-api.service
+    # Mesmo caminho do comando `menor reiniciar`: recarrega a API e mantém os timers ativos.
+    bash scripts/menor reiniciar
     curl --fail --silent --show-error --retry 10 --retry-connrefused \
         --retry-delay 2 --max-time 5 http://127.0.0.1:8000/health
     systemctl --user is-active --quiet menor-api.service
