@@ -17,7 +17,7 @@ from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _norm
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
 from src.agent.tasks import TaskStore
-from src.agent import research, intelligence
+from src.agent import research, intelligence, plan_review
 from src.agent.approval import decision as approval_decision
 from src.memory.search import contextual_knowledge
 from src.memory.semantic import relevant_context
@@ -236,6 +236,34 @@ def _selected_tool(name, arguments):
     return current, answer
 
 
+def _critique_plan(message, history, pending, skills, facts, state, tools, decision):
+    """Revisa apenas decisões de planejamento, com no máximo UMA reformulação."""
+    if not plan_review.should_review(decision):
+        return decision, "disabled"
+    verdict = plan_review.review(message, decision)
+    status = verdict["verdict"]
+    if status == "ok":
+        return decision, "reviewed"
+    if status == "clarify":
+        return {
+            **decision, "move": "clarify",
+            "reply": "Preciso esclarecer um ponto antes de consolidar o plano.",
+            "question": verdict["question"],
+        }, "needs_clarification"
+    if status == "revise":
+        revised = intelligence.decide(
+            message, history, pending=pending, capabilities=skills, knowledge=facts,
+            last_result=state.get("last_result"), paused_goals=paused_context(state),
+            tools=tools, review_issues=verdict["issues"],
+        )
+        if revised is not None and revised["move"] in ("plan", "continue", "clarify"):
+            # A crítica pode corrigir etapas, jamais trocar ID de objetivo.
+            revised["relation"] = decision.get("relation")
+            revised["resume_goal_id"] = decision.get("resume_goal_id", "")
+            return plan_review.annotate(revised, "revised_unverified"), "revised_unverified"
+    return plan_review.annotate(decision, status), status
+
+
 def _understand(state, message, history):
     """Raciocínio contextual para qualquer assunto, sem executar ações do texto do LLM."""
     if state["phase"] == "goal" and approval_decision(message) == "reject":
@@ -259,10 +287,11 @@ def _understand(state, message, history):
         skills = catalog()
     except (OSError, ValueError):
         skills = []
+    tools = list_tools()
     decision = intelligence.decide(
         message, history, pending=pending, capabilities=skills, knowledge=facts,
         last_result=state.get("last_result"), paused_goals=paused_context(state),
-        tools=list_tools(),
+        tools=tools,
     )
     if decision is None:
         if pending:
@@ -271,6 +300,9 @@ def _understand(state, message, history):
                 "Pode explicar de outro jeito? Nenhuma ação foi executada.", **state,
             )
         return None
+    decision, review_status = _critique_plan(
+        message, history, pending, skills, facts, state, tools, decision,
+    )
     move = decision["move"]
     if move == "inspect_result":
         receipt = state.get("last_result")
@@ -325,11 +357,13 @@ def _understand(state, message, history):
                 "Não encontrei esse plano anterior nesta conversa. "
                 "Qual objetivo você quer retomar?", **state,
             )
+        next_state["plan_review_status"] = review_status
         reply = (intelligence.render_plan(decision) if move != "clarify"
                  else decision["reply"] + "\n" + decision["question"])
         return next_state, {
             "handled": True, "reply": reply, "phase": "goal",
             "goal_id": next_state["goal_id"],
+            "plan_review_status": review_status,
         }
     if pending:
         # Dúvidas incidentais não destroem o plano ativo.
