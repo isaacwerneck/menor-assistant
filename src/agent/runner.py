@@ -96,6 +96,11 @@ def _mission_turn(state, message):
     if mission["status"] in ("cancelled", "failed", "blocked"):
         return _answer(mission["question"] if mission["status"] != "failed"
                        else "A execução falhou; nenhuma capacidade foi marcada como pronta.")
+    if mission["status"] == "queued":
+        return _answer(
+            "Autorização registrada. Missão aguardando o worker automático para instalar "
+            "o modelo local. Ainda não concluí o download ou o teste.", **state,
+        )
     label = {"preparing": "preparando ambiente", "downloading": "baixando modelo", "testing": "verificando imagem"}
     progress = label.get(mission.get("stage"), mission["status"])
     return _answer(f"Missão {progress}. Você pode consultar o andamento aqui.", **state)
