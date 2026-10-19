@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Menor Lab · Testes reais de conversa</title>
+<style>
+:root{color-scheme:dark;--bg:#101018;--surface:#1b1b27;--border:#353449;--violet:#aa96ef;--text:#f0edf8;--muted:#bcb9ce}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 75% -10%,#302843 0,transparent 38%),var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+main{max-width:940px;margin:0 auto;padding:24px 16px 64px}
+header{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+a{color:var(--violet)}h1{font-size:clamp(1.5rem,4vw,2.2rem);margin-bottom:6px}
+p{color:var(--muted);line-height:1.55}
+.panel{border:1px solid var(--border);background:var(--surface);border-radius:16px;padding:18px;margin:16px 0}
+label{display:block;font-size:.88rem;margin:12px 0 8px;color:var(--muted)}
+textarea{width:100%;background:#0e0f18;color:var(--text);border:1px solid var(--border);padding:14px;border-radius:12px;font:inherit;resize:vertical;min-height:96px}
+textarea:focus,button:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+button{background:#302a43;border:1px solid #53446f;border-radius:10px;padding:12px 16px;color:var(--text);font:inherit;cursor:pointer;min-height:44px}
+button.primary{background:#9d89ed;color:#171222;border-color:transparent;font-weight:700}
+button:disabled{cursor:wait;opacity:.55}
+.status{font-size:.9rem;min-height:24px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#11111d;padding:14px;border-radius:12px;min-height:90px;line-height:1.55;font-size:.93rem}
+.meta{font-size:.8rem;color:var(--muted);line-height:1.5}
+footer{color:var(--muted);font-size:.78rem}
+@media(max-width:520px){.actions button{flex:1 1 100%}.panel{padding:14px}main{padding:14px 10px 40px}}
+</style>
+</head>
+<body>
+<main>
+<header><div><h1>Menor Lab</h1><p>Diagnóstico privado da compreensão real do modelo no Ubuntu.</p></div><a href="/">Voltar ao chat</a></header>
+<div class="panel">
+<p>Compare a mesma pergunta em dois modos. <strong>Modelo direto</strong> responde sem o JSON de planejamento. <strong>Raciocinador</strong> tenta a interpretação estruturada do Menor. Nenhum modo executa ferramentas ou salva memória.</p>
+<label for="question">Pergunta para testar</label>
+<textarea id="question" maxlength="1200" placeholder="Ex.: Ei, Menor! O que você pode fazer?">Ei, menor! Quem é você?</textarea>
+<label for="history">Histórico de teste opcional (uma linha por mensagem, formato user: ou assistant:)</label>
+<textarea id="history" maxlength="2800" placeholder="user: Meu servidor utiliza Ubuntu.
+assistant: Entendido.
+user: Gosto de música eletrônica."></textarea>
+<div class="actions">
+<button type="button" class="primary" id="runDirect">Testar modelo direto</button>
+<button type="button" id="runPlanner">Testar raciocinador</button>
+<button type="button" id="clear">Limpar resultados</button>
+</div>
+<p class="status" id="status" role="status" aria-live="polite">Pronto. O modelo só recebe dados enviados nesta página.</p>
+</div>
+<section class="panel" aria-label="Resultado do modelo direto"><h2>Modelo direto</h2><pre id="directResult">Nenhum teste executado.</pre><p class="meta" id="directMeta"></p></section>
+<section class="panel" aria-label="Resultado do raciocinador"><h2>Raciocinador JSON</h2><pre id="plannerResult">Nenhum teste executado.</pre><p class="meta" id="plannerMeta"></p></section>
+<footer>Modo laboratório: inferência sem ferramentas, histórico efêmero, limite de requisições. O chat real continua disponível em /. Para avaliar a IA completa, teste também a conversa principal.</footer>
+</main>
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const buttons = [$("runDirect"), $("runPlanner")];
+let running = false;
+function historyLines(raw) {
+    const list = [];
+    for (const line of raw.split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        const match = line.match(/^(user|assistant):\s*(.+)$/i);
+        if (!match) throw new Error("Histórico exige linhas começando por user: ou assistant:");
+        list.push({role: match[1].toLowerCase(), content: match[2].trim().slice(0, 1000)});
+    }
+    if (list.length > 8) throw new Error("Máximo de oito mensagens anteriores.");
+    return list;
+}
+async function run(mode) {
+    if (running) return;
+    const message = $("question").value.trim();
+    if (!message) { $("status").textContent = "Digite uma pergunta."; return; }
+    let history;
+    try { history = historyLines($("history").value); }
+    catch (e) { $("status").textContent = e.message; return; }
+    running = true; buttons.forEach(button => button.disabled = true);
+    const begun = Date.now();
+    const key = mode === "direct" ? "direct" : "planner";
+    $("status").textContent = "Consultando o Ollama no Ubuntu… " + (mode === "direct" ? "modelo direto" : "raciocinador");
+    $(key + "Result").textContent = "Aguardando resultado…";
+    $(key + "Meta").textContent = "";
+    try {
+        const response = await fetch("/lab/compare", {
+            method:"POST", credentials:"same-origin",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({mode,message,history}),
+        });
+        if (!response.ok) throw new Error("HTTP " + response.status + ": verifique sessão ou limite de testes.");
+        const result = await response.json();
+        $(key + "Result").textContent = result.reply || "Nenhuma resposta retornada.";
+        $(key + "Meta").textContent = "Status: " + result.status
+            + " · Modelo: " + (result.model || "indisponível")
+            + " · Movimento: " + (result.move || "—")
+            + " · Tempo: " + result.elapsed_seconds + "s"
+            + " · Ferramentas executadas: 0";
+        $("status").textContent = "Teste finalizado. Compare o conteúdo, não apenas o status.";
+    } catch (e) {
+        $(key + "Result").textContent = "Teste não concluído.";
+        $(key + "Meta").textContent = e.message;
+        $("status").textContent = "Falha após " + ((Date.now()-begun)/1000).toFixed(1) + "s.";
+    } finally {
+        running = false; buttons.forEach(button => button.disabled = false);
+    }
+}
+$("runDirect").addEventListener("click", () => run("direct"));
+$("runPlanner").addEventListener("click", () => run("planner"));
+$("clear").addEventListener("click", () => {
+    for (const key of ["direct", "planner"]) {
+        $(key+"Result").textContent = "Nenhum teste executado.";
+        $(key+"Meta").textContent = "";
+    }
+    $("status").textContent = "Resultados limpos; nada foi salvo no servidor.";
+});
+})();
+</script>
+</body>
+</html>

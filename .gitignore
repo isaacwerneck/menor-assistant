@@ -26,3 +26,8 @@ temp/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Artefatos estáticos e credenciais de túnel (nunca versionar)
+/dist/
+.cloudflared/
+*.cloudflared.json

@@ -4,6 +4,21 @@ Assistente local com FastAPI, interface web com streaming e inferência pelo Oll
 (`qwen2.5-coder:7b`). Voz, memória Markdown e ferramentas agênticas estão no
 [roadmap](docs/roadmap.md).
 
+## Acesso remoto e laboratório de inteligência (opcional)
+
+É possível acessar o Menor por **Cloudflare Tunnel com Access protegido**,
+mantendo FastAPI, Ollama, sessões e arquivos no Ubuntu. O modo remoto exige a
+variável de ambiente `MENOR_PUBLIC_ORIGIN=https://menor.seudominio.com`
+e a configuração manual do túnel e do DNS; nenhuma instalação é automática.
+O laboratório autenticado `/lab/view` compara Qwen direto com o
+raciocinador JSON, sem executar ferramentas nem salvar históricos.
+
+O Netlify oferece somente uma **página estática de entrada** neste estágio.
+Não coloque `/chat/stream` atrás de proxy Netlify: o timeout da camada
+de proxy não é apropriado para inferências de 40+ segundos. Configuração,
+limites e procedimentos completos em
+[acesso remoto Cloudflare + Netlify](docs/acesso_remoto_cloudflare_netlify.md).
+
 ## Executar
 
 Requer Python 3.10+ e Ollama com o modelo instalado:
