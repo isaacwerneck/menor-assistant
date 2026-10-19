@@ -19,6 +19,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
     const imageCalls = [];
     const agentCalls = [];
     const repairCalls = [];
+    const feedbackCalls = [];
     const missionCalls = [];
     let knowledgeItems = [{ id: '3.0123456789abcdef', text: 'Meu jogo usa Godot', date: '2026-10-18',
         source: 'conhecimentos/aprendizados_gerais.md' }];
@@ -51,6 +52,10 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         FormData: class { constructor() { this.values = {}; } append(k, v) { this.values[k] = v; } },
         URL: { createObjectURL(value) { blob = value; return 'blob:test'; }, revokeObjectURL() {} },
         fetch: async (url, options) => {
+            if (url === '/agent/feedback') {
+                feedbackCalls.push(JSON.parse(options.body));
+                return { ok: true, json: async () => ({ status: 'saved', id: 'approved-example' }) };
+            }
             if (url === '/agent/run') {
                 agentCalls.push(JSON.parse(options.body));
                 return { ok: true, json: async () => ({ handled: false }) };
@@ -190,9 +195,51 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         },
     });
     vm.runInContext(script, context);
-    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, agentCalls, repairCalls, missionCalls,
+    return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, agentCalls, repairCalls, missionCalls, feedbackCalls,
         downloads, getBlob: () => blob };
 }
+
+test('aprendizado supervisionado: só salva exemplo após consentimento explícito', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'Qual é o sistema operacional do servidor?';
+    await ui.context.sendMsg();
+    ui.context.openFeedback();
+    assert.match(ui.elements.get('feedbackPrompt').value, /sistema operacional/);
+    assert.equal(ui.elements.get('feedbackConsent').checked, false);
+    ui.elements.get('feedbackPreferred').value = 'O sistema do servidor é Ubuntu.';
+    await ui.context.saveFeedback();
+    assert.equal(ui.feedbackCalls.length, 0);
+    assert.match(ui.elements.get('feedbackResult').textContent, /autoriza/);
+    ui.elements.get('feedbackConsent').checked = true;
+    await ui.context.saveFeedback();
+    assert.equal(ui.feedbackCalls.length, 1);
+    assert.equal(ui.feedbackCalls[0].consent, true);
+    assert.equal(ui.feedbackCalls[0].desired_reply, 'O sistema do servidor é Ubuntu.');
+    assert.match(ui.elements.get('feedbackResult').textContent, /aprovado/i);
+    assert.equal(ui.elements.get('feedbackConsent').checked, false);
+    ui.context.closeFeedback();
+    assert.equal(ui.elements.get('feedbackPanel').hidden, true);
+});
+
+test('falha de cognição economiza classificação dupla e encaminha para streaming', async () => {
+    const ui = browser();
+    const originalFetch = ui.context.fetch;
+    const calls = [];
+    ui.context.fetch = (url, options) => {
+        calls.push(url);
+        if (url === '/agent/run') return Promise.resolve({
+            ok: true, headers: { get: key => key === 'X-Menor-Fallback' ? 'stream' : null },
+            json: async () => ({ handled: false }),
+        });
+        return originalFetch(url, options);
+    };
+    ui.elements.get('userInput').value = 'Explique o algoritmo de busca binária';
+    await ui.context.sendMsg();
+    assert.equal(calls.includes('/agent/route'), false);
+    assert.equal(calls.includes('/images/intent'), false);
+    assert.equal(calls.filter(x => x === '/chat/stream').length, 1);
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /Olá/);
+});
 
 test('núcleo do servidor assume tarefa e mostra recibo sem chamar roteadores antigos', async () => {
     const ui = browser();
@@ -434,7 +481,7 @@ test('criação de projeto é ação real com confirmação do caminho criado', 
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /projetos\/cidade-noturna/);
 });
 
-test('conversa não muda enquanto classificação ou geração está em curso', async () => {
+test('navegação interrompe geração e preserva histórico original', async () => {
     const ui = browser();
     let finish;
     const old = ui.context.fetch;
@@ -447,10 +494,12 @@ test('conversa não muda enquanto classificação ou geração está em curso', 
     await new Promise(resolve => setImmediate(resolve));
     const conv = ui.context.getActiveConv();
     ui.context.newChat();
-    assert.equal(ui.context.getActiveConv(), conv);
+    assert.equal(ui.context.getActiveConv(), undefined);
     finish({ ok: false, json: async () => ({ detail: 'Serviço indisponível' }) });
     await pending;
-    assert.equal(conv.messages.length, 1);
+    assert.equal(conv.messages.length, 2);
+    assert.match(conv.messages[1].content, /interrompida/i);
+    assert.equal(ui.context.getActiveConv(), undefined);
 });
 
 
@@ -532,14 +581,32 @@ test('estado de imagem persiste na conversa e pode ser cancelado', async () => {
 });
 
 
-test('pedido de corrigir bug abre PR supervisionado sem alegar merge', async () => {
+test('pedido de corrigir bug em linguagem natural não pula o agente para autoedição', async () => {
     const ui = browser();
     ui.elements.get('userInput').value = 'Menor, corrige esse bug no código do roteador';
     await ui.context.sendMsg();
+    assert.equal(ui.repairCalls.length, 0);
+    assert.equal(ui.agentCalls.length, 1);
+    assert.equal(ui.requests.length, 1);
+});
+
+test('pedido de planejar melhoria não inicia autoedição sem autorização', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = 'quero organizar meu projeto menor assistant. ' +
+        'crie um objetivo para melhorar a interface, divida em 3 etapas e me mostre o plano ' +
+        'antes de executar qualquer ação';
+    await ui.context.sendMsg();
+    assert.equal(ui.repairCalls.length, 0);
+    assert.equal(ui.agentCalls.length, 1);
+    assert.equal(ui.requests.length, 1);
+});
+
+test('comando /corrigir explícito continua limitado por autorização do servidor', async () => {
+    const ui = browser();
+    ui.elements.get('userInput').value = '/corrigir bug no código do roteador';
+    await ui.context.sendMsg();
     assert.equal(ui.repairCalls.length, 1);
     assert.equal(ui.repairCalls[0].dry_run, false);
-    assert.equal(ui.requests.length, 0);
-    assert.equal(ui.routed.length, 0);
     assert.match(ui.context.getActiveConv().messages.at(-1).content, /Precisa de revisão/);
 });
 
@@ -848,6 +915,116 @@ test('D08: trocar de imagem para correção de software não envia edição visu
     assert.equal(ui.agentCalls.length, 1);
 });
 
+test('cancelamento enquanto roteador responde não salva memória nem inicia segundo modelo', async () => {
+    const ui = browser();
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const originalFetch = ui.context.fetch;
+    const calls = [];
+    ui.context.fetch = (url, options) => {
+        calls.push(url);
+        if (url === '/agent/route') {
+            return gate.then(() => ({ ok: true, status: 200, json: async () => ({
+                decision: 'save', memory: { path: 'notas/resultado-velho.md' },
+            }) }));
+        }
+        return originalFetch(url, options);
+    };
+    ui.elements.get('userInput').value = 'Planeje um sistema para irrigação';
+    const running = ui.context.sendMsg();
+    // O próximo tick deve estar aguardando o roteador legado.
+    await new Promise(resolve => setImmediate(resolve));
+    const previous = ui.context.getActiveConv();
+    ui.context.newChat();
+    release();
+    await running;
+    assert.equal(ui.context.getActiveConv(), undefined);
+    assert.equal(previous.messages.length, 2);
+    assert.match(previous.messages.at(-1).content, /interrompida/i);
+    assert.equal(calls.includes('/chat/stream'), false);
+});
+
+test('cancelamento de geração visual não apaga anexo escolhido em outra conversa', async () => {
+    const ui = browser();
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const originalFetch = ui.context.fetch;
+    ui.context.fetch = (url, options) => {
+        if (url === '/images/generate') {
+            return gate.then(() => ({ ok: true, json: async () => ({
+                status: 'completed', url: '/images/files/' + 'a'.repeat(32),
+            }) }));
+        }
+        return originalFetch(url, options);
+    };
+    ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na floresta';
+    const running = ui.context.sendMsg();
+    await new Promise(resolve => setImmediate(resolve));
+    const previous = ui.context.getActiveConv();
+    ui.context.newChat();
+    ui.context.imageSelected({ files: [{ name: 'novo.png', type: 'image/png', size: 123 }] });
+    release();
+    await running;
+    assert.match(previous.messages.at(-1).content, /interrompida/i);
+    assert.equal(previous.messages.some(m => m.image), false);
+    assert.equal(ui.elements.get('imageAttachmentName').hidden, false);
+    assert.match(ui.elements.get('imageAttachmentName').textContent, /novo.png/);
+});
+
+test('trocar de conversa durante geração permite navegar e não contamina histórico', async () => {
+    const ui = browser();
+    let release;
+    const paused = new Promise(resolve => { release = resolve; });
+    ui.context.createConversation('Conversa antiga');
+    const old = ui.context.getActiveConv();
+    const other = ui.context.createConversation('Conversa nova');
+    ui.context.openConv(old.id);
+    ui.context.fetch = async url => {
+        if (url === '/agent/run') {
+            await paused;
+            return { ok: true, status: 200, json: async () =>
+                ({ handled: true, reply: 'Retorno antigo' }) };
+        }
+        throw new Error('Requisição inesperada: ' + url);
+    };
+    ui.elements.get('userInput').value = 'Me explique a arquitetura';
+    const inProgress = ui.context.sendMsg();
+    assert.equal(ui.elements.get('cancelBtn').hidden, false);
+    ui.context.openConv(other.id);
+    assert.equal(ui.context.getActiveConv().id, other.id);
+    assert.equal(ui.elements.get('cancelBtn').hidden, true);
+    release();
+    await inProgress;
+    assert.equal(old.messages.at(-1).role, 'bot');
+    assert.match(old.messages.at(-1).content, /interrompida/i);
+    assert.equal(old.messages.some(msg => msg.content === 'Retorno antigo'), false);
+    assert.equal(other.messages.length, 0);
+});
+
+test('nova conversa cancela visualmente pedido pendente sem conceder execução', async () => {
+    const ui = browser();
+    let release;
+    const paused = new Promise(resolve => { release = resolve; });
+    ui.context.fetch = async url => {
+        if (url === '/agent/run') {
+            await paused;
+            return { ok: true, status: 200, json: async () =>
+                ({ handled: false }) };
+        }
+        throw new Error('Requisição inesperada');
+    };
+    ui.elements.get('userInput').value = 'Me ajude a planejar um projeto';
+    const inProgress = ui.context.sendMsg();
+    const previous = ui.context.getActiveConv();
+    ui.context.newChat();
+    assert.equal(ui.context.getActiveConv(), undefined);
+    assert.equal(ui.elements.get('sendBtn').disabled, false);
+    release();
+    await inProgress;
+    assert.match(previous.messages.at(-1).content, /servidor pode continuar/i);
+    assert.equal(ui.context.getActiveConv(), undefined);
+});
+
 test('D14: nova conversa mantém histórico e imagem da conversa anterior', async () => {
     const ui = browser();
     ui.elements.get('userInput').value = 'cria uma imagem de um cachorro na grama';
@@ -942,11 +1119,12 @@ test('D14: troca de conversa durante requisição não redireciona resposta pend
     await new Promise(resolve => setImmediate(resolve));
     const first = ui.context.getActiveConv();
     ui.context.newChat();
-    assert.equal(ui.context.getActiveConv().id, first.id);
+    assert.equal(ui.context.getActiveConv(), undefined);
     finish({ ok: false, json: async () => ({ detail: 'Serviço indisponível' }) });
     await pending;
-    assert.equal(first.messages.length, 1);
-    assert.equal(ui.context.getActiveConv().id, first.id);
+    assert.equal(first.messages.length, 2);
+    assert.match(first.messages[1].content, /servidor pode continuar/i);
+    assert.equal(ui.context.getActiveConv(), undefined);
 });
 
 test('D03: bora autoriza apenas a missão pendente da conversa ativa', async () => {
