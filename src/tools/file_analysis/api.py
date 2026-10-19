@@ -6,9 +6,10 @@ a leitura do stream, antes de executar qualquer parser.
 """
 import asyncio
 import logging
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from src.security import auth
 from src.tools.file_analysis import service
@@ -16,6 +17,41 @@ from src.tools.file_analysis.contracts import FileRejected, MAX_BYTES
 
 router = APIRouter(tags=["Arquivos privados"])
 logger = logging.getLogger(__name__)
+
+
+ASSETS = Path(__file__).with_name("templates")
+
+
+@router.get("/files/view")
+def file_view(request: Request):
+    auth.require_owner(request)
+    return FileResponse(
+        ASSETS / "files.html", media_type="text/html",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Security-Policy": (
+                "default-src 'none'; style-src 'self'; script-src 'self'; "
+                "connect-src 'self'; base-uri 'none'; form-action 'none'"
+            ),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/files/assets.js")
+def file_js(request: Request):
+    auth.require_owner(request)
+    return FileResponse(ASSETS / "assets.js", media_type="application/javascript",
+                        headers={"Cache-Control": "private, no-store",
+                                 "X-Content-Type-Options": "nosniff"})
+
+
+@router.get("/files/assets.css")
+def file_css(request: Request):
+    auth.require_owner(request)
+    return FileResponse(ASSETS / "assets.css", media_type="text/css",
+                        headers={"Cache-Control": "private, no-store",
+                                 "X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/files/capabilities")
