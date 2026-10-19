@@ -611,6 +611,7 @@
         .objectives-heading { display: flex; align-items: start; justify-content: space-between; gap: 14px; }
         .objectives-heading p { font-size: .87rem; }
         .objectives-heading button { flex-shrink: 0; }
+        .objectives-full-link { font-size: .82rem; color: var(--accent); align-self: center; }
         .objectives-controls { display: flex; flex-wrap: wrap; gap: 8px; }
         .objectives-controls button {
             min-height: 40px; padding: 9px 12px; border-radius: 9px;
@@ -652,7 +653,6 @@
         </div>
         <nav class="app-nav" aria-label="Navegação principal">
             <span class="app-nav-current" aria-current="page">Conversa</span>
-            <a href="/workspace/objectives">Objetivos</a>
             <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
@@ -710,7 +710,6 @@
         <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
         <nav class="mobile-nav" aria-label="Navegação rápida">
             <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas">Conversas</button>
-            <a href="/workspace/objectives">Objetivos</a>
             <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
@@ -726,6 +725,7 @@
                     <h2 id="objectivesTitle">Objetivos e tarefas</h2>
                     <p>Planos e estados reais de até 12 conversas deste navegador.</p>
                 </div>
+                <a class="objectives-full-link" href="/workspace/objectives">Painel completo</a>
                 <button type="button" class="secondary" onclick="closeObjectives()"
                     aria-label="Fechar objetivos">Fechar</button>
             </div>
