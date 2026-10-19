@@ -52,16 +52,17 @@ function showSteps(card, list) {
   if (ul.childNodes.length) card.append(ul);
 }
 
-function renderGoal(conversation, state) {
-  const goal = typeof state.goal === "string" ? state.goal :
-    state.pending_goal && typeof state.pending_goal.goal === "string" ?
-      state.pending_goal.goal : null;
+function renderGoal(conversation, state, paused = null) {
+  const source = paused || (state.phase === "approval" && state.return_goal) ||
+    state.pending_goal || state;
+  const goal = source && typeof source.goal === "string" ? source.goal : null;
   const card = node("article", "record");
   card.append(node("h3", "", goal || conversation.title || "Conversa sem título"));
-  const phase = typeof state.phase === "string" ? state.phase : "desconhecido";
+  const phase = paused ? "paused" :
+    typeof state.phase === "string" ? state.phase : "desconhecido";
   card.append(node("span", "state", "Fase registrada: " + phase));
   card.append(node("p", "record-meta", "Conversa: " + conversation.title));
-  showSteps(card, state.steps || (state.pending_goal && state.pending_goal.steps));
+  showSteps(card, source && source.steps);
   return card;
 }
 
@@ -80,6 +81,13 @@ async function loadGoals() {
       if (state.phase && state.phase !== "idle") {
         targets.goals.append(renderGoal(conv, state));
         shown += 1;
+      }
+      // Metas pausadas continuam relevantes mesmo quando a sessão está ociosa.
+      for (const paused of (Array.isArray(state.paused_goals) ? state.paused_goals : []).slice(0, 6)) {
+        if (paused && typeof paused.goal === "string" && paused.goal.trim()) {
+          targets.goals.append(renderGoal(conv, state, paused));
+          shown += 1;
+        }
       }
     } catch (error) { failures += 1; }
   }
