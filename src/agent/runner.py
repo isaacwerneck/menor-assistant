@@ -8,6 +8,7 @@ import sqlite3
 import requests
 
 from src.agent.delegation import generate_image
+from src.agent.artifacts import artifact_receipt, describe_artifact
 from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _normalize
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
@@ -51,10 +52,16 @@ def _image_turn(message):
         return _answer("Consigo usar a ferramenta de imagens. Que cena e estilo você quer?",
                        "image_scene", goal=message[:600])
     result = generate_image(intent["prompt"]) if images.provider() == "local" else images.generate(intent["prompt"])
-    state, response = _answer("Imagem gerada e arquivo verificado.")
+    receipt = artifact_receipt(result)
+    current, response = _answer(
+        "Gerei um arquivo de imagem e verifiquei a integridade técnica. "
+        "Ainda não posso garantir que o conteúdo, as cores ou o estilo "
+        "correspondem ao pedido sem revisão visual.", "idle", last_result=receipt,
+    )
     response["image"] = result["url"]
+    response["artifact"] = receipt
     response["events"] = [{"tool": "images.generate", "status": "executed"}]
-    return state, response
+    return current, response
 
 
 def _mission_turn(state, message):
@@ -221,6 +228,7 @@ def _understand(state, message, history):
         skills = []
     decision = intelligence.decide(
         message, history, pending=pending, capabilities=skills, knowledge=facts,
+        last_result=state.get("last_result"),
     )
     if decision is None:
         if pending:
@@ -230,6 +238,11 @@ def _understand(state, message, history):
             )
         return None
     move = decision["move"]
+    if move == "inspect_result":
+        receipt = state.get("last_result")
+        if receipt:
+            return _answer(describe_artifact(receipt), "idle", last_result=receipt)
+        return _answer("Não tenho um resultado de ferramenta registrado nesta conversa.")
     if move == "act":
         return _tool_loop(message, history)
     if move == "research":
@@ -250,7 +263,11 @@ def _understand(state, message, history):
         )
     if pending:
         return _answer(decision["reply"], **state)
-    return _answer(decision["reply"])
+    reply = decision["reply"]
+    last = state.get("last_result")
+    if last and re.search(r"(?:n[aã]o|nao).{0,90}(?:gerar|criar).{0,25}imagen", reply, re.I | re.S):
+        reply = describe_artifact(last)
+    return _answer(reply)
 
 
 def _advance(state, message, history):
@@ -321,6 +338,8 @@ def run(session, turn, message, history, project=None, tasks=None):
         return cached
     try:
         current, result = _advance(state, message, history)
+        if state.get("last_result") and "last_result" not in current:
+            current["last_result"] = state["last_result"]
     except (requests.RequestException, OSError, ValueError, LookupError, RuntimeError, KeyError, TypeError) as error:
         LOGGER.warning("Execução do agente interrompida: %s", type(error).__name__)
         current, result = _answer(

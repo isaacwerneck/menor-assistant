@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
 from src.agent.runner import run as run_agent
+from src.agent.artifacts import artifact_receipt
 from src.agent.feedback import FeedbackStore
 from src.agent import research
 from src.agent.tasks import RunBusy, TaskStore
@@ -313,7 +314,7 @@ def images_generate(body: ImageRequest, request: Request):
             if images.provider() == "local" else images.generate(body.prompt)
         )
         record("images.generate", "executed", ["prompt"])
-        return result
+        return {**result, "artifact": artifact_receipt(result)}
     except (images.ImageUnavailable, ValueError, OSError) as error:
         record("images.generate", "failed", ["prompt"])
         image_error(error)
