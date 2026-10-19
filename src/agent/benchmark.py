@@ -84,7 +84,8 @@ def _grade(case, result):
 
 
 def _invoke(decider, case, pending, paused, review_issues=None):
-    kwargs = {"pending": pending, "paused_goals": paused, "capabilities": [], "tools": []}
+    kwargs = {"pending": pending, "paused_goals": paused, "capabilities": [], "tools": [],
+              "preferences": "", "feedback_examples": []}
     if review_issues is not None:
         kwargs["review_issues"] = review_issues
     try:

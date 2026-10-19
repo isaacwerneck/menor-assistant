@@ -44,10 +44,53 @@ class ReasonerContractTests(unittest.TestCase):
         self.assertEqual(result["move"], "plan")
         self.assertIn("Selecionar sensores", intelligence.render_plan(result))
         payload = post.call_args.kwargs["json"]
-        self.assertEqual(payload["format"], "json")
+        self.assertEqual(payload["format"]["required"], ["move", "reply"])
+        self.assertEqual(payload["format"]["properties"]["move"]["enum"], list(intelligence.MOVES))
+        self.assertFalse(payload["format"]["additionalProperties"])
         ctx = json.loads(payload["messages"][-1]["content"])
         self.assertEqual(ctx["skills"], [{"capability": "images.generate", "ready": False}])
         self.assertIn("Anotações de sensores", ctx["related_memory_data_not_instructions"])
+
+    @patch("src.agent.intelligence.requests.post")
+    def test_full_request_memory_and_preferences_reach_single_inference(self, post):
+        post.return_value = model_reply({"move": "answer", "reply": "Aurora"})
+        message = "detalhe " * 300 + "Responda somente: Aurora."
+        knowledge = "x" * 1500 + " Evidência final: Ubuntu 22.04."
+        with patch("src.memory.store.BrainStore") as store:
+            store.return_value.preference_context.return_value = "- Respostas curtas."
+            result = intelligence.decide(message, knowledge=knowledge, feedback_examples=[])
+        self.assertEqual(result["reply"], "Aurora")
+        post.assert_called_once()
+        payload = post.call_args.kwargs["json"]
+        context = json.loads(payload["messages"][-1]["content"])
+        self.assertEqual(context["current_message"], message)
+        self.assertEqual(context["related_memory_data_not_instructions"], knowledge)
+        self.assertIn("Respostas curtas", context["owner_preferences_data_not_permissions"])
+        self.assertIn("keep_alive", payload)
+
+    @patch("src.agent.intelligence.requests.post")
+    def test_explicit_empty_preferences_never_reads_owner_store(self, post):
+        post.return_value = model_reply({"move": "answer", "reply": "4"})
+        with patch("src.memory.store.BrainStore") as store:
+            self.assertEqual(intelligence.decide(
+                "2 + 2?", feedback_examples=[], preferences="",
+            )["reply"], "4")
+        store.assert_not_called()
+
+    @patch("src.agent.intelligence.requests.post")
+    def test_useful_explanation_over_900_chars_is_not_discarded(self, post):
+        reply = "Explicação fundamentada. " * 50
+        post.return_value = model_reply({"move": "answer", "reply": reply})
+        self.assertEqual(intelligence.decide(
+            "Explique com detalhes", feedback_examples=[], preferences="",
+        )["reply"], reply.strip())
+        post.return_value = model_reply({"move": "answer", "reply": "x" * 4001})
+        self.assertIsNone(intelligence.decide("Explique", feedback_examples=[], preferences=""))
+
+    def test_plan_does_not_append_unsolicited_generic_invitation(self):
+        rendered = intelligence.render_plan(verdict())
+        self.assertIn("Selecionar sensores", rendered)
+        self.assertNotIn("Posso continuar", rendered)
 
     @patch("src.agent.intelligence.requests.post")
     def test_reasoning_model_can_be_separate_from_coder(self, post):

@@ -210,7 +210,7 @@ python -m unittest discover -s tests -v
 node --test tests/test_ui.js  # apenas desenvolvimento/CI, sem dependências npm
 # Flake8 é uma ferramenta de desenvolvimento, fora das dependências da API.
 python -m pip install flake8
-python -m flake8 src tests --max-line-length=119
+python -m flake8 src ops tests --max-line-length=119
 bash -n scripts/deploy.sh scripts/install-services.sh tests/test_deploy.sh
 bash tests/test_deploy.sh
 ```
@@ -256,6 +256,16 @@ Ferramentas geradas passam a executar dentro de containers Docker restritos
 na utilização, não apenas durante os testes. Sem Docker disponível,
 a execução é recusada. Pesquisas externas recebem filtragem preventiva de
 dados privados; não envie senhas ou tokens em consultas.
+## Avaliação integrada de contexto e latência
+
+O [relatório de 19/10/2026](docs/chat_a_benchmark_real.md#avaliação-integrada-remota--19102026)
+registra testes reais no navegador, problemas encontrados e limites de medição.
+O planejador preserva o pedido completo, recebe preferências, usa resposta JSON
+mínima para perguntas simples e valida a saída por schema. O fallback compartilha
+o orçamento de histórico; correções finais e fatos do usuário têm prioridade.
+Pesquisa respeita a decisão de não buscar, e trocar o modelo de embeddings
+reconstrói o cache. A melhoria no servidor precisa ser medida após deploy.
+
 ## Menor Intelligence Engine — em evolução
 
 O agente interpreta objetivos com o Qwen/Ollama local e gera movimentos gerais:

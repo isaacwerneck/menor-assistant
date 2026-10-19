@@ -56,6 +56,19 @@ class LocalSemanticTests(unittest.TestCase):
         self.assertEqual(len(embedding.call_args_list[3].args[0]), 1)
 
     @patch("src.memory.semantic._embed")
+    def test_model_switch_rebuilds_even_when_vector_width_matches(self, embedding):
+        embedding.side_effect = [
+            [self.vec_horta, self.vec_music], [self.vec_horta],
+            [self.vec_music, self.vec_horta], [self.vec_horta],
+        ]
+        index = SemanticIndex(self.store)
+        self.assertIn("irrigação", index.search("horta")[0]["content"])
+        with patch.dict(os.environ, {"MENOR_EMBED_MODEL": "outro-modelo"}):
+            result = index.search("horta")
+        self.assertEqual(len(embedding.call_args_list[2].args[0]), 2)
+        self.assertIn("música", result[0]["content"])
+
+    @patch("src.memory.semantic._embed")
     def test_context_has_provenance_without_interpreting_notes_as_commands(self, embedding):
         embedding.side_effect = [[self.vec_horta, self.vec_music], [self.vec_horta]]
         context = relevant_context("como cultivar plantas?", self.store)

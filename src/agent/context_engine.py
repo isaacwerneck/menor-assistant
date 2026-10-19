@@ -39,6 +39,16 @@ def _overlap(request, candidate):
     return intersection / (len(request) ** 0.5 * len(candidate) ** 0.5) if intersection else 0.0
 
 
+def _excerpt(content, limit):
+    if len(content) <= limit:
+        return content
+    marker = "\n[trecho omitido]\n"
+    if limit <= len(marker):
+        return content[-limit:]
+    room = limit - len(marker)
+    return content[:room // 2] + marker + content[-(room - room // 2):]
+
+
 def select_history(history, message, max_items=MAX_HISTORY_ITEMS, max_chars=MAX_HISTORY_CHARS):
     """Escolhe turnos recentes + fatos antigos relacionados, mantendo cronologia.
 
@@ -48,7 +58,7 @@ def select_history(history, message, max_items=MAX_HISTORY_ITEMS, max_chars=MAX_
     if not isinstance(history, list) or not 2 <= max_items <= 16 or not 400 <= max_chars <= 8000:
         return []
     candidates = [
-        (index, {"role": item["role"], "content": item["content"][:1200]})
+        (index, {"role": item["role"], "content": _excerpt(item["content"], 1200)})
         for index, item in enumerate(history[-20:])
         if isinstance(item, dict) and item.get("role") in ("user", "assistant")
         and isinstance(item.get("content"), str) and item["content"].strip()
@@ -67,18 +77,20 @@ def select_history(history, message, max_items=MAX_HISTORY_ITEMS, max_chars=MAX_
     for _score, index in ranked[:max(0, max_items - len(picked))]:
         picked.add(index)
     ordered = [(index, item) for index, item in candidates if index in picked]
+    latest = {index for index, _ in candidates[-2:]}
+    # Após o último par, fatos do usuário precedem respostas antigas extensas.
+    ordered.sort(key=lambda pair: (pair[0] in latest, pair[1]["role"] == "user", pair[0]), reverse=True)
     result, size = [], 0
-    for _index, item in reversed(ordered):
+    for index, item in ordered:
         content = item["content"]
         room = max_chars - size
         if room <= 0:
             break
         if len(content) > room:
-            # Mantém os fatos do começo da mensagem, sem fabricar resumo.
-            content = content[:room]
-        result.append({"role": item["role"], "content": content})
+            content = _excerpt(content, room)
+        result.append((index, {"role": item["role"], "content": content}))
         size += len(content)
-    return list(reversed(result))
+    return [item for _, item in sorted(result, key=lambda pair: pair[0])]
 
 
 def select_approved_examples(examples, message, limit=MAX_APPROVED_EXAMPLES,

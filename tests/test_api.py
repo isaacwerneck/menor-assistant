@@ -82,6 +82,18 @@ class ApiTests(unittest.TestCase):
         response.__exit__.assert_called_once()
 
     @patch("src.api.main.requests.post")
+    def test_fallback_history_is_bounded_and_retains_final_correction(self, post):
+        post.return_value = upstream({"message": {"content": "Aurora"}})
+        history = [main.ChatMessage(role="user", content="Projeto contexto " * 150
+                                    + "Correção: Aurora.")]
+        history.extend(main.ChatMessage(role="assistant", content="resposta " * 150) for _ in range(8))
+        main.open_ollama(main.ChatRequest(message="Qual projeto?", history=history), stream=False)
+        messages = post.call_args.kwargs["json"]["messages"]
+        self.assertLessEqual(sum(len(item["content"]) for item in messages[1:-1]), 4400)
+        self.assertEqual(messages[-1]["content"], "Qual projeto?")
+        self.assertIn("Correção: Aurora.", " ".join(item["content"] for item in messages[1:-1]))
+
+    @patch("src.api.main.requests.post")
     def test_old_request_without_history_still_works(self, post):
         post.return_value = upstream({"message": {"content": "ok"}})
         self.assertEqual(request("/chat", {"message": "oi"})[0], 200)
