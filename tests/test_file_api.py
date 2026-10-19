@@ -152,7 +152,8 @@ class FileRoutesTests(unittest.TestCase):
         payload = json.dumps({"question": "Qual e o prazo de entrega?"}).encode()
         self.assertEqual(request("POST", target, payload, content_type="application/json")[0], 401)
         self.assertEqual(request("POST", target, payload, cookie=self.cookie,
-                                 origin="https://evil.example")[0], 403)
+                                 origin="https://evil.example",
+                                 content_type="application/json")[0], 403)
         code, result = request("POST", target, payload, cookie=self.cookie,
                                content_type="application/json")
         self.assertEqual(code, 200, result)
