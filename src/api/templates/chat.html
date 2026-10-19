@@ -1694,8 +1694,8 @@
                 }
                 selectedDocument = { id: info.file_id, format: info.format, name: file.name };
                 documentNotice('Arquivo privado recebido: ' + file.name
-                    + '. Faça sua pergunta e envie. O conteúdo ainda não foi analisado. '
-                    + 'Para excluir o arquivo, use Arquivos.');
+                    + ' (ID ' + info.file_id + '). Faça sua pergunta e envie. '
+                    + 'O conteúdo não foi analisado. A exclusão deve ser explícita.');
             } catch (error) {
                 if (ticket !== documentUploadTicket) return;
                 documentNotice('Não foi possível confirmar o upload. '
