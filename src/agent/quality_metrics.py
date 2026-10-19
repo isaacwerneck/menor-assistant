@@ -73,6 +73,15 @@ class DecisionMetrics:
             )
 
     def report(self):
+        path = self.store.brain_dir / "memoria" / "decision_metrics.sqlite"
+        if not path.exists():
+            if path.is_symlink():
+                raise ValueError("Auditoria de decisões inválida.")
+            return {
+                "events": 0, "handled": 0, "unhandled": 0, "failed": 0,
+                "phases": {}, "error_types": {}, "review_signals": [],
+                "note": "Contadores técnicos, não prova de qualidade ou inteligência do modelo.",
+            }
         with closing(self._connect()) as db:
             rows = db.execute(
                 "SELECT phase,outcome,error_type FROM decisions "
