@@ -174,9 +174,13 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             return None
         if tool_name:
             known = next((t for t in (tools or []) if t.get("name") == tool_name), None)
-            if item["move"] != "act" or known is None:
+            if item["move"] != "act" or known is None or type(known.get("writes")) is not bool:
                 return None
-            if (set(arguments) != set(known["arguments"])
+            if (not isinstance(known.get("arguments"), list)
+                    or any(not isinstance(arg, str) for arg in known["arguments"])):
+                return None
+            if (len(known["arguments"]) != len(set(known["arguments"]))
+                    or set(arguments) != set(known["arguments"])
                     or any(not isinstance(value, str) or not 1 <= len(value.strip()) <= 280
                            for value in arguments.values())):
                 return None
