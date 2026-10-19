@@ -51,6 +51,7 @@ def artifact_receipt(produced):
     with Image.open(images.file_path(image_id)) as source:
         width, height = source.size
     review = produced.get("review", {})
+    visual = review.get("visual_review", {}) if isinstance(review, dict) else {}
     return {
         "kind": "image",
         "id": image_id,
@@ -61,7 +62,9 @@ def artifact_receipt(produced):
         "worker": produced.get("worker", "unknown"),
         "file_verified": bool(review.get("passed")),
         "content_verified": review.get("content_verified") is True,
-        "content_description": review.get("content_description", ""),
+        "content_description": str(visual.get("description", ""))[:500],
+        "vision_model_assessment": visual.get("model_matches_brief")
+                                   if visual.get("available") else None,
         "limitation": (
             "Arquivo válido não confirma que o tema, as cores ou o estilo pedidos aparecem na imagem."
         ),
@@ -72,10 +75,13 @@ def describe_artifact(receipt):
     if not isinstance(receipt, dict) or receipt.get("kind") != "image":
         return "Não encontrei um artefato recente verificável nesta conversa."
     width, height = receipt.get("actual_size", ["?", "?"])
+    description = receipt.get("content_description", "")
+    critic = ("O modelo visual local descreveu: " + description[:400] + ". "
+              if description else "")
     return (
         f"Eu gerei um PNG de {width}×{height} pixels com o subagente "
         f"{receipt.get('worker', 'local')}. Pedido: {receipt.get('prompt', '')[:350]}. "
-        "O arquivo existe, mas não confirmei visualmente se representa a cena "
-        "que você pediu. Se ficou diferente, precisamos revisar o resultado e "
-        "corrigir a ferramenta; não vou dizer que ficou certo sem avaliar."
+        + critic + "O arquivo existe, mas sua integridade não comprova a cena, "
+        "as cores ou o estilo. Se ficou diferente, precisamos corrigir a ferramenta; "
+        "não vou afirmar que está certo sem avaliação confiável."
     )
