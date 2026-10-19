@@ -69,7 +69,8 @@ def _mission_turn(state, message):
         criteria = "; ".join(mission["plan"].get("acceptance", []))
         return _answer(f"Plano:\n{steps}\nVerificação: {criteria}\n\n{mission['question']}", **state)
     if mission["status"] in ("queued", "installing") and not re.search(
-        r"status|andamento|pront|termin|como|cancel", normal,
+        r"status|andamento|progresso|pront|termin|como|cancel|consegu|"
+        r"deu certo|funcion|instal|baix|modelo|ferramenta|e agora|falta", normal,
     ):
         return state, {"handled": False}
     if mission["status"] == "awaiting_approval":
