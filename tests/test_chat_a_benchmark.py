@@ -20,6 +20,7 @@ class BenchmarkTests(unittest.TestCase):
     def test_baseline_skips_critic_completely(self):
         def forbidden(*args, **kwargs):
             self.fail("A revisão não deveria rodar")
+
         result = benchmark(lambda *a, **kw: plan(), forbidden, self.cases)
         self.assertEqual(result["baseline"]["passed"], 1)
         self.assertIsNone(result["reviewed"])
@@ -28,12 +29,15 @@ class BenchmarkTests(unittest.TestCase):
     def test_compare_reuses_initial_plan_and_times_additional_cost(self):
         calls = []
         times = iter([0, .1, .1, .3])
+
         def planner(*a, **kw):
             calls.append("planner")
             return plan()
+
         def critic(*a, **kw):
             calls.append("critic")
             return {"verdict": "ok", "issues": [], "question": ""}
+
         result = benchmark(planner, critic, self.cases, True, lambda: next(times))
         self.assertEqual(calls, ["planner", "critic"])
         self.assertEqual(result["reviewed"]["passed"], 1)
@@ -44,13 +48,16 @@ class BenchmarkTests(unittest.TestCase):
         calls = []
         case = (Scenario("retomar", "Volte ao projeto de arquivo", ("continue",),
                          relation="resume", active="Fazer música", paused="Ler documentos"),)
+
         def planner(*args, **kw):
             calls.append(kw)
             if kw.get("review_issues"):
                 return plan(move="continue", relation="switch", resume_goal_id="injetado")
             return plan(move="plan", relation="resume", resume_goal_id="a" * 32)
+
         def critic(*a, **kw):
             return {"verdict": "revise", "issues": ["Corrigir etapas"], "question": ""}
+
         result = benchmark(planner, critic, case, True)
         self.assertEqual(len(calls), 2)
         self.assertEqual(calls[1]["review_issues"], ["Corrigir etapas"])
@@ -59,9 +66,11 @@ class BenchmarkTests(unittest.TestCase):
 
     def test_rejected_unsafe_revision_does_not_replace_plan(self):
         calls = []
+
         def planner(*a, **kw):
             calls.append(kw)
             return plan(move="act") if kw.get("review_issues") else plan()
+
         result = benchmark(planner, lambda *a, **kw: {"verdict": "revise", "issues": ["Revise"]},
                            self.cases, True)
         self.assertEqual(len(calls), 2)
@@ -91,9 +100,11 @@ class BenchmarkTests(unittest.TestCase):
 
     def test_tools_are_not_provided_or_authorized_by_benchmark(self):
         received = []
+
         def planner(*a, **kw):
             received.append(kw)
             return plan(tool="shell.exec")
+
         result = benchmark(planner, cases=self.cases)
         self.assertEqual(received[0]["tools"], [])
         self.assertEqual(received[0]["capabilities"], [])
