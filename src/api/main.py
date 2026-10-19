@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -11,6 +12,8 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
+from src.agent.runner import run as run_agent
+from src.agent.tasks import RunBusy, TaskStore
 from src.agent.router import classify
 from src.agent.image_intent import image_intent
 from src.agent.missions import MissionStore
@@ -43,7 +46,7 @@ app = FastAPI(
     lifespan=app_lifespan,
     title="Menor - Assistente de IA Pessoal",
     description="Servidor de orquestração do Menor, assistente pessoal rodando em hardware doméstico.",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
@@ -80,6 +83,35 @@ class ChatRequest(BaseModel):
         if len(self.message) + sum(len(item.content) for item in self.history) > 32000:
             raise ValueError("A conversa enviada deve conter no máximo 32000 caracteres.")
         return self
+
+
+class AgentRunRequest(ChatRequest):
+    session_id: str = Field(min_length=8, max_length=80, pattern=r"^[a-zA-Z0-9_-]+$")
+    turn_id: str = Field(min_length=8, max_length=80, pattern=r"^[a-zA-Z0-9_-]+$")
+
+
+@app.post("/agent/run")
+def agent_run(body: AgentRunRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return run_agent(
+            body.session_id, body.turn_id, body.message,
+            [item.model_dump() for item in body.history], project=body.project,
+        )
+    except (RunBusy, ValueError) as error:
+        raise HTTPException(409, str(error)) from error
+    except (sqlite3.Error, OSError) as error:
+        logger.warning("Estado do agente indisponível: %s", type(error).__name__)
+        raise HTTPException(503, "Não consegui persistir a tarefa. Nenhuma nova execução foi autorizada.") from error
+
+
+@app.get("/agent/runs/{session_id}")
+def agent_run_state(session_id: str, request: Request):
+    auth.require_owner(request)
+    try:
+        return TaskStore().inspect(session_id)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
 
 
 class ToolRequest(BaseModel):
@@ -256,7 +288,7 @@ async def images_edit(
     auth.require_owner(request)
     try:
         raw = await file.read(images.MAX_BYTES + 1)
-        result = images.edit(prompt, raw)
+        result = await asyncio.to_thread(images.edit, prompt, raw)
         record("images.edit", "executed", ["prompt", "file"])
         return result
     except (images.ImageUnavailable, ValueError, OSError) as error:
@@ -520,7 +552,7 @@ class ChatResponse(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 def serve_chat_ui():
     html_file = TEMPLATES_DIR / "chat.html"
-    return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+    return HTMLResponse(content=html_file.read_text(encoding="utf-8"), headers={"Cache-Control": "no-store"})
 
 
 def ollama_error(error):
@@ -531,6 +563,20 @@ def ollama_error(error):
     if isinstance(error, requests.HTTPError) and error.response is not None and error.response.status_code == 404:
         return HTTPException(status_code=404, detail="Modelo não encontrado no Ollama. Confira /models.")
     return HTTPException(status_code=502, detail="O Ollama retornou uma resposta inválida ou uma falha de inferência.")
+
+
+def capability_context():
+    try:
+        capabilities = [{"name": item["capability"], "ready": item["ready"]} for item in skill_catalog()]
+        return (
+            "\nCapacidades verificadas pelo servidor: " + json.dumps(capabilities, ensure_ascii=False)
+            + ". O modelo de texto não gera pixels, mas o Menor pode delegar a ferramentas prontas. "
+            "Quando uma ferramenta estiver ausente, ofereça planejar sua implementação; "
+            "nunca declare sucesso de uma execução sem recibo."
+        )
+    except (OSError, ValueError, LookupError) as error:
+        logger.warning("Catálogo indisponível no contexto: %s", type(error).__name__)
+        return ""
 
 
 def prompt_with_preferences(query=None, project=None):
@@ -576,7 +622,7 @@ def open_ollama(req: ChatRequest, stream: bool):
     payload = {
         "model": req.model,
         "messages": [
-            {"role": "system", "content": prompt_with_preferences(req.message, req.project)},
+            {"role": "system", "content": prompt_with_preferences(req.message, req.project) + capability_context()},
             *[item.model_dump() for item in req.history],
             {"role": "user", "content": req.message},
         ],
@@ -659,6 +705,7 @@ def health_check():
         "status": "online",
         "service": "Menor API",
         "version": app.version,
+        "api_contract": 1,
         "ollama_status": ollama_status,
         "default_model": DEFAULT_MODEL,
     }

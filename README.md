@@ -16,7 +16,7 @@ python3 -m venv .venv
 
 Abra `http://IP_DO_SERVIDOR:8000`. A API oferece `/health`, `/models`,
 `/chat`, `/chat/stream` e a documentação interativa em `/docs`.
-O serviço ainda não possui autenticação: mantenha-o na rede privada/VPN.
+O proprietário configura autenticação no primeiro acesso. Mantenha o serviço na rede privada/VPN; HTTPS não é integrado.
 
 O chat envia o histórico recente ao modelo (até 20 mensagens e 32000 caracteres
 junto com a mensagem atual). As conversas ficam no navegador e podem ser
@@ -98,6 +98,35 @@ externa por padrão. O download inicial exige internet, alguns GB livres
 e o teste de desempenho no notebook.
 
 Veja [a arquitetura multiagente](docs/arquitetura_multiagente.md).
+
+## Núcleo de execução local
+
+O chat consulta o núcleo autenticado em `/agent/run`: capacidades reais,
+planejamento, aprovação persistente e ferramentas limitadas ao catálogo.
+O modelo pode consultar ferramentas de leitura em até quatro passos; uma escrita
+mostra a operação e seus parâmetros antes de pedir autorização. O mesmo turno
+repetido recupera o recibo salvo. Não existe terminal arbitrário nesta versão.
+
+A comparação com as arquiteturas públicas de Codex, Claude, ChatGPT e
+Antigravity, o que já foi entregue e as próximas fases estão no
+[plano de refinamento, seção R11](PLANO_REFINAMENTO.md).
+
+## Comandos curtos no servidor
+
+Instalados automaticamente pelo deploy em `~/.local/bin/menor`:
+
+```bash
+menor start
+menor stop
+menor restart
+menor status
+```
+
+Também aceita `iniciar`, `parar` e `reiniciar`. Se o terminal já estava aberto
+antes da instalação, execute `source ~/.profile` uma vez para atualizar o PATH.
+`stop` para API, timers e workers do Menor; o serviço Ollama e o computador
+continuam ligados. `restart` reinicia a API e retoma timers, preservando workers
+que já estejam ativos. Operações em curso interrompidas por stop exigem revisão.
 
 ## Deploy automático
 

@@ -76,19 +76,23 @@ class MissionStore:
                 raise ValueError("Missão inválida.")
             return result
 
-    def list(self, limit=20):
+    def list(self, limit=20, statuses=None, oldest_first=False):
         if not isinstance(limit, int) or not 1 <= limit <= 50:
             raise ValueError("Limite inválido.")
+        if statuses is not None and not set(statuses).issubset(STATES):
+            raise ValueError("Filtro de estados inválido.")
         with _LOCK:
             items = []
             for path in self._root().iterdir():
                 if path.is_symlink() or not path.is_file() or not VALID_ID.fullmatch(path.stem):
                     continue
                 try:
-                    items.append(self.get(path.stem))
+                    item = self.get(path.stem)
+                    if statuses is None or item["status"] in statuses:
+                        items.append(item)
                 except (ValueError, LookupError, OSError, json.JSONDecodeError):
                     continue
-            return sorted(items, key=lambda x: x["updated_at"], reverse=True)[:limit]
+            return sorted(items, key=lambda x: x["updated_at"], reverse=not oldest_first)[:limit]
 
     def begin(self, capability, goal):
         if capability not in CAPABILITIES:

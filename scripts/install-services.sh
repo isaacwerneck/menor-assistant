@@ -9,7 +9,8 @@ fi
 for tool in git python3 flock curl systemctl; do
     command -v "$tool" >/dev/null
 done
-mkdir -p "$HOME/.config/systemd/user"
+mkdir -p "$HOME/.config/systemd/user" "$HOME/.local/bin"
+ln -sfn "$PWD/scripts/menor" "$HOME/.local/bin/menor"
 for unit in deploy/systemd/*; do
     ln -sfn "$PWD/$unit" "$HOME/.config/systemd/user/${unit##*/}"
 done

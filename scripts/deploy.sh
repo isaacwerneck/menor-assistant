@@ -7,6 +7,10 @@ ensure_optional_timers() {
     local units="$HOME/.config/systemd/user"
     local name changed=0
     mkdir -p "$units"
+    if [[ -f scripts/menor ]]; then
+        mkdir -p "$HOME/.local/bin"
+        ln -sfn "$PWD/scripts/menor" "$HOME/.local/bin/menor"
+    fi
     for name in menor-review menor-missions; do
         if [[ ! -f "deploy/systemd/$name.timer" ]]; then
             continue
@@ -67,8 +71,15 @@ main() {
         python3 -m venv .venv
     fi
     .venv/bin/python -m pip install -r requirements.txt
-    .venv/bin/python -m unittest discover -s tests -v
+    (
+        test_data="$(mktemp -d)"
+        trap 'rm -rf -- "$test_data"' EXIT
+        # Testes não podem ler o cérebro real nem disputar a CPU do Ollama de produção.
+        MENOR_DATA_DIR="$test_data/data" OLLAMA_URL=http://127.0.0.1:9 \
+            .venv/bin/python -m unittest discover -s tests -v
+    )
     bash tests/test_deploy.sh
+    bash tests/test_control.sh
     systemctl --user daemon-reload
     systemctl --user restart menor-api.service
     curl --fail --silent --show-error --retry 10 --retry-connrefused \

@@ -137,3 +137,104 @@ Implantar e medir desempenho no hardware Intel real antes de aceitar a fase.
   de conexão do Qwen. Somente instruções JSON aceitas são executadas.
 - Testar inferência real de 512x512 no notebook antes de declarar operação pronta.
 
+## R11 — Arquitetura pública dos agentes e implementação local (18/10/2026)
+
+Esta análise usa documentação pública consultada nesta data. Os pesos, treinamento
+e detalhes privados dos produtos não foram inspecionados. A implementação abaixo
+reproduz padrões de orquestração, sem adicionar SDK externo ou trocar o Qwen.
+
+| Referência oficial | Mecanismo documentado | Aplicação no Menor |
+| --- | --- | --- |
+| [Codex harness](https://developers.openai.com/blog/codex-as-a-platform) e [App Server](https://learn.chatgpt.com/docs/app-server) | Estado de conversa/turnos, ferramentas, aprovações e atividade exposta pelo servidor | O backend passa a possuir estado e recibos; a UI apresenta o resultado |
+| [Claude tool use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works) e [loops](https://claude.com/resources/articles/getting-started-with-loops) | Modelo pede ação, aplicação executa, resultado volta ao modelo; condições de parada | Loop local de até quatro passos, catálogo fechado e bloqueio de repetição |
+| [Antigravity Artifacts](https://antigravity.google/docs/artifacts) | Planos, diffs e arquivos como entregas revisáveis | Plano da missão e critérios apresentados antes da autorização; arquivo só após verificação |
+| [ChatGPT imagens](https://learn.chatgpt.com/docs/image-generation) | Ferramenta de geração/edição disponível na experiência de conversa | Capacidade do produto vem de executores reais, não de o modelo textual saber produzir pixels |
+| [Ollama tool calling](https://docs.ollama.com/capabilities/tool-calling) | Chamadas estruturadas e resultados de ferramentas | Nesta etapa usa JSON validado, compatível com o runtime já adotado; não presume suporte nativo de qualquer modelo |
+
+### Diagnóstico confirmado do print
+
+O servidor respondia versão 0.3.0 e sua especificação OpenAPI não continha
+`/agent/resolve`, imagens ou missões, apesar do checkout na revisão atual.
+O processo mantinha módulos antigos em memória. O deploy executava testes que
+podiam consultar o Ollama de produção antes de chegar ao restart.
+
+O 404 tem evidência de incompatibilidade interface/API. A captura, isoladamente,
+não revela o corpo exato de todas as chamadas. Não se atribui o erro a uma
+suposta incapacidade dos pesos do Qwen.
+
+### Incremento implementado
+
+- `POST /agent/run`: autenticado, recebe conversa, identificador do turno,
+  mensagem e histórico limitado. Mantém as rotas anteriores compatíveis.
+- `GET /agent/runs/{session_id}`: consulta autenticada do estado da conversa.
+- `src/agent/tasks.py`: estado e recibos no SQLite privado em
+  `cerebro/memoria/agent.sqlite`. Transações serializam o início de cada conversa.
+  Mesmo turno e conteúdo retornam o recibo anterior; ID reutilizado com conteúdo
+  diferente é recusado. Aprovação pendente sobrevive à recriação do processo.
+- `src/agent/runner.py`: inspeção de capacidade, coleta de requisitos, plano,
+  autorização, execução e resultado. Leituras podem alimentar outro passo do
+  modelo; escritas sempre mostram ferramenta e parâmetros antes de pedir aceite.
+  Somente nomes e argumentos do registry são aceitos. Não aceita shell arbitrário.
+- Limites: quatro passos, uma ação por passo, timeout de leitura de 45 segundos
+  por inferência do planejador e bloqueio de chamadas repetidas no mesmo ciclo.
+- Pedidos de imagens consultam a capacidade real. Sem runtime, oferecem planejar
+  sua construção. Pedir software inicia missão; não grava uma ideia como substituto
+  da execução. Um “sim” responde ao estado persistido, não cria permissão genérica.
+- A interface chama o núcleo antes dos handlers anteriores para tarefas novas.
+  Memória, anexos e missões antigas conservam seus fluxos durante a migração.
+  Falha do núcleo não vira silenciosamente conversa genérica.
+- `/health` publica `api_contract: 1`; a UI detecta API antiga e explica o problema.
+  O HTML é servido sem cache. Isso identifica contrato, não revisão Git completa.
+- Deploy usa diretório de dados temporário e Ollama indisponível nos testes:
+  não consulta memórias reais nem disputa inferência com conversas de produção.
+- Correções operacionais: edição externa de imagem sai do loop assíncrono;
+  a fila filtra estados antes do limite e processa mais antigos primeiro;
+  nova missão não apaga a instalação previamente verificada do catálogo.
+- Controle instalado em `~/.local/bin/menor`: start, stop, restart, status.
+  Stop pausa timers e workers; restart recarrega a API sem matar workers ativos.
+
+### Critérios de aceite desta entrega
+
+1. A frase “eai mano, conseguimos fazer uma imagem?” recebe capacidade real e
+   pergunta objetiva; não cai em negação genérica do modelo.
+2. “não conseguimos fazer uma ferramenta?” inicia missão; autorização de
+   instalação só ocorre depois de requisitos e plano.
+3. Repetir o mesmo turno confirmado não repete a ferramenta.
+4. Recusar a proposta não executa escrita; ferramenta fora do catálogo é recusada.
+5. Testes Python completos no Ubuntu, interface no Node e cenários Bash passam.
+6. API reiniciada publica o novo contrato; o git pull sozinho não é aceite.
+
+Validação em 18/10/2026: 147 testes Python no Ubuntu, 26 testes de interface
+no Node, cenários Bash de deploy/controle e Flake8 com limite de 119 caracteres.
+A conversa do print foi reproduzida no navegador com dados isolados: oferta de
+capacidade, missão, coleta de requisitos e plano antes da aprovação; sem instalar
+modelo nem consultar o cérebro de produção.
+
+### Próximas entregas, por ordem e com limites claros
+
+1. **Recuperação operacional:** guardar lease/heartbeat da execução e reconciliar
+   tarefas interrompidas com artefatos antes de permitir nova tentativa.
+   Aceite: encerrar processo após ação e antes do recibo não duplica efeitos.
+2. **Executor programador:** worktree por tarefa, leitura/pesquisa/diff, comandos
+   permitidos e testes em sandbox real, sem credenciais nem cérebro de produção.
+   Aceite: tarefa pequena produz patch e teste verificável, sem tocar a main.
+   O autoeditor atual continua limitado a draft PR com opt-in; não é esse sandbox.
+3. **Eventos e revisão:** persistir eventos por ferramenta, transmitir progresso
+   real e exibir plano, diff e evidências. Aceite: reconectar no meio da tarefa
+   reconstrói o progresso sem chamar a ferramenta novamente.
+4. **Contexto:** resumo por tarefa e orçamento de tokens medido no Ollama,
+   separado de memória durável. Aceite: retomar projeto sem vazar outro contexto
+   e sem perder decisões ao compactar.
+5. **Confiabilidade:** backup/restore ensaiado, revisão de aprovação por risco e
+   rollback de release. Aceite: restauração preserva notas, tarefas e autorizações.
+6. **Hardware e avaliação:** medir latência, RAM e taxa de acerto das frases reais
+   no Qwen/Intel antes de expandir ferramentas ou paralelismo.
+
+Limites atuais: um processo interrompido durante uma ferramenta fica bloqueado,
+sem replay automático; recibos não equivalem a transação distribuída com GitHub
+ou APIs externas. Missões têm worker próprio; o loop de ferramentas é limitado
+ao turno HTTP. Ainda não há terminal programador, browsing autônomo, sandbox
+completo, retomada automática de execução interrompida ou equivalência de
+inteligência com modelos proprietários. O banco de tarefas contém argumentos
+necessários à aprovação e resultados; incluí-lo no backup privado, nunca no Git.
+

@@ -50,6 +50,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
         FormData: class { constructor() { this.values = {}; } append(k, v) { this.values[k] = v; } },
         URL: { createObjectURL(value) { blob = value; return 'blob:test'; }, revokeObjectURL() {} },
         fetch: async (url, options) => {
+            if (url === '/agent/run') return { ok: true, json: async () => ({ handled: false }) };
             if (url === '/auth/status') {
                 return { ok: true, json: async () => ({ configured: true, authenticated: true }) };
             }
@@ -165,7 +166,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
                 return { ok: true, json: async () => intent };
             }
             if (url === '/health') {
-                return { ok: true, json: async () => ({ default_model: 'test-model', ollama_status: 'online' }) };
+                return { ok: true, json: async () => ({ default_model: 'test-model', ollama_status: 'online', api_contract: 1 }) };
             }
             requests.push(JSON.parse(options.body));
             const data = new TextEncoder().encode('Olá 👋');
@@ -179,6 +180,45 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
     return { context, elements, writes, requests, routed, resolved, memories, knowledgeActions, imageCalls, repairCalls, missionCalls,
         downloads, getBlob: () => blob };
 }
+
+test('núcleo do servidor assume tarefa e mostra recibo sem chamar roteadores antigos', async () => {
+    const ui = browser();
+    ui.context.fetch = async () => ({ ok: true, json: async () => ({
+        handled: true, reply: 'Consulta concluída.', events: [{ tool: 'projects.list', status: 'executed' }],
+    }) });
+    ui.elements.get('userInput').value = 'Liste meus projetos';
+    await ui.context.sendMsg();
+    assert.match(ui.context.getActiveConv().messages.at(-1).content, /projects.list/);
+    assert.equal(ui.routed.length, 0);
+    assert.equal(ui.requests.length, 0);
+});
+
+test('API antiga informa incompatibilidade sem inventar resposta textual', async () => {
+    const ui = browser();
+    ui.context.fetch = async () => ({ status: 404, ok: false });
+    ui.elements.get('userInput').value = 'conseguimos fazer uma imagem?';
+    await ui.context.sendMsg();
+    const rows = ui.elements.get('messagesContainer').children;
+    assert.match(rows.at(-1).children[0].textContent, /deploy e reinício/);
+    assert.equal(ui.context.getActiveConv().messages.length, 1);
+    assert.equal(ui.requests.length, 0);
+});
+
+test('retry de rede conserva o mesmo identificador e conteúdo do turno', async () => {
+    const ui = browser();
+    const sent = [];
+    ui.context.fetch = async (url, options) => {
+        sent.push(JSON.parse(options.body));
+        if (sent.length === 1) throw new Error('conexão perdida');
+        return { ok: true, json: async () => ({ handled: true, reply: 'Resultado recuperado.' }) };
+    };
+    ui.elements.get('userInput').value = 'Liste meus projetos';
+    await ui.context.sendMsg();
+    ui.elements.get('userInput').value = 'Liste meus projetos';
+    await ui.context.sendMsg();
+    assert.equal(sent[0].turn_id, sent[1].turn_id);
+    assert.deepEqual(sent[0], sent[1]);
+});
 
 test('histórico mantém ordem, converte bot e respeita orçamento de contexto', () => {
     const { context } = browser();
@@ -228,9 +268,9 @@ test('enviar inclui histórico, decodifica UTF-8 e exporta Markdown', async () =
 
 test('falha no stream aparece na interface e não vira resposta no histórico', async () => {
     const ui = browser();
-    ui.context.fetch = async () => ({
-        ok: true, body: { getReader: () => ({ read: async () => { throw new Error('interrompido'); } }) },
-    });
+    ui.context.fetch = async url => url === '/agent/run'
+        ? { ok: true, json: async () => ({ handled: false }) }
+        : { ok: true, body: { getReader: () => ({ read: async () => { throw new Error('interrompido'); } }) } };
     ui.elements.get('userInput').value = 'oi';
     await ui.context.sendMsg();
     assert.equal(ui.context.getActiveConv().messages.length, 1);

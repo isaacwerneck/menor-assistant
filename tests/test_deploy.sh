@@ -16,6 +16,7 @@ cp "$source_script" scripts/deploy.sh
 printf '.venv/\n' > .gitignore
 printf '# fixture\n' > requirements.txt
 printf '#!/usr/bin/env bash\nexit 0\n' > tests/test_deploy.sh
+cp tests/test_deploy.sh tests/test_control.sh
 git add .
 git commit -qm initial
 git push -qu origin main

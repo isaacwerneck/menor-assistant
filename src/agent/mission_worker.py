@@ -12,7 +12,7 @@ from src.tools import local_images
 
 def run_once(store=None):
     missions = store if store is not None else MissionStore()
-    for mission in missions.list(limit=50):
+    for mission in missions.list(limit=50, statuses={"queued", "installing"}, oldest_first=True):
         if mission["status"] not in ("queued", "installing"):
             continue
         mission_id = mission["id"]

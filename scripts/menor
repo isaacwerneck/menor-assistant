@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+trap 'echo "Não consegui controlar o Menor. Consulte systemctl --user status menor-api.service." >&2' ERR
+
+timers=()
+workers=()
+for name in menor-deploy menor-missions menor-review; do
+    if systemctl --user cat "$name.timer" >/dev/null 2>&1; then
+        timers+=("$name.timer")
+        workers+=("$name.service")
+    fi
+done
+
+case "${1:-status}" in
+    start|iniciar)
+        systemctl --user start menor-api.service "${timers[@]}"
+        echo "Menor iniciado."
+        ;;
+    stop|parar)
+        if (( ${#timers[@]} )); then
+            systemctl --user stop "${timers[@]}" "${workers[@]}"
+        fi
+        systemctl --user stop menor-api.service
+        echo "Menor parado; os timers não vão religar a API."
+        ;;
+    restart|reiniciar)
+        systemctl --user restart menor-api.service
+        if (( ${#timers[@]} )); then
+            systemctl --user start "${timers[@]}"
+        fi
+        echo "API do Menor reiniciada."
+        ;;
+    status)
+        systemctl --user --no-pager status menor-api.service "${timers[@]}"
+        ;;
+    *)
+        echo "Uso: menor {start|stop|restart|status}" >&2
+        exit 2
+        ;;
+esac

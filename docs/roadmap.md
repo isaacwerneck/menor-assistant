@@ -22,11 +22,12 @@
 - [x] Tratar indisponibilidade, timeout e falhas no streaming.
 - [x] Adicionar status de conexão, exportação Markdown e refinamentos para celular/teclado.
 - [x] Implementar deploy por consulta periódica à main, serviços systemd e testes no GitHub Actions.
-- [ ] Ativar os serviços no servidor e habilitar linger; SSH deixou de responder antes da instalação.
+- [x] Ativar os serviços no servidor e habilitar linger; confirmados via SSH em 18/10/2026.
 
-A API e a interface foram verificadas localmente com Ollama simulado nos testes.
-Inferência real, instalação dos serviços e continuidade após reboot ainda exigem
-validação no servidor. Instruções em [guia do servidor](guia_servidor_domestico.md#deploy-automático-do-menor).
+A suíte Python foi validada no Ubuntu com dados isolados e Ollama indisponível;
+a interface passou nos testes Node e no fluxo real de missão pelo navegador.
+Serviços habilitados e linger foram confirmados. Desempenho de inferência real e
+continuidade após reboot ainda exigem validação no servidor. Instruções em [guia do servidor](guia_servidor_domestico.md#deploy-automático-do-menor).
 
 ## Fase 4: Pipeline de Áudio (Voz Bidirecional)
 - [ ] Integrar `faster-whisper` para transcrição de áudio do microfone.

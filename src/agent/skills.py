@@ -45,10 +45,15 @@ def catalog(missions=None):
         cap = mission.get("capability")
         if cap in CAPABILITIES and cap not in latest and mission["status"] != "cancelled":
             latest[cap] = mission
+    verified = {}
+    for mission in missions.list(limit=50, statuses={"ready"}):
+        if isinstance(mission.get("result"), dict) and mission["result"].get("verified") is True:
+            verified.setdefault(mission["capability"], mission)
     image_runtime = local_images.status(missions.store)
     result = []
     for capability in sorted(CAPABILITIES):
-        mission = latest.get(capability)
+        mission = verified.get(capability) if image_runtime["ready"] else None
+        mission = mission or latest.get(capability)
         ready = (
             capability == "images.generate"
             and image_runtime["ready"]

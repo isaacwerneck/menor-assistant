@@ -486,7 +486,7 @@
         </div>
         <div class="sidebar-footer">
             <div class="dot"></div>
-            <span>Menor v0.3 · Memória local</span>
+            <span>Menor v0.4 · Memória local</span>
         </div>
     </aside>
 
@@ -596,6 +596,7 @@
         let conversations = loadConversations();
         let activeConvId = null;
         let isGenerating = false;
+        let apiCompatible = null;
         let authSetupNeeded = false;
         let brainItems = [];
         let brainEditingId = null;
@@ -924,6 +925,11 @@
                 const response = await fetch('/health');
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 const health = await response.json();
+                apiCompatible = health.api_contract === 1;
+                if (!apiCompatible) {
+                    status.textContent = "API desatualizada para esta interface. Aguarde o deploy e reinício do servidor.";
+                    return;
+                }
                 document.getElementById('modelName').textContent = health.default_model;
                 status.textContent = health.ollama_status === 'online'
                     ? 'Ollama conectado · As conversas ficam neste navegador.'
@@ -1096,6 +1102,39 @@
         function useSuggestion(el) {
             document.getElementById('userInput').value = el.textContent;
             sendMsg();
+        }
+
+        async function handleAgentTurn(conv, message, history, project, content) {
+            if (conv.pendingMemory || conv.pendingImage || conv.activeMission ||
+                conv.pendingCapabilityOffer || selectedImageFile) return false;
+            const previous = conv.pendingAgentRequest;
+            const payload = previous && previous.message === message ? previous : {
+                session_id: conv.id, turn_id: genId(), message, history, project,
+            };
+            conv.pendingAgentRequest = payload;
+            save();
+            content.textContent = 'Consultando capacidades e planejando a próxima ação...';
+            const response = await fetch('/agent/run', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (response.status === 404) {
+                throw new Error('A API não possui o núcleo desta interface. Aguarde o deploy e reinício do servidor.');
+            }
+            if (response.status === 401) {
+                await refreshAuth();
+                throw new Error('Faça login para continuar.');
+            }
+            const result = await response.json();
+            if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : 'Falha no agente.');
+            delete conv.pendingAgentRequest;
+            save();
+            if (!result.handled) return false;
+            const events = Array.isArray(result.events) ? result.events.map(
+                item => '✓ ' + item.tool + ' · ' + item.status,
+            ).join('\n') : '';
+            imageReply(conv, content, result.reply + (events ? '\n\n' + events : ''), result.image || '');
+            return true;
         }
 
         // ========== IMAGENS E ESTADO DE TAREFA ==========
@@ -1363,7 +1402,7 @@
 
         // ========== SEND MESSAGE ==========
         async function sendMsg() {
-            if (isGenerating) return;
+            if (isGenerating || apiCompatible === false) return;
             const input = document.getElementById('userInput');
             const msg = input.value.trim() || (selectedImageFile ? 'edita essa imagem' : '');
             if ((!msg && !selectedImageFile) || msg.length > 8000) return;
@@ -1388,6 +1427,7 @@
             const botContent = appendMessage('bot', '', true);
 
             try {
+                if (await handleAgentTurn(conv, msg, history, project, botContent)) return;
                 if (!conv.pendingMemory && (await handleMissionTurn(conv, msg, botContent))) return;
                 if (!conv.pendingMemory && (await handleImageTurn(conv, msg, botContent))) return;
                 if (!conv.pendingMemory && (await handleRepairTurn(conv, msg, botContent))) return;
