@@ -264,15 +264,26 @@ def _understand(state, message, history):
                 "proposed_steps_not_executed": pending["steps"],
                 "acceptance": pending["acceptance"],
             }, ensure_ascii=False)
-        return _tool_loop(request, history)
+        next_state, receipt = _tool_loop(request, history)
+        if pending:
+            if next_state["phase"] == "approval":
+                next_state["return_goal"] = {
+                    "goal": pending["goal"], "goal_id": pending["id"],
+                    "steps": pending["steps"], "acceptance": pending["acceptance"],
+                    "question": pending["question"],
+                }
+            elif next_state["phase"] in ("idle", "blocked"):
+                # Consulta concluída ou limite de passos: preservar o objetivo.
+                next_state = dict(state)
+                receipt["phase"] = "goal"
+        return next_state, receipt
     if move == "research":
         evidence = research.handle(message, history, automatic=True)
         if evidence is not None:
-            return _answer(evidence["reply"])
-        return _answer(
-            "Para pesquisar isso preciso de uma consulta pública segura. "
-            "Me diga o tema sem incluir informações privadas ou segredos."
-        )
+            return _answer(evidence["reply"], **state) if pending else _answer(evidence["reply"])
+        reply = ("Para pesquisar isso preciso de uma consulta pública segura. "
+                 "Me diga o tema sem incluir informações privadas ou segredos.")
+        return _answer(reply, **state) if pending else _answer(reply)
     if move in ("plan", "continue", "clarify"):
         try:
             next_state = apply_plan(state, decision)
@@ -302,6 +313,12 @@ def _advance(state, message, history):
     if state["phase"] == "approval":
         choice = approval_decision(message)
         if choice == "reject":
+            goal = state.get("return_goal")
+            if isinstance(goal, dict) and goal.get("goal_id"):
+                return _answer(
+                    "Ação cancelada, sem executar a ferramenta. "
+                    "O plano continua disponível para revisão.", "goal", **goal,
+                )
             return _answer("Ação cancelada, sem executar a ferramenta.")
         if choice != "approve":
             return _answer(
@@ -313,6 +330,10 @@ def _advance(state, message, history):
             "Execução confirmada: " + receipt["tool"] + ".\n"
             + json.dumps(receipt["result"], ensure_ascii=False)[:6000],
         )
+        goal = state.get("return_goal")
+        if isinstance(goal, dict) and goal.get("goal_id"):
+            current = {"phase": "goal", **goal}
+            result["phase"] = "goal"
         result["events"] = [{"tool": receipt["tool"], "status": receipt["status"]}]
         if receipt["tool"] == "images.generate" and receipt["status"] == "executed":
             proof = artifact_receipt(receipt["result"])
