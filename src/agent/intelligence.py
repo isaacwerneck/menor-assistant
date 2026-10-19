@@ -27,7 +27,9 @@ objetivo pendente. Escolha exatamente UM próximo movimento:
 - plan: proposta nova ou trabalho extenso; ofereça passos concretos e critérios
   verificáveis; não afirme ter executado nem instalado.
 - act: usuário solicitou REALMENTE uma ação agora; encaminhe ao executor de
-  ferramentas autorizadas. Não afirme sucesso sem recibo.
+  ferramentas autorizadas. Se existir ferramenta no catálogo, inclua seu
+  nome exato e argumentos. Se não existir, não invente: proponha um plano.
+  Não afirme sucesso sem recibo.
 - research: precisa de informação pública atual para decidir; não inclua
   projetos privados, senhas nem conteúdo da memória em buscas externas.
 - inspect_result: usuário pede explicação, avaliação ou correção do resultado recente; consulte recibo.
@@ -58,7 +60,8 @@ Responda APENAS JSON com chaves:
 {"move":"answer|clarify|plan|act|research|continue|inspect_result",
  "goal":"objetivo em 1 frase", "reply":"resposta útil curta em português",
  "question":"pergunta única ou vazio", "steps":["etapa"], "acceptance":["critério"],
- "relation":"start|refine|switch|resume", "resume_goal_id":"id exato ou vazio"}
+ "relation":"start|refine|switch|resume", "resume_goal_id":"id exato ou vazio",
+ "tool":"nome exato do catálogo ou vazio", "arguments":{"param":"valor"}}
 Limites: goal até 220 caracteres, reply até 900, question até 220,
 até 5 passos e 4 critérios, cada um até 150 caracteres.
 """
@@ -70,7 +73,7 @@ def _strings(items, limit):
 
 
 def decide(message, history=None, pending=None, capabilities=None, knowledge="",
-           last_result=None, paused_goals=None):
+           last_result=None, paused_goals=None, tools=None):
     """Retorna decisão validada, ou None se Ollama falhar; nunca age diretamente."""
     if not isinstance(message, str) or not message.strip() or len(message) > 8000:
         raise ValueError("Mensagem inválida.")
@@ -95,6 +98,17 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             for x in (paused_goals or [])[-6:]
             if isinstance(x, dict) and isinstance(x.get("id"), str)
             and isinstance(x.get("goal"), str)
+        ],
+        "available_tools": [
+            {
+                "name": x["name"], "description": x["description"][:180],
+                "arguments": x["arguments"][:8], "writes": x["writes"],
+            }
+            for x in (tools or [])[:30]
+            if isinstance(x, dict) and isinstance(x.get("name"), str)
+            and isinstance(x.get("description"), str)
+            and isinstance(x.get("arguments"), list)
+            and type(x.get("writes")) is bool
         ],
         "skills": [
             {"capability": x["capability"], "ready": x["ready"]}
@@ -147,10 +161,25 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             }
             if resume_goal_id not in available:
                 return None
+        tool_name = item.get("tool", "")
+        arguments = item.get("arguments", {})
+        if not isinstance(tool_name, str) or not isinstance(arguments, dict):
+            return None
+        if tool_name:
+            known = next((t for t in (tools or []) if t.get("name") == tool_name), None)
+            if item["move"] != "act" or known is None:
+                return None
+            if (set(arguments) != set(known["arguments"])
+                    or any(not isinstance(value, str) or not 1 <= len(value.strip()) <= 280
+                           for value in arguments.values())):
+                return None
+        elif arguments:
+            return None
         return {
             "move": item["move"], "goal": goal.strip(), "reply": reply.strip(),
             "question": question.strip(), "steps": steps, "acceptance": acceptance,
             "relation": relation, "resume_goal_id": resume_goal_id,
+            "tool": tool_name, "arguments": arguments,
         }
     except (requests.RequestException, ValueError, TypeError, KeyError) as error:
         LOG.info("Análise contextual indisponível: %s", type(error).__name__)
