@@ -17,7 +17,8 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, model_validator
 
 from src.agent import intelligence
-from ops.model_latency import local_endpoint, model_identifier
+from ops.model_latency import local_endpoint, model_identifier, numeric_summary
+from src.agent.voice import LAB_BASELINE_VOICE, NATURAL_VOICE
 from src.security import auth
 
 router = APIRouter()
@@ -37,6 +38,7 @@ class LabMessage(BaseModel):
 
 class LabRequest(BaseModel):
     mode: Literal["planner", "direct"]
+    profile: Literal["baseline", "natural"] = "baseline"
     message: str = Field(min_length=1, max_length=1200)
     history: list[LabMessage] = Field(default_factory=list, max_length=8)
 
@@ -62,14 +64,17 @@ def _direct(payload):
     """Baseline sem o roteador JSON nem ferramentas; somente inferência local."""
     url = local_endpoint(os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
     model = model_identifier(os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
-    messages = [{"role": "system", "content":
-                 "Responda em português brasileiro com precisão e clareza."}]
+    natural = payload.profile == "natural"
+    messages = [{"role": "system", "content": NATURAL_VOICE if natural else LAB_BASELINE_VOICE}]
     messages.extend(item.model_dump() for item in payload.history)
     messages.append({"role": "user", "content": payload.message})
     with requests.post(
         url,
         json={"model": model, "messages": messages,
-              "stream": False, "options": {"temperature": 0.1, "num_predict": 256}},
+              "stream": False, "options": {
+                  "temperature": 0.25 if natural else 0.1,
+                  "num_predict": 192 if natural else 256,
+              }},
         timeout=(4, 50),
     ) as response:
         response.raise_for_status()
@@ -78,7 +83,7 @@ def _direct(payload):
     if not isinstance(item, dict) or not isinstance(item.get("content"), str):
         raise ValueError("Resposta do Ollama inválida.")
     return {"status": "answered", "reply": item["content"][:1800],
-            "model": model, "move": None}
+            "model": model, "move": None, "performance": numeric_summary(result)}
 
 
 def _planner(payload):
