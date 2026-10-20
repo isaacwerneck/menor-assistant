@@ -22,6 +22,33 @@ São 12 cenários fixos inéditos nesta suíte: linguagem coloquial, ambiguidade
 
 ## Aceite no hardware
 
+### Prefixo do catálogo no raciocinador — candidato de 20/10/2026
+
+O JSON do contexto colocava pergunta/preferências antes de `available_tools` e
+`skills`. Alterar esses dados invalidava o prefixo anterior ao catálogo. O
+candidato coloca os dois catálogos antes dos campos variáveis, mantendo o mesmo
+conteúdo, o papel `user`, histórico, limites, schema e aprovação no executor.
+Não adiciona classificador de saudações, chamadas extras ou respostas em cache.
+
+Um teste com duas perguntas e preferências diferentes reproduziu a ausência do
+prefixo compartilhado e verifica sua preservação após a mudança. Também confere
+que os dados variáveis permanecem exatos em suas respectivas solicitações. Isso
+comprova a organização do payload, não ganho de tempo nem equivalência semântica
+das respostas do modelo real.
+
+A motivação é o reaproveitamento do prefixo KV descrito pelo
+[llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).
+O reaproveitamento efetivo depende do runner/configuração, cache residente e das
+mensagens anteriores ao contexto. Como o histórico continua antes desse JSON,
+mudanças no histórico podem impedir o ganho. Partida fria, fila concorrente e
+geração longa continuam possíveis causas de demora.
+
+Aceite pendente no Ubuntu: comparar a mesma revisão com ordem antiga/nova,
+perguntas inéditas e mesmo histórico; alternar as ordens, separar prefill/geração
+e conferir contratos de ferramenta/recibos. Não prometer resolver o caso da
+saudação de 22 s antes de medir a versão efetivamente carregada. O SSH local
+ficou indisponível após a mudança de rede; acesso de teste está pendente.
+
 Executar no servidor autorizado com `MENOR_REASONING_MODEL`/`MENOR_PLAN_REVIEW_MODEL` apontando para modelos **já instalados** e dados privados isolados. Registrar SHA Git, versão do Qwen/Ollama, CPU/RAM, carga concorrente, aquecimento e pelo menos três execuções com ordem alternada. Inspecionar qualitativamente erros sem publicar dados privados. Habilitar crítica por padrão apenas se houver ganho útil e orçamento de latência aceitável, com decisão de configuração revisada separadamente.
 
 **Estado da entrega original:** regressões de Python com mocks verificavam o instrumento;

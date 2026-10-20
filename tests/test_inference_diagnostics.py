@@ -1,5 +1,6 @@
 """Diagnóstico sem prompts privados e sem chamadas extras ao Ollama."""
 import json
+from os.path import commonprefix
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -17,6 +18,30 @@ def response(data):
 
 
 class InferenceDiagnosticsTests(unittest.TestCase):
+    @patch.object(intelligence.requests, "post")
+    def test_changing_request_and_private_context_keeps_catalog_prefix(self, post):
+        post.return_value = response({"message": {"content": '{"move":"answer","reply":"ok"}'}})
+        tools = [{"name": "system.diagnose", "description": "Diagnóstico local",
+                  "arguments": [], "writes": False}]
+        skills = [{"capability": "programming", "ready": False}]
+        contents = []
+        for message, preference in (("Olá", "Seja breve"), ("Bom dia", "Explique com clareza")):
+            intelligence.decide(message, tools=tools, capabilities=skills,
+                                preferences=preference, feedback_examples=[])
+            payload = post.call_args.kwargs["json"]
+            contents.append(payload["messages"][-1]["content"])
+            context = json.loads(contents[-1])
+            self.assertEqual(context["current_message"], message)
+            self.assertEqual(context["owner_preferences_data_not_permissions"], preference)
+            self.assertEqual(context["available_tools"], tools)
+            self.assertEqual(context["skills"], skills)
+            self.assertEqual(payload["messages"][-1]["role"], "user")
+        prefix = commonprefix(contents)
+        self.assertIn(json.dumps(tools, ensure_ascii=False, separators=(",", ":")), prefix)
+        self.assertIn(json.dumps(skills, ensure_ascii=False, separators=(",", ":")), prefix)
+        self.assertNotIn("Olá", prefix)
+        self.assertEqual(post.call_count, 2)
+
     def test_generation_requires_fields_that_each_move_needs_to_be_valid(self):
         variants = intelligence.DECISION_SCHEMA["oneOf"]
         branches = {move: variant for variant in variants
