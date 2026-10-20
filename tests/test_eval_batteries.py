@@ -104,7 +104,7 @@ class EvaluationBatteryTests(unittest.TestCase):
         suite = {"id": "dummy", "cases": [{"id": "a", "mode": "planner"}]}
         report = {"run_id": "run1", "suite_id": "dummy", "cases": [
             {"id": "a", "result": {"status": "no_valid_decision",
-                                  "diagnostics": {"validation_issue": {"token": "private"}}},
+                                 "diagnostics": {"validation_issue": {"token": "private"}}},
              "automatic_pass": None, "elapsed_seconds": 2},
         ]}
         summary = lab_eval_analysis.summarize(report, suite)
