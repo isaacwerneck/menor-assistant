@@ -41,8 +41,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#11111d;padding:14px;
 .suite-heading input{width:20px;height:20px;margin-top:5px;flex:0 0 auto;accent-color:#a995f3;cursor:pointer}
 .suite-copy{flex:1;min-width:0}
 .suite-title{font-weight:700;line-height:1.4;display:block}
-.suite-description{font-size:.84rem;color:var(--muted);margin:5px 0;overflow-wrap:anywhere}
-.suite-id{font: .74rem ui-monospace,SFMono-Regular,Consolas,monospace;color:#b1a8cf;overflow-wrap:anywhere}
+.suite-description{display:block;font-size:.84rem;color:var(--muted);margin:5px 0;overflow-wrap:anywhere}
+.suite-id{display:block;font: .74rem ui-monospace,SFMono-Regular,Consolas,monospace;color:#b1a8cf;overflow-wrap:anywhere}
 .suite-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
 .suite-chip{display:inline-block;padding:4px 8px;background:#29243b;border:1px solid #48415e;border-radius:100px;font-size:.74rem;white-space:normal}
 .suite-chip.done{background:#182d29;border-color:#337b60;color:#b6f2d8}
@@ -101,6 +101,7 @@ user: Gosto de música eletrônica."></textarea>
 <p id="queueCurrent" class="helper"></p>
 <progress id="queueProgress" class="queue-progress" max="1" value="0"></progress>
 <span id="queueNumbers" class="meta"></span>
+<div class="actions"><button type="button" id="queueViewReports">Ver relatórios concluídos</button></div>
 </div>
 <div class="suite-tools" role="group" aria-label="Filtrar baterias">
 <button type="button" id="filterPending" aria-pressed="true">Pendentes</button>
@@ -489,6 +490,10 @@ async function refreshQueueStatus() {
         pollHandle = setTimeout(refreshQueueStatus, 6000);
     }
 }
+$("queueViewReports").addEventListener("click", () => {
+    $("reportsHistory").open = true;
+    $("reportsHistory").scrollIntoView?.({behavior:"smooth", block:"start"});
+});
 $("batchImport").addEventListener("click", async () => {
     const file = $("batchFile").files[0];
     if (!file) { $("batchStatus").textContent = "Selecione um JSON."; return; }
@@ -526,6 +531,7 @@ $("batchRun").addEventListener("click", async () => {
         selectedSuites.clear();
         $("batchStatus").textContent = "Fila iniciada. Acompanhe o andamento abaixo.";
         await refreshQueueStatus();
+        if (!queueRunning) await batchRefresh();
     } catch (e) {
         $("batchStatus").textContent = "Falha ao iniciar: " + e.message;
         $("batchRun").disabled = false;
