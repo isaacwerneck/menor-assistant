@@ -289,10 +289,8 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
         problems = constraint_warnings(message, decision.get("steps", []))
         problems += required_stage_warnings(message, decision.get("steps", []))
         if problems:
-            # Sem nova chamada cara ao modelo, nem permissão para execução.
-            issue = " ".join(problems[:2])
-            warning_reply = "Plano preliminar: " + issue + "\n" + decision["reply"]
-            return {**decision, "reply": warning_reply[:900]}, "constraint_warning"
+            # Não confiar num plano com conflito conhecido, mesmo sem revisão via LLM.
+            return {**decision, "_plan_warnings": problems[:4]}, "constraint_warning"
     if not plan_review.should_review(decision):
         return decision, "disabled"
     verdict = plan_review.review(message, decision, pending=pending)
@@ -315,6 +313,11 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
             # A crítica pode corrigir etapas, jamais trocar ID de objetivo.
             revised["relation"] = decision.get("relation")
             revised["resume_goal_id"] = decision.get("resume_goal_id", "")
+            if revised["move"] in ("plan", "continue"):
+                problems = constraint_warnings(message, revised.get("steps", []))
+                problems += required_stage_warnings(message, revised.get("steps", []))
+                if problems:
+                    return {**revised, "_plan_warnings": problems[:4]}, "constraint_warning"
             return plan_review.annotate(revised, "revised_unverified"), "revised_unverified"
     return plan_review.annotate(decision, status), status
 
@@ -418,6 +421,18 @@ def _understand(state, message, history, project=None):
                  "Me diga o tema sem incluir informações privadas ou segredos.")
         return _answer(reply, **state) if pending else _answer(reply)
     if move in ("plan", "continue", "clarify"):
+        if review_status == "constraint_warning":
+            # Preserve exactly the prior goal/receipts; do not store a known-bad plan.
+            issues = decision.get("_plan_warnings", [])
+            reply = (
+                "Esse plano precisa de revisão antes de ser registrado: "
+                + " ".join(issues[:3])
+                + " Nenhuma ferramenta foi executada e o objetivo anterior foi preservado."
+            )
+            next_state, response = _answer(reply[:1500], **state)
+            response["plan_review_status"] = "constraint_warning"
+            response["plan_warnings"] = issues[:4]
+            return next_state, response
         try:
             next_state = apply_plan(state, decision)
         except GoalReferenceError:
