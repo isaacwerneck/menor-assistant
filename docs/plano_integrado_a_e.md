@@ -1,5 +1,8 @@
 # Direção integrada Menor Assistant — trilhas A → B → C → D → E
 
+**Atualização pós-plano (20/10/2026):** este documento continua sendo a visão e separação de responsabilidades; seu status de 19/10 foi superado pelos PRs até #84 e por medições reais de latência. Consulte o [estado A–E atual](handoff/03_FRENTES_A_B_C_D_E.md), [hardware e gargalos](handoff/02_HARDWARE_E_LATENCIA.md) e [backlog do Codex](handoff/06_BACKLOG_PRIORIZADO.md), sem confundir integração no Git com validação end-to-end. 
+
+
 Atualizado em 19/10/2026. Esta é a visão operacional consolidada do proprietário,
 reconciliando `PLANO.md`, `PLANO_REFINAMENTO.md` e `PLANO_INTELLIGENCE_ENGINE.md`.
 As regras de segurança nesses documentos continuam obrigatórias.
