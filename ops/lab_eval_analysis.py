@@ -81,7 +81,7 @@ def summarize(report, suite):
         if not isinstance(diagnostics, dict):
             diagnostics = {}
         issue = diagnostics.get("validation_issue")
-        if status == "no_valid_decision" and issue in KNOWN_VALIDATION_ISSUES:
+        if status == "no_valid_decision" and isinstance(issue, str) and issue in KNOWN_VALIDATION_ISSUES:
             flags.append("schema_validation")
         performance = result.get("performance")
         if not isinstance(performance, dict):
@@ -106,7 +106,7 @@ def summarize(report, suite):
             "id": cid, "mode": mode, "split": split, "category": category,
             "status": status, "grade": grade, "elapsed_seconds": elapsed,
             "flags": flags, "human_review_required": bool(spec.get("review_criteria")),
-            "validation_issue": issue if issue in KNOWN_VALIDATION_ISSUES else None,
+            "validation_issue": issue if isinstance(issue, str) and issue in KNOWN_VALIDATION_ISSUES else None,
             "prefill_seconds": prefill, "generation_seconds": generation,
         })
     graded = sum(item["grade"] in ("passed", "failed") for item in records)
