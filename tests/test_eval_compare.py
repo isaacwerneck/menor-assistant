@@ -43,6 +43,26 @@ class CompareTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             eval_compare.compare(old, new)
 
+    def test_cross_profile_ab_accepts_only_matching_questions_and_rubrics(self):
+        before = report("base", [{**case("one", True), "question": "Oi", "mode": "direct",
+                                  "profile": "baseline", "grader": "strict", "history": []}])
+        after = report("natural", [{**case("one", False), "question": "Oi", "mode": "direct",
+                                   "profile": "natural", "grader": "strict", "history": []}])
+        before["suite_id"] = "segundo-lote-base-v2"
+        after["suite_id"] = "segundo-lote-naturalidade-v2"
+        before["comparison_group"] = after["comparison_group"] = "linguagem-v2-24"
+        result = eval_compare.compare(before, after)
+        self.assertEqual(result["new_regressions"], ["one"])
+        self.assertEqual(result["baseline"]["profiles"], {"baseline": 1})
+        self.assertEqual(result["candidate"]["profiles"], {"natural": 1})
+        after["cases"][0]["question"] = "Pergunta diferente"
+        with self.assertRaises(ValueError):
+            eval_compare.compare(before, after)
+        after["cases"][0]["question"] = "Oi"
+        after["cases"][0]["grader"] = "boolean"
+        with self.assertRaises(ValueError):
+            eval_compare.compare(before, after)
+
     def test_empty_report_has_no_false_scores(self):
         stats = eval_compare.summarize(report("empty", []))
         self.assertIsNone(stats["graded_pass_rate"])

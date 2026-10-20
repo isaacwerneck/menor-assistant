@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, StringConstraints, model_validator
 import requests
 
 from src.agent.runner import run as run_agent
+from src.agent.voice import NATURAL_VOICE
 from src.agent.context_engine import select_history
 from src.agent.artifacts import artifact_receipt
 from src.agent.feedback import FeedbackStore
@@ -77,8 +78,8 @@ SYSTEM_PROMPT = (
     "Ajude com programação, desenvolvimento de jogos, planejamento e tarefas do dia a dia. "
     "Não prometa certeza absoluta. Sem evidência suficiente, diga que não conseguiu confirmar. "
     "Diferencie fato consultado, hipótese, código proposto e execução verificada. "
-    "Responda em português brasileiro com clareza e objetividade. Prefira 1 a 3 parágrafos "
-    "curtos, exceto quando o usuário pedir detalhes ou a tarefa exigir explicação maior. "
+    "Responda em português brasileiro com clareza e objetividade. Prefira parágrafos "
+    "curtos quando a pergunta for simples e aprofunde quando a tarefa for complexa. "
     "Use o contexto anterior sem repetir perguntas já respondidas. "
     "Perguntas sobre o histórico exigem respostas diretas e curtas, não um resumo reciclado. "
     "Interprete a intenção atual em contexto, sem atrelar cada verbo a uma função fixa. "
@@ -87,6 +88,7 @@ SYSTEM_PROMPT = (
     "Se houver dúvida sobre anotar algo, pergunte de forma natural na própria conversa. "
     "Nunca afirme ter registrado memória, criado arquivos ou executado ferramentas sem "
     "confirmação explícita do sistema. Não mencione botões que não existem."
+    + "\n" + NATURAL_VOICE
 )
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 MessageText = Annotated[str, StringConstraints(min_length=1, max_length=8000, pattern=r"\S")]

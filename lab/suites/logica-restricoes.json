@@ -11,7 +11,8 @@
       "message": "Se todo gato é mamífero e alguns mamíferos nadam, é obrigatório que algum gato nade? Responda SIM ou NÃO, sem explicação.",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "silogismo-valido",
@@ -20,7 +21,8 @@
       "message": "Todos os arquivos PDF são documentos. O arquivo A é PDF. O arquivo A é documento? Só SIM ou NÃO.",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "SIM"
+      "expected_exact": "SIM",
+      "grader": "boolean"
     },
     {
       "id": "condicional-falsa",
@@ -29,7 +31,8 @@
       "message": "Se eu disse 'Se chover, levo guarda-chuva', e levei guarda-chuva, isso prova que choveu? Só SIM ou NÃO.",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "contradicao-direta",
@@ -38,7 +41,8 @@
       "message": "As afirmações 'o serviço está ativo' e 'o serviço não está ativo' podem ambas ser verdade no mesmo instante e sentido? SIM ou NÃO.",
       "expected_contains": [],
       "split": "validation",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "deducao-transitiva",
@@ -56,7 +60,8 @@
       "message": "Todos os músicos são artistas. Alguns artistas são professores. É garantido que algum músico seja professor? Só SIM ou NÃO.",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "incerteza-intervalo",
@@ -76,7 +81,8 @@
       "message": "Regra A: só publicar com aprovação. Regra B: publicar tudo automaticamente. As regras são compatíveis sem exceções? SIM ou NÃO.",
       "expected_contains": [],
       "split": "validation",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "num-alunos",
@@ -94,7 +100,8 @@
       "message": "Um arquivo tem extensão .pdf. Isso garante que seu conteúdo é um PDF válido? SIM ou NÃO.",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "conclusao-insuficiente",
@@ -103,7 +110,8 @@
       "message": "Dois testes passaram. Isso prova que todos os 500 testes passarão? Responda SIM ou NÃO.",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "requisitos-opostos",
@@ -114,5 +122,6 @@
       "review_criteria": "Identificar conflito e pedir esclarecimento sem escrever em disco.",
       "split": "validation"
     }
-  ]
+  ],
+  "grader_version": "menor-eval-grader-v2"
 }

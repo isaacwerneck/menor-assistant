@@ -25,8 +25,11 @@ class EvaluationBatteryTests(unittest.TestCase):
                     self.assertLessEqual(len(case["message"]), 1200)
                     self.assertIn(case["mode"], {"direct", "planner"})
                 if data["id"] not in ("diagnostico-inicial", "triagem-16-v1",
-                                      "diagnostico-geral-192-v1"):
+                                      "diagnostico-geral-192-v1", "segundo-lote-base-v2",
+                                      "segundo-lote-naturalidade-v2"):
                     self.assertEqual(len(data["cases"]), 12)
+                if data["id"] in ("segundo-lote-base-v2", "segundo-lote-naturalidade-v2"):
+                    self.assertEqual(len(data["cases"]), 24)
                 if data["id"] == "triagem-16-v1":
                     self.assertEqual(len(data["cases"]), 16)
                 if data["id"] == "diagnostico-geral-192-v1":

@@ -34,6 +34,11 @@ def summarize(report):
                if isinstance(case.get("elapsed_seconds"), (int, float))
                and not isinstance(case.get("elapsed_seconds"), bool)
                and case["elapsed_seconds"] >= 0]
+    throughputs = [
+        case.get("result", {}).get("performance", {}).get("generation_tokens_per_second")
+        for case in cases if isinstance(case.get("result"), dict)
+    ]
+    throughputs = [n for n in throughputs if type(n) in (int, float) and 0 <= n <= 100_000]
     by_split = {}
     for split in ("development", "validation"):
         group = [case for case in cases if case.get("split", "development") == split]
@@ -52,17 +57,27 @@ def summarize(report):
         "execution_errors": dict(sorted(errors.items())),
         "latency_p50_seconds": percentile(elapsed, 0.50),
         "latency_p95_seconds": percentile(elapsed, 0.95),
+        "generation_tokens_per_second_p50": percentile(throughputs, 0.5),
         "by_split": by_split,
+        "profiles": dict(sorted(Counter(case.get("profile", "baseline") for case in cases).items())),
     }
 
 
 def compare(baseline, candidate):
-    if baseline.get("suite_id") != candidate.get("suite_id"):
-        raise ValueError("Relatórios devem ser da mesma bateria.")
+    same_suite = baseline.get("suite_id") == candidate.get("suite_id")
+    group = baseline.get("comparison_group")
+    same_group = (isinstance(group, str) and bool(group)
+                  and group == candidate.get("comparison_group"))
+    if not same_suite and not same_group:
+        raise ValueError("Relatórios devem ser da mesma bateria ou do mesmo grupo A/B.")
     old = {item["id"]: item for item in baseline["cases"]}
     new = {item["id"]: item for item in candidate["cases"]}
-    if old.keys() != new.keys():
+    if old.keys() != new.keys() or len(old) != len(baseline["cases"]) or len(new) != len(candidate["cases"]):
         raise ValueError("Casos de teste diferentes: comparação não é equivalente.")
+    for case_id in old:
+        for key in ("question", "history", "mode", "expected_exact", "expected_contains", "grader"):
+            if old[case_id].get(key) != new[case_id].get(key):
+                raise ValueError("Conteúdo ou critérios dos casos mudaram; comparação inválida.")
     regressions = [key for key in sorted(old) if old[key].get("automatic_pass") is True
                    and new[key].get("automatic_pass") is False]
     improvements = [key for key in sorted(old) if old[key].get("automatic_pass") is False
