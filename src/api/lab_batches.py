@@ -1,0 +1,174 @@
+"""Execução local de baterias de avaliação. Sem execução de ferramentas."""
+import json
+import os
+import re
+import threading
+import time
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+from src.api import remote_lab
+
+SUITES = Path(__file__).resolve().parents[2] / "lab" / "suites"
+DATA = Path(os.environ.get("MENOR_LAB_DATA_DIR", str(Path.home() / "menor-data" / "lab")))
+_LOCK = threading.Lock()
+_RUNNING = False
+STATE = {"status":  "idle"}
+
+
+def validate_suite(data):
+    if not isinstance(data, dict) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", str(data.get("id", ""))):
+        raise ValueError("ID de bateria inválido.")
+    cases = data.get("cases")
+    if not isinstance(cases, list) or not 1 <= len(cases) <= 200:
+        raise ValueError("Bateria deve ter de 1 a 200 casos.")
+    ids = set()
+    for case in cases:
+        if not isinstance(case, dict):
+            raise ValueError("Caso inválido.")
+        cid = case.get("id")
+        if not isinstance(cid, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", cid) or cid in ids:
+            raise ValueError("ID de caso inválido ou duplicado.")
+        ids.add(cid)
+        remote_lab.LabRequest.model_validate(case)
+        expected = case.get("expected_contains", [])
+        if not isinstance(expected, list) or len(expected) > 10 or any(
+            not isinstance(x, str) or len(x) > 200 for x in expected
+        ):
+            raise ValueError("Critérios inválidos.")
+    return data
+
+
+def suites():
+    result = []
+    for path in sorted(list(SUITES.glob("*.json")) + list((DATA / "suites").glob("*.json"))):
+        try:
+            data = validate_suite(json.loads(path.read_text(encoding="utf-8")))
+            result.append({"id":  data["id"], "title":  data.get("title", data["id"]),
+                           "description":  data.get("description", ""), "cases":  len(data["cases"])})
+        except (ValueError, OSError, TypeError):
+            continue
+    return result
+
+
+def load_suite(suite_id):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", suite_id):
+        raise ValueError("ID inválido.")
+    path = DATA / "suites" / (suite_id + ".json")
+    if not path.is_file():
+        path = SUITES / (suite_id + ".json")
+    if not path.is_file():
+        raise FileNotFoundError(suite_id)
+    return validate_suite(json.loads(path.read_text(encoding="utf-8")))
+
+
+def save_suite(raw):
+    if len(raw) > 200000:
+        raise ValueError("Arquivo muito grande.")
+    data = validate_suite(json.loads(raw.decode("utf-8")))
+    (DATA / "suites").mkdir(parents=True, exist_ok=True)
+    path = DATA / "suites" / (data["id"] + ".json")
+    if (SUITES / (data["id"] + ".json")).exists():
+        raise ValueError("Já existe uma bateria com este ID.")
+    if path.exists():
+        raise ValueError("Já existe uma bateria com este ID.")
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return data["id"]
+
+
+def _run(suite, run_id):
+    global _RUNNING
+    results = []
+    started = datetime.now(timezone.utc).isoformat()
+    try:
+        DATA.mkdir(parents=True, exist_ok=True)
+        for index, case in enumerate(suite["cases"]):
+            with _LOCK:
+                STATE.update(done=index, total=len(suite["cases"]))
+            payload = remote_lab.LabRequest.model_validate(case)
+            began = time.monotonic()
+            if not remote_lab._INFERENCE.acquire(timeout=60):
+                output = {"status":  "busy", "reply":  "", "model":  None}
+            else:
+                try:
+                    try:
+                        output = (remote_lab._planner(payload) if payload.mode == "planner"
+                                  else remote_lab._direct(payload))
+                    except (Exception,) as error:
+                        output = {"status":  "inference_failed", "reply":  "", "error_type":  type(error).__name__}
+                finally:
+                    remote_lab._INFERENCE.release()
+            expected = case.get("expected_contains", [])
+            reply = output.get("reply", "")
+            passed = all(token.casefold() in reply.casefold() for token in expected) if expected else None
+            results.append({"id":  case["id"], "category":  case.get("category", "geral"),
+                            "mode":  payload.mode, "question":  payload.message, "result":  output,
+                            "elapsed_seconds":  round(time.monotonic() - began, 3),
+                            "automatic_pass":  passed})
+        report = {"run_id":  run_id, "suite_id":  suite["id"], "started_at":  started,
+                  "finished_at":  datetime.now(timezone.utc).isoformat(),
+                  "total":  len(results), "automatic_passes":  sum(x["automatic_pass"] is True for x in results),
+                  "automatic_failures":  sum(x["automatic_pass"] is False for x in results),
+                  "ungraded":  sum(x["automatic_pass"] is None for x in results),
+                  "cases":  results}
+        (DATA / (run_id + ".json")).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Publicar somente métricas, sem perguntas, respostas ou histórico privados.
+        summary = {key: report[key] for key in ("run_id", "suite_id", "started_at", "finished_at",
+                   "total", "automatic_passes", "automatic_failures", "ungraded")}
+        (DATA / (run_id + ".summary.json")).write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        publish_status = "disabled"
+        if os.environ.get("MENOR_LAB_REPORTS_PUBLISH") == "1":
+            try:
+                from src.api.lab_publish import publish_summary
+                publish_summary(summary)
+                publish_status = "published"
+            except Exception as error:
+                publish_status = "failed: " + type(error).__name__
+        with _LOCK:
+            STATE.update(status="completed", report_id=run_id, done=len(results), publish_status=publish_status)
+    except Exception as error:
+        with _LOCK:
+            STATE.update(status="failed", error=type(error).__name__)
+    finally:
+        with _LOCK:
+            _RUNNING = False
+
+
+def start(suite_id):
+    global _RUNNING
+    suite = load_suite(suite_id)
+    with _LOCK:
+        if _RUNNING:
+            raise RuntimeError("Já existe uma bateria em execução.")
+        _RUNNING = True
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[: 8]
+        STATE.clear()
+        STATE.update(status="running", run_id=run_id, done=0, total=len(suite["cases"]))
+    threading.Thread(target=_run, args=(suite, run_id), daemon=True).start()
+    return run_id
+
+
+def state():
+    with _LOCK:
+        return dict(STATE)
+
+
+def reports():
+    DATA.mkdir(parents=True, exist_ok=True)
+    result = []
+    for path in sorted(DATA.glob("*.summary.json"), reverse=True)[: 100]:
+        try:
+            result.append(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+    return result
+
+
+def report_path(run_id):
+    if not re.fullmatch(r"[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}", run_id):
+        raise ValueError("ID inválido.")
+    path = DATA / (run_id + ".json")
+    if not path.is_file():
+        raise FileNotFoundError(run_id)
+    return path
