@@ -142,6 +142,7 @@ class QueueTests(unittest.TestCase):
                 "automatic_passes": 1, "automatic_failures": 0, "ungraded": 0,
             }
             (self.store / (run_id + ".summary.json")).write_text(json.dumps(summary))
+            (self.store / (run_id + ".json")).write_text("{}")
         listed = {item["id"]: item for item in lab_batches.suites()}[suite_id]
         self.assertEqual(listed["run_count"], 104)
         self.assertEqual(listed["status"], "completed")
@@ -149,12 +150,21 @@ class QueueTests(unittest.TestCase):
                          "20261020T000103Z-00000067")
         self.assertEqual(len(lab_batches.reports()), 100)
 
-    def test_malformed_summary_does_not_mark_suite_as_completed(self):
+    def test_malformed_or_orphan_summary_does_not_mark_suite_completed(self):
         self.suite("primeira-bateria", ["a1"])
         (self.store / "fake.summary.json").write_text('{"suite_id":"primeira-bateria"}')
+        run_id = "20261020T020000Z-deadbeef"
+        (self.store / (run_id + ".summary.json")).write_text(json.dumps({
+            "run_id": run_id, "suite_id": "primeira-bateria",
+            "total": 1, "automatic_passes": 1, "ungraded": 0,
+        }))
         item = next(x for x in lab_batches.suites() if x["id"] == "primeira-bateria")
         self.assertEqual(item["run_count"], 0)
         self.assertEqual(item["status"], "pending")
+        (self.store / (run_id + ".json")).write_text("{}")
+        updated = next(x for x in lab_batches.suites() if x["id"] == "primeira-bateria")
+        self.assertEqual(updated["run_count"], 1)
+        self.assertEqual(updated["last_report"]["automatic_failures"], 0)
 
     def test_api_auth_and_input_errors_are_not_bypassed(self):
         request = lab_batches_routes.QueueRequest(suite_ids=["primeira-bateria"])
