@@ -158,3 +158,20 @@ pre{
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 @media(prefers-reduced-transparency:reduce){.topbar{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--surface)}}
+
+/* E7 — feedback coerente, alvos de toque e navegação entre workspaces. */
+.side-nav a,.side-nav span{display:flex;align-items:center;min-height:44px;
+transition:background-color .15s ease,color .15s ease}
+button{transition:background-color .15s ease,border-color .15s ease,transform .15s ease}
+button:hover:not(:disabled){background:#302d43;border-color:var(--accent)}
+button:active:not(:disabled){transform:translateY(1px)}
+button:disabled{cursor:not-allowed;opacity:.52}
+.intro button,#refresh{font-weight:650}
+@media(max-width:760px){
+.intro{flex-wrap:wrap;gap:12px}
+.intro>button{flex:0 0 auto}
+.mobile-nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+.mobile-nav a,.mobile-nav span{min-width:0;font-size:.7rem;text-align:center}
+}
+@media(max-width:370px){.intro>button{width:100%}}
+@media(prefers-reduced-motion:reduce){button{transition:none;transform:none!important}}

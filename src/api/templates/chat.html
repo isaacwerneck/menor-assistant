@@ -664,31 +664,116 @@
             .mobile-nav { grid-template-columns: repeat(6, minmax(0, 1fr)); }
             .mobile-nav button, .mobile-nav a { font-size: .7rem; }
         }
+
+        /* E7 — organização da interface e áreas de toque consistentes. */
+        .sidebar-scrim { display: none; }
+        .sidebar-nav-label { color: var(--text-muted); font-size: .66rem; font-weight: 700;
+            letter-spacing: .11em; padding: 12px 12px 5px; }
+        .app-nav button, .app-nav a, .app-nav-current { min-height: 44px;
+            display: flex; align-items: center; }
+        .new-chat-btn { min-height: 46px; display: flex; justify-content: center; align-items: center; gap: 9px; }
+        .conv-item { min-height: 46px; }
+        .conv-item .conv-title { min-height: 34px; }
+        .conv-item .conv-delete { min-width: 34px; min-height: 34px; border-radius: 8px; }
+        .topbar { justify-content: space-between; gap: 14px; }
+        .topbar-leading, .topbar-actions { display: flex; align-items: center; gap: 7px; min-width: 0; }
+        .topbar-leading { flex: 1 1 auto; }
+        .topbar-actions { flex: 0 0 auto; }
+        .topbar-title { flex: 1 1 auto; }
+        .topbar .toggle-sidebar-btn { min-height: 44px; min-width: 44px;
+            display: inline-grid; place-items: center; border: 1px solid transparent; }
+        .topbar .toggle-sidebar-btn:hover { border-color: rgba(184,173,226,.17); }
+        .lab-top-link { display: inline-flex; align-items: center; min-height: 44px; }
+        .topbar-model { margin-left: 2px; max-width: 170px; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; }
+        .welcome-screen { max-width: 100%; overflow-y: auto; }
+        .welcome-suggestions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+            width: min(100%,620px); }
+        .suggestion-chip { min-height: 52px; line-height: 1.4; text-align: left; }
+        .chat-area { overscroll-behavior: contain; }
+        .input-area { display: block; padding: 10px 20px 5px; flex: 0 0 auto; }
+        .composer-shell { max-width: 860px; margin: 0 auto; min-width: 0; }
+        .input-wrapper { align-items: flex-end; gap: 8px; }
+        .input-wrapper textarea { align-self: center; padding: 8px 2px; font-size: 1rem; }
+        .input-wrapper textarea:focus-visible { outline: none; }
+        .input-wrapper:focus-within { outline: 2px solid rgba(178,162,245,.28); outline-offset: 2px; }
+        .attach-btn, .input-wrapper .file-attach-btn, .send-btn, #cancelBtn {
+            min-width: 44px; min-height: 44px; height: 44px; border-radius: 11px;
+            display: inline-flex; align-items: center; justify-content: center; align-self: flex-end;
+            flex-shrink: 0; }
+        .attach-btn { width: 44px; padding: 0; border: 1px solid transparent; }
+        .attach-btn:hover { background: var(--bg-hover); }
+        .input-wrapper .file-attach-btn { padding: 7px 10px; }
+        .send-btn { width: 44px; }
+        #sendBtn:disabled { display: none; }
+        #cancelBtn { color: #f5b8c4; border: 1px solid rgba(245,184,196,.35); }
+        .composer-meta { display: flex; align-items: center; gap: 5px 16px;
+            flex-wrap: wrap; padding: 7px 4px 4px; min-height: 27px; }
+        .composer-meta .input-footer { padding: 0; margin: 0; text-align: left; font-size: .75rem; }
+        .composer-meta .connection-indicator { margin-right: auto; }
+        .composer-meta .connection-indicator::before { content: ''; display: inline-block;
+            width: 7px; height: 7px; margin-right: 8px; border-radius: 50%;
+            background: var(--text-muted); vertical-align: 1px; }
+        .connection-indicator.is-online::before { background: var(--success); }
+        .connection-indicator.is-warning::before { background: #f4c884; }
+        .composer-meta #clearDocumentBtn { margin: 0; min-height: 32px; padding: 5px 9px; }
+        @media(max-width:980px) and (min-width:769px) {
+            .topbar .memory-top { display: none; }
+            .topbar-model { max-width: 110px; }
+        }
+        @media(max-width:768px) {
+            .sidebar-scrim:not([hidden]) { display: block; position: fixed; inset: 0;
+                z-index: 90; width: 100%; height: 100dvh; background: rgba(5,6,13,.68);
+                border: 0; cursor: pointer; }
+            .topbar { padding: 6px 10px; gap: 7px; }
+            .topbar-leading { gap: 5px; }
+            .topbar-actions { gap: 3px; }
+            .topbar .lab-top-link, .topbar .memory-top, .topbar-model { display: none; }
+            .topbar .toggle-sidebar-btn { width: 44px; padding: 0; }
+            .welcome-suggestions { grid-template-columns: 1fr; gap: 8px; margin-top: 9px; }
+            .suggestion-chip { min-height: 48px; width: 100%; }
+            .input-area { padding: 7px 10px 4px; }
+            .input-wrapper { padding: 7px; gap: 5px; }
+            .input-wrapper .file-attach-btn { padding: 7px 6px; font-size: .72rem; }
+            .input-wrapper textarea { font-size: 16px; padding: 8px 0; }
+            .composer-meta { padding: 5px 4px 3px; }
+            .composer-meta .input-footer { font-size: .7rem; line-height: 1.35; }
+            .mobile-nav { grid-template-columns: repeat(5,minmax(0,1fr)); }
+            .mobile-nav button, .mobile-nav a { font-size: .71rem; min-width: 0; }
+        }
+        @media(max-width:360px) {
+            .topbar .export-top { display: none; }
+            .input-wrapper .file-attach-btn { width: 44px; padding: 3px; font-size: .63rem; }
+        }
+        @media(hover:none) { .conv-item .conv-delete { opacity: 1; } }
     </style>
 </head>
 <body>
     <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar" id="sidebar" aria-label="Menu e conversas">
         <div class="sidebar-header">
             <div class="brand" aria-label="Menor AI">
                 <span class="brand-mark" aria-hidden="true">M</span>
                 <span class="brand-name">Menor <span>AI</span></span>
             </div>
-            <button class="new-chat-btn" onclick="newChat()">
+            <button type="button" class="new-chat-btn" onclick="newChat(); closeMobileSidebar()">
                 <span>＋</span>
                 <span>Nova Conversa</span>
             </button>
         </div>
-        <nav class="app-nav" aria-label="Navegação principal">
-            <span class="app-nav-current" aria-current="page">Conversa</span>
+        <nav class="app-nav" aria-label="Navegação principal" onclick="closeMobileSidebar()">
+            <span class="sidebar-nav-label">ÁREA DE TRABALHO</span>
+            <span class="app-nav-current" aria-current="page">Conversas</span>
             <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
             <a href="/lab/view" aria-label="Abrir Laboratório de testes">Laboratório · Testes</a>
+            <a href="/workspace/system">Sistema</a>
+            <span class="sidebar-nav-label">PERSONALIZAÇÃO</span>
             <button type="button" onclick="openBrain()">Conhecimentos</button>
             <button type="button" onclick="openFeedback()">Ensinar uma resposta</button>
         </nav>
-        <div class="sidebar-conversations" id="convList">
+        <div class="sidebar-conversations" id="convList" onclick="closeMobileSidebar()">
             <div class="sidebar-section-title">Conversas Recentes</div>
         </div>
         <div class="sidebar-footer">
@@ -696,19 +781,29 @@
             <span>Menor AI · Assistente local</span>
         </div>
     </aside>
+    <button type="button" id="sidebarScrim" class="sidebar-scrim" hidden
+        onclick="closeMobileSidebar()" aria-label="Fechar menu de navegação"></button>
 
     <!-- MAIN -->
     <div class="main">
-        <div class="topbar">
-            <button class="toggle-sidebar-btn" aria-label="Alternar conversas" onclick="toggleSidebar()">☰</button>
-            <div class="topbar-title" id="topbarTitle">Menor AI</div>
-            <a href="/lab/view" class="lab-top-link" title="Abrir baterias de testes">Lab · Testes</a>
-            <button class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
-                aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
-            <button class="toggle-sidebar-btn" onclick="openBrain()" aria-label="Abrir conhecimentos salvos" title="Conhecimentos salvos">Memória</button>
-            <button class="toggle-sidebar-btn" onclick="exportChat()" aria-label="Exportar conversa em Markdown">↓</button>
-            <div class="topbar-model" id="modelName">qwen2.5-coder:7b</div>
-        </div>
+        <header class="topbar">
+            <div class="topbar-leading">
+                <button type="button" class="toggle-sidebar-btn menu-toggle" id="menuToggle"
+                    aria-label="Alternar menu" aria-controls="sidebar" aria-expanded="true"
+                    onclick="toggleSidebar()">☰</button>
+                <div class="topbar-title" id="topbarTitle">Menor AI</div>
+            </div>
+            <div class="topbar-actions" role="group" aria-label="Ações da conversa">
+                <a href="/lab/view" class="lab-top-link" title="Abrir baterias de testes">Lab · Testes</a>
+                <button type="button" class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
+                    aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
+                <button type="button" class="toggle-sidebar-btn memory-top" onclick="openBrain()"
+                    aria-label="Abrir conhecimentos salvos" title="Conhecimentos salvos">Memória</button>
+                <button type="button" class="toggle-sidebar-btn export-top" onclick="exportChat()"
+                    aria-label="Exportar conversa em Markdown" title="Exportar conversa">↓</button>
+                <div class="topbar-model" id="modelName" title="Modelo ativo informado pela API">Carregando…</div>
+            </div>
+        </header>
 
         <div class="chat-area" id="chatArea">
             <div class="welcome-screen" id="welcomeScreen">
@@ -726,9 +821,10 @@
         </div>
 
         <div class="input-area">
+            <div class="composer-shell">
             <div class="input-wrapper">
-                <button type="button" class="attach-btn" aria-label="Anexar foto para editar"
-                    title="Anexar foto para editar" onclick="chooseImage()">＋</button>
+                <button type="button" class="attach-btn" aria-label="Anexar imagem"
+                    title="Anexar imagem" onclick="chooseImage()">＋</button>
                 <input type="file" id="imageAttachment" accept="image/png,image/jpeg,image/webp"
                     onchange="imageSelected(this)" hidden>
                 <button type="button" class="file-attach-btn" id="chooseDocumentBtn"
@@ -738,24 +834,28 @@
                     onchange="documentSelected(this)" hidden>
                 <textarea id="userInput" rows="1" maxlength="8000" aria-label="Mensagem para o Menor" placeholder="Mande uma mensagem para o Menor..."
                     onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-                <button class="send-btn" id="sendBtn" aria-label="Enviar mensagem" onclick="sendMsg()">➤</button>
+                <button type="button" class="send-btn" id="sendBtn" aria-label="Enviar mensagem"
+                    title="Enviar mensagem" onclick="sendMsg()">➤</button>
                 <button type="button" class="toggle-sidebar-btn" id="cancelBtn"
                     aria-label="Parar resposta em andamento" onclick="cancelGeneration()" hidden>Parar</button>
             </div>
+            <div class="composer-meta">
+                <div class="input-footer" id="imageAttachmentName" hidden></div>
+                <div class="input-footer attachment-status" id="documentStatus" role="status"
+                    aria-live="polite" hidden></div>
+                <button type="button" class="file-attach-btn" id="clearDocumentBtn"
+                    onclick="clearDocumentAttachment()" hidden
+                    aria-label="Desanexar documento sem excluir o arquivo privado">Desanexar arquivo</button>
+                <div class="input-footer" id="storageStatus" role="alert" hidden></div>
+                <div class="input-footer connection-indicator" id="connectionStatus" role="status"
+                    aria-live="polite">Verificando conexão com Ollama...</div>
+                <div class="input-footer" id="generationStatus" role="status" aria-live="polite" hidden></div>
+            </div>
+            </div>
         </div>
-        <div class="input-footer" id="imageAttachmentName" hidden></div>
-        <div class="input-footer attachment-status" id="documentStatus" role="status"
-            aria-live="polite" hidden></div>
-        <button type="button" class="file-attach-btn" id="clearDocumentBtn"
-            onclick="clearDocumentAttachment()" hidden
-            aria-label="Desanexar documento sem excluir o arquivo privado">Desanexar arquivo</button>
-        <div class="input-footer" id="storageStatus" role="alert" hidden></div>
-        <div class="input-footer" id="connectionStatus" role="status">Verificando conexão com Ollama...</div>
-        <div class="input-footer" id="generationStatus" role="status" hidden></div>
         <nav class="mobile-nav" aria-label="Navegação rápida">
             <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas">Conversas</button>
             <button type="button" onclick="openObjectives()">Objetivos</button>
-            <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
             <a href="/lab/view" aria-label="Abrir Laboratório de testes">Lab</a>
             <button type="button" onclick="openBrain()">Memória</button>
@@ -865,6 +965,7 @@
         let conversations = loadConversations();
         let activeConvId = null;
         let isGenerating = false;
+        let sidebarShown = !window.matchMedia('(max-width: 768px)').matches;
         let generationSequence = 0;
         let activeGeneration = null;
 
@@ -1304,14 +1405,18 @@
                 const health = await response.json();
                 apiCompatible = health.api_contract === 1;
                 if (!apiCompatible) {
+                    status.className = 'input-footer connection-indicator is-warning';
                     status.textContent = "API desatualizada para esta interface. Aguarde o deploy e reinício do servidor.";
                     return;
                 }
                 document.getElementById('modelName').textContent = health.default_model;
+                status.className = 'input-footer connection-indicator '
+                    + (health.ollama_status === 'online' ? 'is-online' : 'is-warning');
                 status.textContent = health.ollama_status === 'online'
                     ? 'Ollama conectado · As conversas ficam neste navegador.'
                     : 'Ollama indisponível. Verifique o serviço no servidor.';
             } catch (error) {
+                status.className = 'input-footer connection-indicator is-warning';
                 status.textContent = 'API indisponível: ' + error.message;
             }
         }
@@ -1399,6 +1504,8 @@
         function deleteConv(id, e) {
             e.stopPropagation();
             if (isGenerating) return;
+            const target = conversations.find(c => c.id === id);
+            if (!target || !window.confirm('Excluir a conversa "' + target.title + '" deste navegador?')) return;
             conversations = conversations.filter(c => c.id !== id);
             save();
             if (activeConvId === id) { activeConvId = null; pendingProjectSlug = ''; updateProjectBadge(); showWelcome(); }
@@ -1423,26 +1530,40 @@
         }
 
         // ========== UI HELPERS ==========
+        function setSidebarShown(show) {
+            sidebarShown = Boolean(show);
+            const sidebar = document.getElementById('sidebar');
+            if (sidebarShown) sidebar.classList.remove('hidden');
+            else sidebar.classList.add('hidden');
+            const mobile = window.matchMedia('(max-width: 768px)').matches;
+            document.getElementById('sidebarScrim').hidden = !mobile || !sidebarShown;
+            document.getElementById('menuToggle').ariaExpanded = String(sidebarShown);
+            sidebar.inert = !sidebarShown;
+        }
+        function closeMobileSidebar() {
+            if (window.matchMedia('(max-width: 768px)').matches) setSidebarShown(false);
+        }
+        if (typeof document.addEventListener === 'function') {
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') closeMobileSidebar();
+            });
+        }
         function showWelcome() {
-            if (window.matchMedia('(max-width: 768px)').matches) {
-                document.getElementById('sidebar').classList.add('hidden');
-            }
+            closeMobileSidebar();
             document.getElementById('welcomeScreen').style.display = 'flex';
             document.getElementById('messagesContainer').style.display = 'none';
             document.getElementById('topbarTitle').textContent = 'Menor';
         }
 
         function showMessages() {
-            if (window.matchMedia('(max-width: 768px)').matches) {
-                document.getElementById('sidebar').classList.add('hidden');
-            }
+            closeMobileSidebar();
             document.getElementById('welcomeScreen').style.display = 'none';
             document.getElementById('messagesContainer').style.display = 'flex';
             const conv = getActiveConv();
             if (conv) document.getElementById('topbarTitle').textContent = conv.title;
         }
 
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('hidden'); }
+        function toggleSidebar() { setSidebarShown(!sidebarShown); }
 
         function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
