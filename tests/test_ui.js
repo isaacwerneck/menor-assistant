@@ -1713,3 +1713,39 @@ test('D14: histórico de cada conversa mantém sua própria ordem cronológica',
     assert.deepEqual(Array.from(a, x => x.content), ['primeiro A', 'segundo A']);
     assert.deepEqual(Array.from(b, x => x.content), ['primeiro B', 'segundo B']);
 });
+
+test('E7: chat mantém ações e organização dos controles no HUD', () => {
+    for (const id of ['sidebarScrim', 'menuToggle', 'userInput', 'sendBtn',
+        'cancelBtn', 'connectionStatus', 'generationStatus']) {
+        assert.match(html, new RegExp('id="' + id + '"'));
+    }
+    assert.match(html, /class="topbar-actions"/);
+    assert.match(html, /class="composer-shell"/);
+    assert.match(html, /class="composer-meta"/);
+    assert.match(html, /href="\/workspace\/system"/);
+    assert.match(html, /grid-template-columns:\s*repeat\(5,minmax\(0,1fr\)\)/);
+});
+
+test('E7: menu mobile abre e fecha com fundo de proteção e estado acessível', () => {
+    const ui = browser();
+    ui.context.window.matchMedia = () => ({ matches: true });
+    ui.context.showWelcome();
+    assert.equal(ui.elements.get('sidebarScrim').hidden, true);
+    ui.context.toggleSidebar();
+    assert.equal(ui.elements.get('sidebarScrim').hidden, false);
+    assert.equal(ui.elements.get('menuToggle').ariaExpanded, 'true');
+    ui.context.closeMobileSidebar();
+    assert.equal(ui.elements.get('sidebarScrim').hidden, true);
+    assert.equal(ui.elements.get('menuToggle').ariaExpanded, 'false');
+});
+
+test('E7: exclusão de conversa exige confirmação explícita', () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('Não apagar sem confirmação');
+    ui.context.window.confirm = () => false;
+    ui.context.deleteConv(conv.id, { stopPropagation() {} });
+    assert.equal(ui.context.getActiveConv().id, conv.id);
+    ui.context.window.confirm = () => true;
+    ui.context.deleteConv(conv.id, { stopPropagation() {} });
+    assert.equal(ui.context.getActiveConv(), undefined);
+});
