@@ -23,3 +23,23 @@ O token deve ficar **somente no Ubuntu**, fora do Git e de conversas. O servidor
 **Importante:** a branch de relatórios é separada da `main` para não disparar deploys a cada avaliação. Um relatório salvo no Ubuntu **não fica automaticamente acessível a este chat**; com a publicação habilitada, é possível consultar os resumos pelo conector GitHub. Para avaliar a qualidade das respostas completas, baixe o JSON privado e anexe à conversa.
 
 Para importar baterias, use o esquema JSON do exemplo inicial. A interface exige sessão do proprietário. Esta é uma primeira versão sem filas persistentes: reiniciar a API interrompe uma bateria em andamento.
+
+
+## Enviar relatório completo ao GitHub manualmente
+
+O botão **Enviar ao GitHub** aparece ao lado de cada relatório salvo. Ele envia o JSON
+completo para a branch `lab-reports`, pasta `lab/reports/full/`, somente depois
+da confirmação do proprietário. A publicação exige no ambiente privado do Ubuntu:
+
+```ini
+MENOR_LAB_REPORTS_ALLOW_FULL_PUSH=1
+MENOR_LAB_GITHUB_TOKEN=<token GitHub restrito a este repositório>
+```
+
+O token precisa de permissão de escrita em Contents. Não o coloque no Git ou no chat.
+**Confirme que o repositório é privado antes de ativar a publicação completa.**
+O servidor não verifica a visibilidade do repositório automaticamente. Mesmo num
+repositório privado, quem tiver acesso ao GitHub poderá ler os relatórios completos.
+Não use essa opção para baterias que contenham credenciais ou dados sensíveis.
+A função não abre PR nem faz merge na `main`. Se um relatório já foi publicado,
+o GitHub rejeita a duplicação, preservando o original.

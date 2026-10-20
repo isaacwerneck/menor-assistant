@@ -128,7 +128,12 @@ async function batchRefresh(){
  for(const item of suites){const opt=document.createElement("option");opt.value=item.id;opt.textContent=item.title+" ("+item.cases+" casos)";select.append(opt);}
  const target=$("batchReports");target.replaceChildren();
  for(const item of reports){const p=document.createElement("p"),a=document.createElement("a");
- a.href="/lab/reports/"+encodeURIComponent(item.run_id)+"/download";a.textContent=item.run_id+" · "+item.automatic_passes+"/"+item.total+" acertos automáticos · "+item.ungraded+" sem nota";a.setAttribute("download","");p.append(a);target.append(p);}
+ a.href="/lab/reports/"+encodeURIComponent(item.run_id)+"/download";a.textContent=item.run_id+" · "+item.automatic_passes+"/"+item.total+" acertos automáticos · "+item.ungraded+" sem nota";a.setAttribute("download","");p.append(a);const push=document.createElement("button");push.type="button";push.textContent="Enviar ao GitHub";push.style.marginLeft="12px";push.addEventListener("click",async()=>{
+ if(!confirm("Publicar perguntas e respostas completas no GitHub privado?"))return;
+ push.disabled=true;try{const res=await fetch("/lab/reports/"+encodeURIComponent(item.run_id)+"/publish",{method:"POST",credentials:"same-origin"});
+ if(!res.ok){const body=await res.json().catch(()=>({}));throw new Error(body.detail||"HTTP "+res.status);}
+ const data=await res.json();$("batchStatus").textContent="Relatório publicado: "+data.url;push.textContent="Enviado";
+ }catch(e){$("batchStatus").textContent="Falha ao publicar: "+e.message;push.disabled=false;}\n });p.append(push);target.append(p);}
  if(!reports.length)target.textContent="Nenhum relatório salvo.";
  }catch(e){$("batchStatus").textContent=e.message;}
 }
