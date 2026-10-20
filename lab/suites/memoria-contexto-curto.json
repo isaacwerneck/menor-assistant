@@ -113,7 +113,7 @@
       "split": "development"
     },
     {
-      "id": "ultima-correção",
+      "id": "ultima-correcao",
       "category": "memoria-contexto-curto",
       "mode": "direct",
       "message": "Qual é o nome corrigido da pasta?",
