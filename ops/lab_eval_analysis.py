@@ -5,6 +5,8 @@ Gera resumo local JSON, sem rede e sem alterar arquivos.
 """
 import argparse
 import json
+import re
+import unicodedata
 import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -24,6 +26,50 @@ def _duration_seconds(value):
     if type(value) is int and 0 <= value <= 10 ** 15:
         return round(value / 1_000_000_000, 3)
     return None
+
+
+_SMALL_NUMBERS = {
+    "0": "zero", "1": "um", "2": "dois", "3": "tres", "4": "quatro",
+    "5": "cinco", "6": "seis", "7": "sete", "8": "oito", "9": "nove",
+    "10": "dez",
+}
+
+
+def _fold_text(value):
+    value = unicodedata.normalize("NFKD", value.casefold())
+    return "".join(ch for ch in value if not unicodedata.combining(ch))
+
+
+def _possible_format_mismatch(spec, case):
+    """Apenas recomenda revisão humana: nunca altera automatic_pass."""
+    if case.get("automatic_pass") is not False or spec.get("grader") not in (None, "strict"):
+        return False
+    result = case.get("result", {})
+    if not isinstance(result, dict) or result.get("status") != "answered":
+        return False
+    reply = result.get("reply", "")
+    if not isinstance(reply, str) or len(reply) > 4000:
+        return False
+    folded = _fold_text(reply)
+    parts = spec.get("expected_contains") or []
+    expected = spec.get("expected_exact")
+    if isinstance(expected, str) and expected.strip():
+        parts = [expected]
+    if not isinstance(parts, list) or not 1 <= len(parts) <= 3:
+        return False
+    for raw in parts:
+        if not isinstance(raw, str) or not 1 <= len(raw) <= 80:
+            return False
+        target = _fold_text(raw.strip())
+        if not target:
+            return False
+        pattern = r"(?<!\w)" + re.escape(target) + r"(?!\w)"
+        if re.search(pattern, folded):
+            continue
+        word = _SMALL_NUMBERS.get(target)
+        if not word or not re.search(r"(?<!\w)" + word + r"(?!\w)", folded):
+            return False
+    return True
 
 
 def _load_suite(suite_id, suite_dir):
@@ -67,6 +113,8 @@ def summarize(report, suite):
             flags.append(status)
         if auto is False:
             flags.append("objective_mismatch")
+            if _possible_format_mismatch(spec, case):
+                flags.append("possible_format_mismatch")
         if auto is True and case.get("format_compliant") is False:
             flags.append("numeric_format_mismatch")
         if elapsed is not None and elapsed > (45 if mode == "planner" else 25):
@@ -130,6 +178,8 @@ def summarize(report, suite):
         suggestions.append("Medir latência por modo e carga do Ubuntu; investigar desempenho sem sacrificar acurácia.")
     if incidents["plan_constraints"]:
         suggestions.append("Revisar planos que violam restrições ou omitem etapas; nunca inferir aprovação.")
+    if incidents["possible_format_mismatch"]:
+        suggestions.append("Revisar possíveis equivalências de escrita; nunca alterar nota automaticamente.")
     if incidents["numeric_format_mismatch"]:
         suggestions.append("Valor numérico correto, mas formato descumprido; não é erro matemático.")
     if incidents["schema_validation"]:
