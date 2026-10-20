@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, model_validator
 
 from src.agent import intelligence
+from src.agent.plan_constraints import warnings as constraint_warnings, required_stage_warnings
 from ops.model_latency import local_endpoint, model_identifier, numeric_summary
 from src.agent.voice import LAB_BASELINE_VOICE, NATURAL_VOICE
 from src.security import auth
@@ -101,8 +102,13 @@ def _planner(payload):
         return {"status": "no_valid_decision", "reply":
                 "O modelo não produziu uma decisão válida no limite configurado.",
                 "model": model, "move": None}
-    # Nenhuma tool é permitida neste sandbox; uma sugestão jamais será executada.
-    return {"status": "decision_validated", "reply": (
+    # Decisão validada = estrutura/contrato, não prova de qualidade nem execução.
+    plan_warnings = []
+    if result["move"] in ("plan", "continue"):
+        plan_warnings = constraint_warnings(payload.message, result.get("steps", []))
+        plan_warnings += required_stage_warnings(payload.message, result.get("steps", []))
+    return {"status": "decision_validated", "plan_quality_verified": False,
+            "plan_warnings": plan_warnings, "reply": (
         intelligence.render_plan(result)
         if result["move"] in ("plan", "continue") else
         (result.get("reply") or result.get("question") or "")
