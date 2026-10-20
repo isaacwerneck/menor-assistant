@@ -222,6 +222,24 @@ def _tool_result(name, receipt):
             "content_verified": False}
 
 
+def _human_tool_result(receipt):
+    """Relato legível ancorado no comprovante do executor, sem despejar JSON."""
+    name, output = receipt["tool"], receipt["result"]
+    if name in ("developer.propose", "developer.build") and isinstance(output, dict):
+        url = output.get("url")
+        if output.get("status") == "pr_created" and isinstance(url, str):
+            return "Abri uma proposta de revisão: " + url + ". Ainda depende de testes e merge."
+    if name == "projects.create":
+        return "Criei o registro do projeto no Menor."
+    if name == "projects.add_task":
+        return "Registrei a tarefa no projeto."
+    if name == "brain.remember":
+        return "Salvei a anotação na memória local."
+    if name == "images.generate":
+        return "A ferramenta de imagem concluiu a operação; vou apresentar o arquivo disponível."
+    return "A operação foi executada. O resultado está registrado, mas seu conteúdo ainda não foi verificado."
+
+
 def _observed_answer(reply, observations, phase="idle"):
     current, response = _answer(reply, phase)
     if observations:
@@ -239,8 +257,8 @@ def _tool_loop(message, history):
             if not observations:
                 return _answer("Plano do modelo, sem ação executada:\n" + step.get("reply", ""))
             return _observed_answer(
-                "Operações executadas: " + ", ".join(item["tool"] for item in observations)
-                + ". O conteúdo retornado não foi verificado independentemente.\n" + step.get("reply", ""),
+                "Concluí as operações de leitura. O resultado ainda precisa de verificação independente.\n"
+                + step.get("reply", ""),
                 observations,
             )
         name, arguments = step.get("tool"), step.get("arguments")
@@ -311,9 +329,8 @@ def _selected_tool(name, arguments):
         answer["events"] = [{"tool": name, "status": "failed"}]
         return current, answer
     proof = _tool_result(name, receipt)
-    result = json.dumps(receipt["result"], ensure_ascii=False)[:6000]
     current, answer = _answer(
-        "Resultado retornado pela ferramenta " + name + ":\n" + result,
+        _human_tool_result(receipt),
         last_result=proof,
     )
     answer["events"] = [{"tool": name, "status": receipt["status"]}]
@@ -552,8 +569,7 @@ def _advance(state, message, history, project=None, metrics=None):
             )
         proof = _tool_result(state["tool"], receipt)
         current, result = _answer(
-            "Execução confirmada. Resultado: "
-            + json.dumps(receipt["result"], ensure_ascii=False)[:6000],
+            "Execução confirmada. " + _human_tool_result(receipt),
         )
         goal = state.get("return_goal")
         if isinstance(goal, dict) and goal.get("goal_id"):

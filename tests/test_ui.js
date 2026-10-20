@@ -1684,10 +1684,10 @@ test('D: recibos planejados e falhos não aparecem como sucesso executado', asyn
     ui.elements.get('userInput').value = 'Quais ferramentas foram executadas?';
     await ui.context.sendMsg();
     const reply = ui.context.getActiveConv().messages.at(-1).content;
-    assert.match(reply, /✓ projects.list · executed/);
-    assert.match(reply, /… developer.propose · planned/);
-    assert.match(reply, /! vision.inspect · failed/);
-    assert.doesNotMatch(reply, /✓ vision.inspect/);
+    assert.match(reply, /Operação concluída e registrada/);
+    assert.match(reply, /Ação apenas planejada/);
+    assert.match(reply, /Uma operação não foi concluída/);
+    assert.doesNotMatch(reply, /developer\.propose|vision\.inspect/);
 });
 
 test('D12: recibo sem arquivo verificado não afirma integridade válida', () => {
@@ -1762,4 +1762,42 @@ test('E7: menu de projetos permanece acessível na sidebar e navegação inferio
     const mobile = html.match(/<nav class="mobile-nav"[\s\S]*?<\/nav>/)?.[0] || '';
     assert.match(sidebar, /onclick="openProjects\(\)"/);
     assert.equal((mobile.match(/<button\b|<a\b/g) || []).length, 5);
+});
+
+
+test('E8: confirmação usa card com ações humanas, sem parâmetros e nomes internos', async () => {
+    const ui = browser();
+    ui.context.fetch = async (url) => {
+        if (url === '/agent/run') return {
+            ok: true, status: 200, json: async () => ({
+                handled: true, phase: 'approval',
+                reply: 'Proposta aguarda consentimento.',
+                approval: { title: 'Propor correção no Menor',
+                    description: 'Abre PR rascunho sem alterar a main.' },
+            }),
+        };
+        return { ok: true, status: 200, json: async () => ({ decision: 'chat' }) };
+    };
+    ui.elements.get('userInput').value = 'corrige o roteador do menor';
+    await ui.context.sendMsg();
+    const conv = ui.context.getActiveConv();
+    const last = conv.messages.at(-1);
+    assert.equal(last.approval.title, 'Propor correção no Menor');
+    assert.doesNotMatch(last.content, /developer\.propose|Parâmetros/);
+    const root = ui.elements.get('messagesContainer');
+    const bot = root.children.at(-1).children.at(-1);
+    const card = bot.children.find(c => c.className === 'approval-card');
+    assert.ok(card);
+    assert.equal(card.children.at(-1).children.length, 3);
+    assert.equal(card.children.at(-1).children[0].textContent, 'Aprovar');
+    assert.equal(card.children.at(-1).children[1].textContent, 'Explicar');
+    assert.equal(card.children.at(-1).children[2].textContent, 'Cancelar');
+});
+
+test('E8: tela mobile reduz peso visual sem eliminar controles de documento e foco', () => {
+    assert.match(html, /\.input-wrapper:focus-within \{ outline: none;/);
+    assert.match(html, /\.input-wrapper \.file-attach-btn::before/);
+    assert.match(html, /\.mobile-nav \{ min-height: 49px;/);
+    assert.match(html, /id="chooseDocumentBtn"/);
+    assert.match(html, /aria-label="Anexar documento privado"/);
 });
