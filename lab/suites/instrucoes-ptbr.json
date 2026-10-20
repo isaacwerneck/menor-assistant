@@ -11,7 +11,8 @@
       "message": "Responda somente com SIM: 2 é um número par?",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "SIM"
+      "expected_exact": "SIM",
+      "grader": "boolean"
     },
     {
       "id": "sem-desculpas",
@@ -120,5 +121,6 @@
       "review_criteria": "Português brasileiro informal; condições de hardware apresentadas como dependentes.",
       "split": "validation"
     }
-  ]
+  ],
+  "grader_version": "menor-eval-grader-v2"
 }
