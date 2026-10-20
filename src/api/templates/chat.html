@@ -866,7 +866,7 @@
             </div>
         </div>
         <nav class="mobile-nav" aria-label="Navegação rápida">
-            <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas">Conversas</button>
+            <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas" aria-current="page">Conversas</button>
             <button type="button" onclick="openObjectives()">Objetivos</button>
             <a href="/files/view">Arquivos</a>
             <a href="/lab/view" aria-label="Abrir Laboratório de testes">Lab</a>
@@ -976,6 +976,7 @@
         let canSave = true;
         let conversations = loadConversations();
         let activeConvId = null;
+        let sidebarShown = !window.matchMedia('(max-width: 768px)').matches;
         let isGenerating = false;
         let generationSequence = 0;
         let activeGeneration = null;
@@ -1541,7 +1542,6 @@
         }
 
         // ========== UI HELPERS ==========
-        let sidebarShown = !window.matchMedia('(max-width: 768px)').matches;
         function setSidebarShown(show) {
             sidebarShown = Boolean(show);
             const sidebar = document.getElementById('sidebar');

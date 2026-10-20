@@ -7,7 +7,7 @@ const { test } = require('node:test');
 const html = fs.readFileSync(path.join(__dirname, '../src/api/templates/chat.html'), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 
-function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { decision: 'cancel' }) {
+function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { decision: 'cancel' }, mobile = false) {
     const elements = new Map();
     const writes = [];
     const requests = [];
@@ -44,7 +44,7 @@ function browser(saved = '[]', intent = { decision: 'chat' }, resolution = { dec
             },
             createElement: element,
         },
-        window: { matchMedia: () => ({ matches: false }), confirm: () => true },
+        window: { matchMedia: () => ({ matches: mobile }), confirm: () => true },
         localStorage: {
             getItem: () => saved,
             setItem: (key, value) => writes.push(JSON.parse(value)),
@@ -1712,4 +1712,39 @@ test('D14: histórico de cada conversa mantém sua própria ordem cronológica',
     const b = ui.context.buildHistory(second.messages, 'continua B');
     assert.deepEqual(Array.from(a, x => x.content), ['primeiro A', 'segundo A']);
     assert.deepEqual(Array.from(b, x => x.content), ['primeiro B', 'segundo B']);
+});
+
+test('E7: mobile starts with closed navigation and toggles accessible menu', () => {
+    const ui = browser('[]', { decision: 'chat' }, { decision: 'cancel' }, true);
+    assert.equal(ui.elements.get('sidebarScrim').hidden, true);
+    assert.equal(ui.elements.get('menuToggle').ariaExpanded, 'false');
+    ui.context.toggleSidebar();
+    assert.equal(ui.elements.get('sidebarScrim').hidden, false);
+    assert.equal(ui.elements.get('menuToggle').ariaExpanded, 'true');
+    ui.context.closeMobileSidebar();
+    assert.equal(ui.elements.get('sidebarScrim').hidden, true);
+    assert.equal(ui.elements.get('menuToggle').ariaExpanded, 'false');
+});
+
+test('E7: deleting a conversation always requires confirmation', () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('Uma conversa importante');
+    ui.context.window.confirm = () => false;
+    ui.context.deleteConv(conv.id, { stopPropagation() {} });
+    assert.equal(ui.context.getActiveConv().id, conv.id);
+    ui.context.window.confirm = () => true;
+    ui.context.deleteConv(conv.id, { stopPropagation() {} });
+    assert.equal(ui.context.getActiveConv(), undefined);
+});
+
+test('E7: HUD preserves accessible composer and five mobile routes', () => {
+    for (const id of ['sidebarScrim', 'menuToggle', 'userInput', 'sendBtn',
+        'cancelBtn', 'connectionStatus', 'generationStatus']) {
+        assert.match(html, new RegExp('id="' + id + '"'));
+    }
+    assert.match(html, /class="composer-shell"/);
+    assert.match(html, /class="composer-meta"/);
+    assert.match(html, /class="topbar-actions"/);
+    assert.match(html, /href="\/workspace\/system"/);
+    assert.match(html, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
 });

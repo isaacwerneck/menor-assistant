@@ -256,3 +256,13 @@ test("Lab: manual direct comparison allows selecting improved profile without ch
     await ui.click("runDirect");
     assert.equal(JSON.parse(ui.requests.at(-1).opts.body).profile, "baseline");
 });
+
+test("E7: laboratory retains functional controls and reachable sections", () => {
+    assert.match(lab, /class="lab-jump-nav"/);
+    assert.match(lab, /id="teste-avulso"/);
+    assert.match(lab, /class="compare-results"/);
+    assert.match(lab, /class="batch-action-bar"/);
+    assert.match(lab, /id="batchRun"/);
+    assert.match(lab, /id="selectionCount"/);
+    assert.match(lab, /href="#reportsHistory"/);
+});
