@@ -107,7 +107,7 @@
       "split": "development"
     },
     {
-      "id": "não-inventar-campo",
+      "id": "nao-inventar-campo",
       "category": "dados-extracao",
       "mode": "direct",
       "message": "JSON: {\"nome\":\"Lia\"}. Qual a idade informada? Responda explicitamente se não existe.",
