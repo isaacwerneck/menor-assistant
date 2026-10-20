@@ -18,6 +18,58 @@ _LOCK = threading.Lock()
 _RUNNING = False
 STATE = {"status":  "idle"}
 
+# Rotina de avaliação mais recente. IDs são estáveis e exibidos na UI para
+# o operador poder conferir exatamente qual bateria foi solicitada.
+RECOMMENDED_BATCHES = {
+    "planejamento-supervisionado": (1, "Planos e ferramentas"),
+    "programacao-debug": (2, "Programação e correção de erros"),
+    "matematica-validacao-v2": (3, "Matemática: valor e formato"),
+    "regressoes-planejamento-v3": (4, "Segurança e restrições dos planos"),
+}
+
+
+def _progress_from_summaries():
+    """Conta execuções SALVAS por bateria; não usa o histórico do navegador.
+
+    Lê apenas resumos pequenos locais. Cada relatório concluído é contado
+    uma vez; ter relatório NÃO implica acerto nem publicação no GitHub.
+    """
+    progress = {}
+    if not DATA.is_dir():
+        return progress
+    for path in DATA.glob("*.summary.json"):
+        try:
+            if path.stat().st_size > 4096:
+                continue
+            summary = json.loads(path.read_text(encoding="utf-8"))
+            suite_id = summary.get("suite_id")
+            run_id = summary.get("run_id")
+            if not isinstance(suite_id, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", suite_id):
+                continue
+            if not isinstance(run_id, str) or not re.fullmatch(r"[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}", run_id):
+                continue
+            if path.name != run_id + ".summary.json":
+                continue
+            counts = [summary.get(field) for field in (
+                "total", "automatic_passes", "automatic_failures", "ungraded"
+            )]
+            if any(type(n) is not int or n < 0 or n > 200 for n in counts):
+                continue
+            if counts[1] + counts[2] + counts[3] != counts[0]:
+                continue
+            item = progress.setdefault(suite_id, {"run_count": 0, "last_report": None})
+            item["run_count"] += 1
+            latest = item["last_report"]
+            if latest is None or run_id > latest["run_id"]:
+                item["last_report"] = {
+                    "run_id": run_id, "total": counts[0],
+                    "automatic_passes": counts[1], "automatic_failures": counts[2],
+                    "ungraded": counts[3],
+                }
+        except (OSError, ValueError, TypeError, AttributeError):
+            continue
+    return progress
+
 
 def validate_suite(data):
     if not isinstance(data, dict) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", str(data.get("id", ""))):
@@ -129,12 +181,27 @@ def grade_case(case, result):
 
 
 def suites():
+    progress = _progress_from_summaries()
+    with _LOCK:
+        active = STATE.get("suite_id") if STATE.get("status") == "running" else None
     result = []
     for path in sorted(list(SUITES.glob("*.json")) + list((DATA / "suites").glob("*.json"))):
         try:
             data = validate_suite(json.loads(path.read_text(encoding="utf-8")))
-            result.append({"id":  data["id"], "title":  data.get("title", data["id"]),
-                           "description":  data.get("description", ""), "cases":  len(data["cases"])})
+            suite_id = data["id"]
+            saved = progress.get(suite_id, {"run_count": 0, "last_report": None})
+            order, label = RECOMMENDED_BATCHES.get(suite_id, (None, None))
+            state = "running" if suite_id == active else (
+                "completed" if saved["run_count"] else "pending"
+            )
+            result.append({
+                "id": suite_id, "title": data.get("title", suite_id),
+                "description": data.get("description", ""), "cases": len(data["cases"]),
+                "source": "imported" if path.parent == DATA / "suites" else "builtin",
+                "status": state, "run_count": saved["run_count"],
+                "last_report": saved["last_report"], "recommended_order": order,
+                "recommended_label": label,
+            })
         except (ValueError, OSError, TypeError):
             continue
     return result
@@ -242,7 +309,8 @@ def start(suite_id):
         _RUNNING = True
         run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[: 8]
         STATE.clear()
-        STATE.update(status="running", run_id=run_id, done=0, total=len(suite["cases"]))
+        STATE.update(status="running", suite_id=suite_id, run_id=run_id,
+                     done=0, total=len(suite["cases"]))
     threading.Thread(target=_run, args=(suite, run_id), daemon=True).start()
     return run_id
 
