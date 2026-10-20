@@ -35,6 +35,9 @@ Timeout sem resposta não tem métricas inventadas.
 `output_limited=true` indica `done_reason=length` reportado pelo Ollama;
 `reply_truncated=true` indica o corte do trecho exibido no relatório. São
 condições diferentes. A ausência de limite reportado não prova resposta completa.
+Os cartões do teste individual mostram a causa, tokens gerados, tokens/s e os
+avisos de limite, com rótulos conhecidos e sem texto bruto de exceções. Respostas
+de versões antigas continuam legíveis quando essas métricas não estão presentes.
 O status continua compatível com relatórios anteriores; os sinalizadores devem
 ser considerados na revisão humana.
 
