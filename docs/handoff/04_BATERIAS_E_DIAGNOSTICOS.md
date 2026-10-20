@@ -46,7 +46,48 @@ A triagem levou **172,244 s** na soma dos 16 casos (incluso tempo do avaliador).
 - `segundo-lote-naturalidade-v2`: **os mesmos 24**, perfil natural em perguntas diretas. Testes de `planner` compartilham o raciocinador e **não são A/B isolado de estilo de planos**.
 - Somando apenas cenários temáticos independentes do original e segundo lote: **192 + 24 = 216** prompts distintos; pacotes agregados e versões de perfil repetem prompts. **Não é um leaderboard oficial nem holdout cego.**
 
-PR #84 integrou `src/agent/voice.py` (tom natural), `src/agent/plan_constraints.py` (avisos), grader `boolean`, medição de tokens/s, A/B e diagnósticos de hardware. Código testado em CI, **lote v2 ainda sem resultado real publicado** nesta conversa. Evitar afirmar melhoria de nota/latência por expectativa.
+PR #84 integrou `src/agent/voice.py` (tom natural), `src/agent/plan_constraints.py` (avisos), grader `boolean`, medição de tokens/s, A/B e diagnósticos de hardware. No snapshot original do handoff, o código estava testado em CI e o lote v2 ainda não havia sido publicado. A rodada Codex abaixo atualiza esse estado; não afirmar melhoria de nota/latência por expectativa.
+
+## Rodada Codex — 20/10/2026
+
+O laboratório autenticado executou os dois lotes de 24 casos. O baseline
+`20261020T040826Z-f0556cec` foi publicado na branch privada `lab-reports` e
+consultado integralmente: **5 aprovações/1 reprovação automática, 18 sem nota e
+2 decisões inválidas**. A falha automática foi `ollama list` no lugar do comando
+para modelos carregados. Duas falhas técnicas ocorreram nos planos de deploy e
+migração/rollback; o relatório antigo não permite distinguir timeout, limite de
+saída, JSON ou contrato rejeitado.
+
+A soma dos tempos foi **444,337 s**; mediana por caso **16,188 s**, mediana dos
+20 casos diretos **12,072 s**. A mediana das taxas de geração reportadas nesses
+casos diretos foi **7,465 tokens/s**. Quatro saídas atingiram exatamente 256
+tokens; sem `done_reason` no relatório antigo, isso é indício de limite, não
+prova isolada. Houve textos visivelmente interrompidos e planos inadequados,
+inclusive critério que mantinha um teste vermelho após liberação.
+
+O lote natural `20261020T113158Z-217c3e5e` também foi publicado e consultado:
+**5 aprovações/1 reprovação automática, 18 sem nota e 3 decisões inválidas**.
+A soma dos tempos foi **447,345 s**; mediana geral **17,743 s**, mediana dos
+20 casos diretos **11,915 s** e mediana das taxas de geração **7,235 tokens/s**.
+Também houve quatro saídas de 256 tokens. A resposta sobre modelos carregados
+inventou `ollama list-models`; o plano de CI continuou aceitando o teste vermelho.
+
+O tom natural não demonstrou ganho consistente nessa rodada. A resposta sobre
+GPU desconhecida foi mais cautelosa, mas persistiram confusão sobre modelo de IA
+versus placa gráfica, texto cortado e critérios de plano inadequados. A pergunta
+sobre “qual modelo” sem contexto também é ambígua e precisa de teste com histórico
+explícito, além de reformulação inédita. Não atribuir todo erro ao modelo sem
+conferir os dados efetivamente fornecidos.
+
+Os horários das execuções diferem em várias horas e não há SHA de deploy,
+digest do modelo ou controle de carga nesses relatórios. Não usar este par como
+prova causal de melhora ou regressão. Os modos de planejamento compartilham o
+mesmo prompt, portanto sua diferença não isola o perfil de linguagem.
+
+As correções de pesquisa e continuidade posteriores à coleta também precisam de
+testes no chat completo. O diagnóstico novo acrescenta motivos de falha,
+contagens/tempos e hashes do prompt/schema ao planejador, sem repetir inferências;
+ver [contrato atual do Lab](../laboratorio_baterias.md).
 
 ## Como executar a segunda rodada após o deploy
 

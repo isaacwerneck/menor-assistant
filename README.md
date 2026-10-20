@@ -21,7 +21,9 @@ mantendo FastAPI, Ollama, sessões e arquivos no Ubuntu. O modo remoto exige a
 variável de ambiente `MENOR_PUBLIC_ORIGIN=https://menor.seudominio.com`
 e a configuração manual do túnel e do DNS; nenhuma instalação é automática.
 O laboratório autenticado `/lab/view` compara Qwen direto com o
-raciocinador JSON, sem executar ferramentas nem salvar históricos.
+raciocinador JSON, sem executar ferramentas nem salvar históricos. Os relatórios
+distinguem timeout, JSON/contrato inválido e limite de saída, com métricas
+numéricas de inferência; veja o [contrato do laboratório](docs/laboratorio_baterias.md).
 
 O Netlify oferece somente uma **página estática de entrada** neste estágio.
 Não coloque `/chat/stream` atrás de proxy Netlify: o timeout da camada

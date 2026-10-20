@@ -84,7 +84,9 @@ def _direct(payload):
     if not isinstance(item, dict) or not isinstance(item.get("content"), str):
         raise ValueError("Resposta do Ollama inválida.")
     return {"status": "answered", "reply": item["content"][:1800],
-            "model": model, "move": None, "performance": numeric_summary(result)}
+            "model": model, "move": None, "performance": numeric_summary(result),
+            "output_limited": result.get("done_reason") == "length",
+            "reply_truncated": len(item["content"]) > 1800}
 
 
 def _planner(payload):
@@ -92,16 +94,18 @@ def _planner(payload):
     local_endpoint(os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
     model = model_identifier(os.environ.get("MENOR_REASONING_MODEL") or os.environ.get(
         "OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")))
+    diagnostics = {}
     result = intelligence.decide(
         payload.message,
         [item.model_dump() for item in payload.history],
         tools=[], capabilities=[], knowledge="", feedback_examples=[],
-        paused_goals=[], pending=None, last_result=None, preferences="",
+        paused_goals=[], pending=None, last_result=None, preferences="", diagnostics=diagnostics,
     )
     if result is None:
         return {"status": "no_valid_decision", "reply":
                 "O modelo não produziu uma decisão válida no limite configurado.",
-                "model": model, "move": None}
+                "model": model, "move": None, "diagnostics": diagnostics,
+                "performance": diagnostics.get("performance", {})}
     # Decisão validada = estrutura/contrato, não prova de qualidade nem execução.
     plan_warnings = []
     if result["move"] in ("plan", "continue"):
@@ -113,7 +117,8 @@ def _planner(payload):
         reply = result.get("reply") or result.get("question") or ""
     return {"status": "decision_validated", "plan_quality_verified": False,
             "plan_warnings": plan_warnings, "reply": reply[:1800],
-            "model": model, "move": result["move"]}
+            "model": model, "move": result["move"], "diagnostics": diagnostics,
+            "performance": diagnostics.get("performance", {}), "reply_truncated": len(reply) > 1800}
 
 
 @router.get("/lab/view", response_class=HTMLResponse)

@@ -3,6 +3,7 @@
 O LLM sugere o próximo movimento em qualquer domínio. O código continua
 sendo a autoridade para permissão, ferramentas e resultados verificáveis.
 """
+import hashlib
 import json
 import logging
 import os
@@ -11,9 +12,12 @@ import requests
 
 from src.agent.context_engine import select_history, select_approved_examples
 from src.agent.voice import NATURAL_VOICE
+from ops.model_latency import numeric_summary
 
 LOG = logging.getLogger(__name__)
 MOVES = ("answer", "clarify", "plan", "act", "research", "continue", "inspect_result")
+INFERENCE_OPTIONS = {"temperature": 0.1, "num_predict": 480}
+INFERENCE_TIMEOUT = (4, 40)
 SYSTEM = """Você é o Menor, assistente pessoal local. Entenda o pedido atual por
 significado e contexto em qualquer domínio, sem rotas por palavras-chave.
 O pedido atual e suas correções têm prioridade sobre temas antigos. Responda
@@ -122,12 +126,30 @@ def _bounded_evidence(value, budget=2400):
     return compact or {"evidence": "metadata_unavailable"}
 
 
+def _inference_failure(error):
+    for kind, outcome in ((requests.Timeout, "timeout"), (json.JSONDecodeError, "invalid_json"),
+                          (requests.RequestException, "request_failed")):
+        if isinstance(error, kind):
+            return outcome
+    return "invalid_response"
+
+
 def decide(message, history=None, pending=None, capabilities=None, knowledge="",
            last_result=None, paused_goals=None, tools=None, review_issues=None,
-           feedback_examples=None, preferences=None):
+           feedback_examples=None, preferences=None, diagnostics=None):
     """Retorna decisão validada, ou None se Ollama falhar; nunca age diretamente."""
     if not isinstance(message, str) or not message.strip() or len(message) > 8000:
         raise ValueError("Mensagem inválida.")
+    if diagnostics is not None:
+        if not isinstance(diagnostics, dict):
+            raise ValueError("Destino de diagnóstico inválido.")
+        diagnostics.clear()
+        diagnostics.update(
+            outcome="invalid_decision", options=INFERENCE_OPTIONS.copy(),
+            read_timeout_seconds=INFERENCE_TIMEOUT[1],
+            prompt_sha256=hashlib.sha256(SYSTEM.encode()).hexdigest(),
+            schema_sha256=hashlib.sha256(json.dumps(DECISION_SCHEMA, sort_keys=True).encode()).hexdigest(),
+        )
     if feedback_examples is None:
         # Exemplos aprovados pelo dono adaptam o estilo sem treino ou permissão.
         try:
@@ -196,12 +218,20 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
                              {"role": "user", "content": json.dumps(context, ensure_ascii=False)}],
                 "format": DECISION_SCHEMA, "stream": False,
                 "keep_alive": os.environ.get("OLLAMA_KEEP_ALIVE", "24h"),
-                "options": {"temperature": 0.1, "num_predict": 480},
+                "options": INFERENCE_OPTIONS,
             },
-            timeout=(4, 40),
+            timeout=INFERENCE_TIMEOUT,
         ) as response:
             response.raise_for_status()
-            item = json.loads(response.json()["message"]["content"])
+            data = response.json()
+            if not isinstance(data, dict):
+                raise ValueError("Protocolo do Ollama inválido.")
+            if diagnostics is not None:
+                reason = data.get("done_reason")
+                diagnostics.update(performance=numeric_summary(data),
+                                   done_reason=reason if reason in ("stop", "length") else "unknown",
+                                   output_limited=reason == "length")
+            item = json.loads(data["message"]["content"])
         if not isinstance(item, dict) or item.get("move") not in MOVES:
             return None
         goal, reply, question = (item.get(key, "") for key in ("goal", "reply", "question"))
@@ -256,6 +286,8 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
                 return None
         elif arguments:
             return None
+        if diagnostics is not None:
+            diagnostics["outcome"] = "validated"
         return {
             "move": item["move"], "goal": goal.strip(), "reply": reply.strip(),
             "question": question.strip(), "steps": steps, "acceptance": acceptance,
@@ -264,6 +296,8 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             **({"query": query.strip()} if query else {}),
         }
     except (requests.RequestException, ValueError, TypeError, KeyError) as error:
+        if diagnostics is not None:
+            diagnostics["outcome"] = _inference_failure(error)
         LOG.info("Análise contextual indisponível: %s", type(error).__name__)
         return None
 
