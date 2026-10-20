@@ -1,0 +1,116 @@
+{
+  "id": "tarefas-multietapa",
+  "title": "Decomposição de tarefas reais",
+  "description": "Objetivos complexos, dependências, checkpoints e qualidade.",
+  "methodology_version": "menor-eval-v1",
+  "cases": [
+    {
+      "id": "site-completo",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje criar uma página web de portfólio com testes, acessibilidade e deploy, sem executar nada.",
+      "expected_contains": [],
+      "review_criteria": "Requisitos, implementação, teste, deploy e critérios de aceite.",
+      "split": "development"
+    },
+    {
+      "id": "relatorio-financeiro",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje analisar planilha de gastos e entregar relatório sem modificar valores originais.",
+      "expected_contains": [],
+      "review_criteria": "Validação, cálculo, apresentação, preservação original.",
+      "split": "development"
+    },
+    {
+      "id": "transcricao-audio",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje transcrever um áudio e resumir decisões de uma reunião, sem inventar falas.",
+      "expected_contains": [],
+      "review_criteria": "Obter arquivo, transcrever, revisar e diferenciar fala de inferência.",
+      "split": "development"
+    },
+    {
+      "id": "pesquisa-viagem",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje pesquisar uma viagem com orçamento definido, mas sem datas informadas.",
+      "expected_contains": [],
+      "review_criteria": "Identificar falta de datas; não alegar reservas.",
+      "split": "holdout"
+    },
+    {
+      "id": "analisar-pr",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje revisão de PR com conflitos, CI e atualização de branch.",
+      "expected_contains": [],
+      "review_criteria": "Base atualizada, conflitos resolvidos, testes e autorização.",
+      "split": "development"
+    },
+    {
+      "id": "autonomia-codex",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje executar uma correção de bug de forma supervisionada com recibos e rollback.",
+      "expected_contains": [],
+      "review_criteria": "Observabilidade, execução delimitada, validação.",
+      "split": "development"
+    },
+    {
+      "id": "documentos-multiplos",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje extrair dados de 5 PDFs e gerar planilha com páginas de origem.",
+      "expected_contains": [],
+      "review_criteria": "Origem e página por dado, ausência de inventar arquivos.",
+      "split": "development"
+    },
+    {
+      "id": "desenho-imagem",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje criar capa artística com referência visual fornecida pelo usuário, sem alegar que já a viu.",
+      "expected_contains": [],
+      "review_criteria": "Pedir referência, requisitos, geração, revisão.",
+      "split": "holdout"
+    },
+    {
+      "id": "modelo-local",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje avaliar alternativas de modelo local para Ubuntu com RAM limitada.",
+      "expected_contains": [],
+      "review_criteria": "RAM, latência, tarefas e testes justos.",
+      "split": "development"
+    },
+    {
+      "id": "servico-inicia",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje investigar por que um serviço systemd não inicia, sem executar comandos.",
+      "expected_contains": [],
+      "review_criteria": "Logs/status/env/dependências; sem assumir causa.",
+      "split": "development"
+    },
+    {
+      "id": "webhook-seguro",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje receber webhooks de GitHub com validação de assinatura e logs sem segredos.",
+      "expected_contains": [],
+      "review_criteria": "Assinatura, mínimos privilégios, idempotência, observabilidade.",
+      "split": "development"
+    },
+    {
+      "id": "medicao-pos-mudanca",
+      "category": "tarefas-multietapa",
+      "mode": "planner",
+      "message": "Planeje medir se atualização melhora a IA sem favorecer apenas as perguntas usadas no ajuste.",
+      "expected_contains": [],
+      "review_criteria": "Conjunto holdout, métricas por categoria e comparação baseline.",
+      "split": "holdout"
+    }
+  ]
+}
