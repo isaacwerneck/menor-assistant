@@ -56,6 +56,7 @@ class CalculatorToolTests(unittest.TestCase):
         for item in (
             "__import__('os').system('id')", "2**10000000", "9/0", "sin(1)",
             "1<<12", "1e100", "1 + x", "1; 2", "5 // 2",
+            "1" * 121, None, "", [], "(((((((((((((((((((1)))))))))))))))))))",
         ):
             with self.subTest(item=str(item)[:20]), self.assertRaises(ValueError):
                 calculate(item)
