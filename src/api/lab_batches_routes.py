@@ -1,4 +1,6 @@
 """Endpoints autenticados do laboratório de baterias."""
+import json
+
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse
 
@@ -62,3 +64,22 @@ def batch_download(run_id: str, request: Request):
         raise HTTPException(404, "Relatório não encontrado.") from error
     return FileResponse(path, media_type="application/json", filename=path.name,
                         headers={"Cache-Control": "private, no-store"})
+
+
+@router.post("/lab/reports/{run_id}/publish")
+def batch_publish(run_id: str, request: Request):
+    """Push manual de relatório completo. Não aceita conteúdo enviado pelo cliente."""
+    auth.require_owner(request)
+    try:
+        path = lab_batches.report_path(run_id)
+        report = json.loads(path.read_text(encoding="utf-8"))
+        if report.get("run_id") != run_id:
+            raise ValueError("ID do relatório inconsistente.")
+        from src.api.lab_publish import publish_report
+        return {"url": publish_report(report)}
+    except FileNotFoundError as error:
+        raise HTTPException(404, "Relatório não encontrado.") from error
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(503, str(error)) from error
