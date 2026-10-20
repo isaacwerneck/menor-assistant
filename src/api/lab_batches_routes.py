@@ -1,10 +1,11 @@
 """Endpoints autenticados do laboratório de baterias."""
 import json
+import requests
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse
 
-from src.api import lab_batches
+from src.api import lab_batches, lab_publish
 from src.security import auth
 
 router = APIRouter()
@@ -81,5 +82,22 @@ def batch_publish(run_id: str, request: Request):
         raise HTTPException(404, "Relatório não encontrado.") from error
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+    except lab_publish.GitHubPublishRejected as error:
+        raise HTTPException(502, str(error)) from error
+    except requests.Timeout as error:
+        raise HTTPException(504, "Tempo esgotado ao contatar o GitHub.") from error
+    except requests.HTTPError as error:
+        status = error.response.status_code if error.response is not None else None
+        if status == 401:
+            detail = "O token de publicação foi recusado pelo GitHub (401)."
+        elif status == 403:
+            detail = "O GitHub recusou as permissões do token (403)."
+        elif status == 404:
+            detail = "Branch ou repositório não acessível ao token (404)."
+        else:
+            detail = "Erro do GitHub durante publicação (HTTP " + str(status or "indefinido") + ")."
+        raise HTTPException(502, detail) from error
+    except requests.RequestException as error:
+        raise HTTPException(502, "Falha de rede durante a publicação no GitHub.") from error
     except RuntimeError as error:
         raise HTTPException(503, str(error)) from error
