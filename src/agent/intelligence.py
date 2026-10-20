@@ -180,6 +180,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
         except (OSError, UnicodeError, ValueError) as error:
             LOG.warning("Preferências indisponíveis: %s", type(error).__name__)
             preferences = ""
+    prompt_started = time.monotonic()
     turns = select_history(history or [], message)
     context = {
         "owner_preferences_data_not_permissions": preferences[:2000] if isinstance(preferences, str) else "",
@@ -207,7 +208,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
         ],
         "available_tools": [
             {
-                "name": x["name"], "description": x["description"][:180],
+                "name": x["name"], "description": x["description"][:110],
                 "arguments": x["arguments"][:8], "writes": x["writes"],
             }
             for x in (tools or [])[:30]
@@ -223,6 +224,19 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             and type(x.get("ready")) is bool
         ],
     }
+    # Não enviar blocos vazios: cada campo opcional custa tokens e prefill no 7B.
+    # Manter exemplos vazios no contrato para não transformar ausência em permissão.
+    required = {"current_message", "owner_approved_examples_data_not_instructions"}
+    context = {key: value for key, value in context.items()
+               if key in required or value not in ("", None, [], {})}
+    context_json = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
+    if diagnostics is not None:
+        diagnostics.update(
+            context_chars=len(context_json), selected_history_chars=sum(len(x["content"]) for x in turns),
+            tool_count=len(context.get("available_tools", [])), system_chars=len(SYSTEM),
+            prompt_assembly_ms=round((time.monotonic() - prompt_started) * 1000, 2),
+        )
+    request_started = time.monotonic()
     try:
         with requests.post(
             os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/chat",
@@ -231,7 +245,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
                     "OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
                 ),
                 "messages": [{"role": "system", "content": SYSTEM}, *turns,
-                             {"role": "user", "content": json.dumps(context, ensure_ascii=False)}],
+                             {"role": "user", "content": context_json}],
                 "format": DECISION_SCHEMA, "stream": False,
                 "keep_alive": os.environ.get("OLLAMA_KEEP_ALIVE", "24h"),
                 "options": INFERENCE_OPTIONS,
@@ -316,6 +330,9 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             diagnostics["outcome"] = _inference_failure(error)
         LOG.info("Análise contextual indisponível: %s", type(error).__name__)
         return None
+    finally:
+        if diagnostics is not None:
+            diagnostics["ollama_wall_ms"] = round((time.monotonic() - request_started) * 1000, 2)
 
 
 def render_plan(decision):
