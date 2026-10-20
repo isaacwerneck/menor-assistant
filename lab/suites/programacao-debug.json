@@ -9,70 +9,63 @@
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Em Python, qual o resultado de len([3, 4, 5, 6])? Apenas número.",
-      "expected_contains": [
-        "4"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "4"
     },
     {
       "id": "python-slice",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Em Python, qual é o resultado de 'menor'[1:4]? Responda só com o trecho.",
-      "expected_contains": [
-        "eno"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "eno"
     },
     {
       "id": "python-boolean",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Em Python, qual o resultado de bool([])? Apenas True ou False.",
-      "expected_contains": [
-        "False"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "False"
     },
     {
       "id": "javascript-tipo",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Em JavaScript, qual valor retorna typeof 42? Apenas o texto, sem aspas.",
-      "expected_contains": [
-        "number"
-      ],
-      "split": "holdout"
+      "expected_contains": [],
+      "split": "validation",
+      "expected_exact": "number"
     },
     {
       "id": "http-404",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Qual código HTTP indica recurso não encontrado? Apenas número.",
-      "expected_contains": [
-        "404"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "404"
     },
     {
       "id": "http-401",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Qual código HTTP costuma indicar ausência de autenticação? Apenas número.",
-      "expected_contains": [
-        "401"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "401"
     },
     {
       "id": "git-ff",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "O comando `git merge --ff-only` pode criar um merge quando as branches divergem? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "NÃO"
     },
     {
       "id": "api-token",
@@ -81,37 +74,34 @@
       "message": "Uma API retorna 403 no acesso a repositório privado; mencione duas causas plausíveis e uma verificação segura.",
       "expected_contains": [],
       "review_criteria": "Permissão do token/escopo, sem solicitar token em claro.",
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "python-bug",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Este código Python executa `print(10 / 0)`. Qual exceção normalmente ocorre? Só o nome da exceção.",
-      "expected_contains": [
-        "ZeroDivisionError"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "ZeroDivisionError"
     },
     {
       "id": "js-syntax",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Um script inline tem um \\n literal fora de string e gera SyntaxError. Qual classe de erro está ocorrendo? Responda com nome técnico.",
-      "expected_contains": [
-        "SyntaxError"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "SyntaxError"
     },
     {
       "id": "ci-reprovou",
       "category": "programacao-debug",
       "mode": "direct",
       "message": "Uma suíte tem 500 testes e 1 falha. É aceitável desativar o teste falho sem diagnóstico para conseguir merge? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "NÃO"
     },
     {
       "id": "revisar-pr",
@@ -120,7 +110,7 @@
       "message": "Planeje corrigir um PR com regressão, mantendo testes e autorização de merge.",
       "expected_contains": [],
       "review_criteria": "Reproduzir, alterar patch, testar CI e verificar main.",
-      "split": "holdout"
+      "split": "validation"
     }
   ]
 }

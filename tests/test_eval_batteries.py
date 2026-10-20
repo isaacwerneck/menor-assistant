@@ -11,7 +11,7 @@ from src.api import lab_batches
 class EvaluationBatteryTests(unittest.TestCase):
     def test_every_bundled_suite_is_valid_and_has_unique_cases(self):
         suites = sorted(lab_batches.SUITES.glob("*.json"))
-        self.assertGreaterEqual(len(suites), 17)
+        self.assertGreaterEqual(len(suites), 19)
         total = 0
         ids = set()
         for path in suites:
@@ -24,12 +24,18 @@ class EvaluationBatteryTests(unittest.TestCase):
                 for case in data["cases"]:
                     self.assertLessEqual(len(case["message"]), 1200)
                     self.assertIn(case["mode"], {"direct", "planner"})
-                if data["id"] != "diagnostico-inicial":
+                if data["id"] not in ("diagnostico-inicial", "triagem-16-v1",
+                                      "diagnostico-geral-192-v1"):
                     self.assertEqual(len(data["cases"]), 12)
+                if data["id"] == "triagem-16-v1":
+                    self.assertEqual(len(data["cases"]), 16)
+                if data["id"] == "diagnostico-geral-192-v1":
+                    self.assertEqual(len(data["cases"]), 192)
+                if data["id"] != "diagnostico-inicial":
                     for case in data["cases"]:
-                        self.assertIn(case["split"], {"development", "holdout"})
+                        self.assertIn(case["split"], {"development", "validation"})
                 total += len(data["cases"])
-        self.assertGreaterEqual(total, 197)
+        self.assertGreaterEqual(total, 405)
 
     def test_report_analysis_never_exposes_raw_replies(self):
         suite = {"id": "exemplo", "cases": [

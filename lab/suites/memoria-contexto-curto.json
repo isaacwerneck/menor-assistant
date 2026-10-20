@@ -90,7 +90,7 @@
           "content": "Entendi."
         }
       ],
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "restricao-historico",
@@ -178,7 +178,7 @@
           "content": "Posso orientar."
         }
       ],
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "referencia-pronome",
@@ -274,7 +274,7 @@
           "content": "Certo, vou respeitar essa regra."
         }
       ],
-      "split": "holdout"
+      "split": "validation"
     }
   ]
 }

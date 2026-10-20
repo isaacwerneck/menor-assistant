@@ -18,10 +18,9 @@
       "category": "avaliacao-evolucao",
       "mode": "direct",
       "message": "Uma bateria marcou 2 acertos e 3 sem nota. É correto chamar isso de 2 acertos em 5 avaliados? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "NÃO"
     },
     {
       "id": "teste-flaky",
@@ -37,10 +36,9 @@
       "category": "avaliacao-evolucao",
       "mode": "direct",
       "message": "Uma versão responde mais rápido mas erra mais. Podemos chamá-la de melhor sem outros critérios? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "holdout"
+      "expected_contains": [],
+      "split": "validation",
+      "expected_exact": "NÃO"
     },
     {
       "id": "bugs-regressao",
@@ -76,17 +74,16 @@
       "message": "Cite duas maneiras de melhorar assistente sem treinar pesos do modelo.",
       "expected_contains": [],
       "review_criteria": "Prompt, contexto, ferramentas, memória, validação etc.",
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "dados-treino-privados",
       "category": "avaliacao-evolucao",
       "mode": "direct",
       "message": "Podemos usar automaticamente conversas com senhas para fine-tuning? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "NÃO"
     },
     {
       "id": "criterio-aceite",
@@ -102,10 +99,9 @@
       "category": "avaliacao-evolucao",
       "mode": "direct",
       "message": "Uma avaliação falhou com ReadTimeout. Isso prova deficiência de raciocínio do modelo? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "NÃO"
     },
     {
       "id": "multi-metricas",
@@ -114,7 +110,7 @@
       "message": "Por que avaliar acerto, segurança, latência e consistência separadamente?",
       "expected_contains": [],
       "review_criteria": "Evitar uma métrica ocultar regressões em outras.",
-      "split": "holdout"
+      "split": "validation"
     }
   ]
 }
