@@ -80,6 +80,36 @@ def publish_summary(summary):
     return response.json()["content"]["html_url"]
 
 
+
+class GitHubReportConflict(RuntimeError):
+    """Um relatório diferente já ocupa o mesmo caminho; nunca sobrescrever."""
+
+
+def _existing_report(session, path, expected_content):
+    """Consulta a branch exata com o mesmo token antes de publicar novamente.
+
+    None indica caminho ausente; relatório idêntico retorna link, e divergência
+    falha sem passar SHA ao PUT (nunca sobrescrever dados publicados).
+    """
+    response = session.get(API + "/contents/" + path, params={"ref": BRANCH}, timeout=15)
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    document = response.json()
+    if not isinstance(document, dict) or document.get("type") != "file":
+        raise GitHubPublishRejected("O caminho do relatório no GitHub não é um arquivo.")
+    raw = document.get("content")
+    if not isinstance(raw, str) or document.get("encoding") != "base64":
+        raise GitHubPublishRejected("O GitHub não forneceu conteúdo verificável do relatório existente.")
+    try:
+        existing = base64.b64decode(raw)
+    except (ValueError, base64.binascii.Error) as error:
+        raise GitHubPublishRejected("O GitHub retornou relatório existente com conteúdo inválido.") from error
+    if existing != expected_content:
+        raise GitHubReportConflict("Já existe um relatório diferente com este ID no GitHub; não foi sobrescrito.")
+    return "https://github.com/isaacwerneck/menor-assistant/blob/" + BRANCH + "/" + path
+
+
 def publish_report(report):
     """Publica relatório completo apenas por ação explícita do proprietário.
 
@@ -109,14 +139,22 @@ def publish_report(report):
         ref.raise_for_status()
     run_id = report["run_id"]
     path = "lab/reports/full/" + run_id + ".json"
+    encoded = json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")
+    existing = _existing_report(session, path, encoded)
+    if existing:
+        return existing
     payload = {
         "message": "chore(lab): publish evaluation report " + run_id,
-        "content": base64.b64encode(json.dumps(
-            report, ensure_ascii=False, indent=2).encode("utf-8")).decode("ascii"),
+        "content": base64.b64encode(encoded).decode("ascii"),
         "branch": BRANCH,
     }
     response = session.put(API + "/contents/" + path, json=payload, timeout=30)
-    if response.status_code == 422:
-        raise GitHubPublishRejected(describe_github_rejection(response))
+    if response.status_code in (409, 422):
+        # A second request may have created the file while PUT was in flight.
+        existing = _existing_report(session, path, encoded)
+        if existing:
+            return existing
+        if response.status_code == 422:
+            raise GitHubPublishRejected(describe_github_rejection(response))
     response.raise_for_status()
     return response.json()["content"]["html_url"]
