@@ -671,11 +671,20 @@ def _run_locked(session, turn, message, history, project, tasks):
     except (requests.RequestException, OSError, ValueError, LookupError, RuntimeError, KeyError, TypeError) as error:
         error_type = type(error).__name__
         LOGGER.warning("Execução do agente interrompida: %s", error_type)
+        reason = {
+            "ValueError": "os dados ou parâmetros não passaram na validação",
+            "LookupError": "o recurso solicitado não foi encontrado",
+            "OSError": "um arquivo ou serviço local está indisponível",
+            "RuntimeError": "o ambiente de execução não estava pronto",
+            "KeyError": "a ferramenta retornou um resultado incompleto",
+            "TypeError": "a ferramenta retornou um formato inesperado",
+            "Timeout": "o serviço demorou demais para responder",
+            "ConnectionError": "não consegui falar com o serviço local",
+        }.get(error_type, "um erro inesperado interrompeu o processo")
         current, result = _answer(
-            "Não consegui concluir essa ação (" + error_type + "). "
-            "O resultado pode estar incompleto ou incerto; confira o estado e os "
-            "arquivos envolvidos antes de pedir outra tentativa. "
-            "Não vou executar de novo sem sua confirmação.", "failed",
+            "Não consegui concluir a ação porque " + reason + ". "
+            "Não tenho confirmação de todos os efeitos; confira o estado da tarefa "
+            "antes de tentar outra vez. Não vou repeti-la automaticamente.", "failed",
         )
     if metrics:
         metrics["agent_wall_ms"] = round((time.monotonic() - started) * 1000, 2)

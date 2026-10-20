@@ -388,7 +388,9 @@ test('núcleo do servidor assume tarefa e mostra recibo sem chamar roteadores an
     }) });
     ui.elements.get('userInput').value = 'Liste meus projetos';
     await ui.context.sendMsg();
-    assert.match(ui.context.getActiveConv().messages.at(-1).content, /projects.list/);
+    const reply = ui.context.getActiveConv().messages.at(-1).content;
+    assert.match(reply, /Consulta concluída.*Operação concluída e registrada/s);
+    assert.doesNotMatch(reply, /projects\.list/);
     assert.equal(ui.routed.length, 0);
     assert.equal(ui.requests.length, 0);
 });
