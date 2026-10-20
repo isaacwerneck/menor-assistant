@@ -30,6 +30,10 @@ def summarize(report):
     passes = sum(case.get("automatic_pass") is True for case in cases)
     failures = sum(case.get("automatic_pass") is False for case in cases)
     reviews = sum(case.get("automatic_pass") is None for case in cases)
+    format_mismatches = sum(
+        case.get("automatic_pass") is True and case.get("format_compliant") is False
+        for case in cases
+    )
     elapsed = [case["elapsed_seconds"] for case in cases
                if isinstance(case.get("elapsed_seconds"), (int, float))
                and not isinstance(case.get("elapsed_seconds"), bool)
@@ -50,6 +54,7 @@ def summarize(report):
         "suite_id": report.get("suite_id"), "run_id": report.get("run_id"), "total": len(cases),
         "graded": passes + failures, "graded_passes": passes, "graded_failures": failures,
         "ungraded": reviews,
+        "numeric_format_mismatches": format_mismatches,
         "graded_pass_rate": round(passes / (passes + failures), 4) if passes + failures else None,
         "completion_rate": round(sum(n for status, n in statuses.items() if status in COMPLETE) / len(cases), 4)
         if cases else None,

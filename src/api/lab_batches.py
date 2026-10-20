@@ -6,6 +6,7 @@ import threading
 import time
 import unicodedata
 import uuid
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -40,8 +41,12 @@ def validate_suite(data):
         expected = case.get("expected_contains", [])
         exact = case.get("expected_exact")
         grader = case.get("grader", "strict")
-        if grader not in ("strict", "boolean"):
+        if grader not in ("strict", "boolean", "numeric"):
             raise ValueError("Tipo de avaliador inválido.")
+        if grader == "numeric" and (
+                not isinstance(exact, str) or not re.fullmatch(r"[+-]?\d+(?:[.,]\d+)?", exact.strip())
+                or _numeric_value(exact) is None or expected):
+            raise ValueError("Avaliador numérico exige um gabarito numérico isolado.")
         if grader == "boolean" and (not isinstance(exact, str)
                                     or _boolean_answer(exact) is None or expected):
             raise ValueError("Avaliador binário exige resposta exata SIM ou NÃO.")
@@ -70,6 +75,38 @@ def _boolean_answer(value):
     return match.group(1) if match else None
 
 
+def _numeric_value(text):
+    """Confere valor numérico simples, sem transformar explicações em respostas."""
+    if not isinstance(text, str) or len(text) > 70:
+        return None
+    normalized = text.strip().replace("\u00a0", " ")
+    normalized = re.sub(r"^R\$\s*", "", normalized, flags=re.I)
+    normalized = re.sub(r"\s*(?:MB|GB|minutos?)$", "", normalized, flags=re.I).strip()
+    # Permite separador de milhar BR só quando todos os grupos têm 3 dígitos.
+    if re.fullmatch(r"[+-]?\d{1,3}(?:\.\d{3})+(?:,\d+)?", normalized):
+        normalized = normalized.replace(".", "").replace(",", ".")
+    elif re.fullmatch(r"[+-]?\d+(?:[.,]\d+)?", normalized):
+        normalized = normalized.replace(",", ".")
+    else:
+        return None
+    try:
+        number = Decimal(normalized)
+        return number if number.is_finite() and abs(number) <= Decimal("1e15") else None
+    except InvalidOperation:
+        return None
+
+
+def numeric_format_compliance(case, result):
+    """False = valor analisável, mas formato não corresponde ao gabarito estrito."""
+    if case.get("grader") != "numeric":
+        return None
+    reply = result.get("reply", "")
+    expected = case.get("expected_exact")
+    if not isinstance(reply, str) or not isinstance(expected, str):
+        return False
+    return reply.strip().casefold() == expected.strip().casefold()
+
+
 def grade_case(case, result):
     """Apenas verificações determinísticas; casos subjetivos continuam sem nota."""
     exact = case.get("expected_exact")
@@ -84,6 +121,9 @@ def grade_case(case, result):
     if exact is not None:
         if case.get("grader") == "boolean":
             return _boolean_answer(reply) == _boolean_answer(exact)
+        if case.get("grader") == "numeric":
+            parsed = _numeric_value(reply)
+            return parsed is not None and parsed == _numeric_value(exact)
         return reply.strip().casefold() == exact.strip().casefold()
     return all(token.casefold() in reply.casefold() for token in tokens)
 
@@ -156,7 +196,8 @@ def _run(suite, run_id):
                             "expected_exact": case.get("expected_exact"),
                             "review_criteria": case.get("review_criteria", ""), "result": output,
                             "elapsed_seconds": round(time.monotonic() - began, 3),
-                            "automatic_pass": passed})
+                            "automatic_pass": passed,
+                            "format_compliant": numeric_format_compliance(case, output) if passed is True else None})
         report = {"run_id": run_id, "suite_id": suite["id"],
                   "comparison_group": suite.get("comparison_group"),
                   "methodology_version": suite.get("methodology_version", "legacy"),
@@ -165,6 +206,7 @@ def _run(suite, run_id):
                   "automatic_passes": sum(x["automatic_pass"] is True for x in results),
                   "automatic_failures": sum(x["automatic_pass"] is False for x in results),
                   "ungraded": sum(x["automatic_pass"] is None for x in results),
+                  "numeric_format_mismatches": sum(x["format_compliant"] is False for x in results),
                   "inference_failures": sum(x["result"].get("status")
                                             not in ("answered", "decision_validated") for x in results),
                   "cases": results}

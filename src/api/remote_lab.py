@@ -85,6 +85,7 @@ def _direct(payload):
         raise ValueError("Resposta do Ollama inválida.")
     return {"status": "answered", "reply": item["content"][:1800],
             "model": model, "move": None, "performance": numeric_summary(result),
+            "prompt_chars": sum(len(entry["content"]) for entry in messages),
             "output_limited": result.get("done_reason") == "length",
             "reply_truncated": len(item["content"]) > 1800}
 
