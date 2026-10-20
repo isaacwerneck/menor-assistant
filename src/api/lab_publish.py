@@ -1,4 +1,4 @@
-"""Publica apenas resumos anônimos em branch isolada (nunca respostas completas)."""
+"""Publica resumos opcionais e relatórios completos aprovados em branch isolada."""
 import base64
 import json
 import os
@@ -22,6 +22,13 @@ def describe_github_rejection(response):
         payload = {}
     message = payload.get("message", "")
     message = message.casefold() if isinstance(message, str) else ""
+    errors = payload.get("errors", [])
+    if isinstance(errors, list):
+        message += " " + " ".join(
+            item.get("message", "")[:300].casefold()
+            for item in errors[:5]
+            if isinstance(item, dict) and isinstance(item.get("message"), str)
+        )
     if "sha" in message and ("supplied" in message or "required" in message):
         reason = "O GitHub exige o SHA do arquivo existente; confirme se o relatório já está publicado."
     elif "protected branch" in message or "protected" in message and "branch" in message:
@@ -36,6 +43,8 @@ def describe_github_rejection(response):
         reason = "O GitHub limitou publicações rápidas."
     else:
         reason = "O GitHub rejeitou a gravação; a causa não foi identificada automaticamente."
+    if "validation failed" in message and reason.startswith("O GitHub rejeitou"):
+        reason = "O GitHub rejeitou um campo da requisição de gravação."
     request_id = response.headers.get("X-GitHub-Request-Id", "")
     if not isinstance(request_id, str) or not request_id or not all(
             char.isascii() and (char.isalnum() or char in ":-") for char in request_id[:65]
