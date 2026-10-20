@@ -113,7 +113,7 @@ class ContractSchemaTests(unittest.TestCase):
         intelligence._schema_for_tools([])
         self.assertEqual(json.dumps(intelligence.DECISION_SCHEMA, sort_keys=True), baseline)
         self.assertIs(intelligence._schema_for_tools(None), intelligence.DECISION_SCHEMA)
-        self.assertIs(intelligence._schema_for_tools([{"name":"math.calculate"}]),
+        self.assertIs(intelligence._schema_for_tools([{"name": "math.calculate"}]),
                       intelligence.DECISION_SCHEMA)
 
     @patch("src.agent.intelligence.requests.post")
