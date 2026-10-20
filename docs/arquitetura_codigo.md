@@ -3,8 +3,11 @@
 ## Estado implementado
 
 O runtime atual está em `src/api/main.py`, com FastAPI, Requests, Pydantic e
-a interface HTML/JavaScript em `src/api/templates/chat.html`. As árvores e o
-loop agêntico abaixo descrevem a arquitetura planejada, ainda não implementada.
+a interface HTML/JavaScript em `src/api/templates/chat.html`. As árvores e o loop agêntico abaixo mostram o desenho histórico/ideal.
+Hoje partes do loop estão em `src/agent/runner.py`, `intelligence.py`,
+`tasks.py` e `src/tools/registry.py`. Isto **não comprova** autonomia
+geral ponta a ponta. Estado consolidado:
+[frentes A–E](handoff/03_FRENTES_A_B_C_D_E.md).
 
 ### Chat com contexto
 
