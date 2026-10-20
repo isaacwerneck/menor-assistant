@@ -282,7 +282,10 @@ O agente interpreta objetivos com o Qwen/Ollama local e gera movimentos gerais:
 responder, esclarecer, planejar, pesquisar, continuar ou encaminhar execução.
 A execução é sempre validada pelo registro de ferramentas existente. O estado
 de planejamento continua na SQLite por conversa; informações do cérebro entram
-como dados contextualizados, sem conceder permissões.
+como dados contextualizados, sem conceder permissões. Recibos de consultas e
+escritas aprovadas são preservados por conversa para consulta posterior, sem
+reexecutar ferramentas; execução confirmada não garante a qualidade do conteúdo.
+Veja o [fluxo de continuidade](docs/chat_a_objetivos_contextuais.md).
 
 O módulo de laboratório mede decisões em cenários diversos. O feedback aprovado
 é guardado localmente mediante consentimento explícito, sem treinamento

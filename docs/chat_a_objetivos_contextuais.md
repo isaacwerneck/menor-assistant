@@ -95,6 +95,31 @@ A ferramenta system.diagnose agora inclui decision_quality: indicadores de
 falhas repetidas, pedidos não atendidos e excesso de planejamento. Essas
 métricas não consertam nem treinam o modelo sozinhas e não disparam PRs.
 
+## Continuidade de recibos de ferramentas — 20/10/2026
+
+O executor agora preserva também consultas e escritas aprovadas em `last_result`,
+com nome da ferramenta, estado `executed` e trecho de até 1.800 caracteres. O
+próximo turno pode consultar esse recibo sem repetir a ferramenta. O contexto
+encaminhado ao modelo continua limitado e identificado como dado não confiável.
+Recibos de imagem mantêm seu formato anterior.
+
+Fluxo: interpretar → validar parâmetros → pedir aprovação quando necessária →
+executar → validar nome/estado/resultado do recibo → persistir por conversa →
+consultar no turno seguinte. Um recibo `planned`, `failed`, sem resultado ou de
+outra ferramenta não produz confirmação de execução. O conteúdo retornado não
+recebe aprovação semântica só porque o executor terminou.
+
+O loop conserva operações já concluídas quando bloqueia repetição, atinge seu
+limite, encontra falha em outra leitura ou aguarda aprovação de uma escrita.
+Um plano ativo também conserva a consulta realizada sem perder seu objetivo.
+
+Os testes usam diretório temporário e ferramentas reais de projeto, com decisão
+do modelo simulada: verificam ausência de escrita antes de aprovação, arquivo
+final, consulta após reiniciar o armazenamento, idempotência, isolamento entre
+sessões, histórico com execução forjada e rejeição de recibos inconsistentes.
+Isso comprova o contrato do executor; a escolha correta do Qwen ainda exige teste
+no chat real. Nenhuma chamada adicional ao modelo foi adicionada.
+
 ## Critérios de conclusão deste incremento
 
 - Alternar objetivos sem perder os anteriores.

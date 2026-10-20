@@ -100,7 +100,7 @@ def _bounded_evidence(value, budget=2400):
     allowed = ("tool", "status", "phase", "file_id", "page", "line", "sheet",
                "source", "citation", "url", "mime", "error", "summary", "excerpt",
                "kind", "id", "actual_size", "requested_size", "worker",
-               "file_verified", "content_verified", "limitation")
+               "file_verified", "content_verified", "limitation", "truncated")
     compact = {}
     for key in allowed:
         item = value.get(key)

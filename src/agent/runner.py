@@ -183,6 +183,26 @@ def _model_step(message, history, observations):
     return result
 
 
+def _tool_result(name, receipt):
+    if (not isinstance(receipt, dict) or receipt.get("tool") != name
+            or receipt.get("status") != "executed" or "result" not in receipt):
+        raise ValueError("A ferramenta não retornou um recibo de execução correspondente.")
+    output = receipt["result"]
+    text = output if isinstance(output, str) else json.dumps(output, ensure_ascii=False)
+    return {"kind": "tool", "tool": name, "status": "executed",
+            "excerpt": text[:1800], "truncated": len(text) > 1800,
+            "content_verified": False}
+
+
+def _observed_answer(reply, observations, phase="idle"):
+    current, response = _answer(reply, phase)
+    if observations:
+        last = observations[-1]
+        current["last_result"] = _tool_result(last["tool"], last)
+        response["events"] = [{"tool": item["tool"], "status": item["status"]} for item in observations]
+    return current, response
+
+
 def _tool_loop(message, history):
     observations, seen = [], set()
     for _ in range(MAX_STEPS):
@@ -190,39 +210,45 @@ def _tool_loop(message, history):
         if step["action"] == "answer":
             if not observations:
                 return _answer("Plano do modelo, sem ação executada:\n" + step.get("reply", ""))
-            state, result = _answer(
-                "Operações verificadas: " + ", ".join(item["tool"] for item in observations)
-                + ".\n" + step.get("reply", ""),
+            return _observed_answer(
+                "Operações executadas: " + ", ".join(item["tool"] for item in observations)
+                + ". O conteúdo retornado não foi verificado independentemente.\n" + step.get("reply", ""),
+                observations,
             )
-            result["events"] = [{"tool": item["tool"], "status": item["status"]} for item in observations]
-            return state, result
         name, arguments = step.get("tool"), step.get("arguments")
         if not isinstance(name, str) or name not in TOOLS:
             raise ValueError("O modelo pediu uma ferramenta fora do catálogo.")
         perform(name, arguments, dry_run=True)
         signature = json.dumps([name, arguments], sort_keys=True)
         if signature in seen:
-            return _answer("Interrompi um ciclo repetido de ferramenta. Nenhuma ação foi repetida.", "blocked")
+            return _observed_answer(
+                "Interrompi um ciclo repetido de ferramenta. Nenhuma ação foi repetida.", observations, "blocked",
+            )
         seen.add(signature)
         if TOOLS[name].writes:
-            return _answer(
+            current, response = _observed_answer(
                 "Plano: " + (step.get("reply") or TOOLS[name].description)
                 + "\nFerramenta: " + name + "\nParâmetros: "
                 + json.dumps(arguments, ensure_ascii=False)
                 + "\nPosso executar essa ação? Responda sim ou não.",
-                "approval", tool=name, arguments=arguments,
+                observations, "approval",
             )
+            current.update(tool=name, arguments=arguments)
+            return current, response
         receipt = perform(name, arguments, dry_run=False)
         if receipt.get("status") != "executed":
-            state, result = _answer(
+            state, result = _observed_answer(
                 "A consulta à ferramenta " + name + " não retornou evidência utilizável. "
                 "Não vou concluir com conteúdo inventado ou repetir automaticamente.",
-                "blocked",
+                observations, "blocked",
             )
-            result["events"] = [{"tool": name, "status": "failed"}]
+            result.setdefault("events", []).append({"tool": name, "status": "failed"})
             return state, result
+        _tool_result(name, receipt)
         observations.append({**receipt, "result": json.dumps(receipt["result"], ensure_ascii=False)[:6000]})
-    return _answer("Atingi o limite de quatro passos. Consulte as operações antes de continuar.", "blocked")
+    return _observed_answer(
+        "Atingi o limite de quatro passos. Consulte as operações antes de continuar.", observations, "blocked",
+    )
 
 
 def _selected_tool(name, arguments):
@@ -247,9 +273,11 @@ def _selected_tool(name, arguments):
         )
         answer["events"] = [{"tool": name, "status": "failed"}]
         return current, answer
+    proof = _tool_result(name, receipt)
     result = json.dumps(receipt["result"], ensure_ascii=False)[:6000]
     current, answer = _answer(
-        "Resultado verificado da ferramenta " + name + ":\n" + result,
+        "Resultado retornado pela ferramenta " + name + ":\n" + result,
+        last_result=proof,
     )
     answer["events"] = [{"tool": name, "status": receipt["status"]}]
     return current, answer
@@ -374,7 +402,10 @@ def _understand(state, message, history, project=None):
                 }
             elif next_state["phase"] in ("idle", "blocked"):
                 # Consulta concluída ou limite de passos: preservar o objetivo.
+                last_result = next_state.get("last_result")
                 next_state = dict(state)
+                if last_result:
+                    next_state["last_result"] = last_result
                 receipt["phase"] = "goal"
         return next_state, receipt
     if move == "research":
@@ -405,7 +436,8 @@ def _understand(state, message, history, project=None):
         return _answer(decision["reply"], **state)
     reply = decision["reply"]
     last = state.get("last_result")
-    if last and re.search(r"(?:n[aã]o|nao).{0,90}(?:gerar|criar).{0,25}imagen", reply, re.I | re.S):
+    if (last and last.get("kind") == "image"
+            and re.search(r"(?:n[aã]o|nao).{0,90}(?:gerar|criar).{0,25}imagen", reply, re.I | re.S)):
         reply = describe_artifact(last)
     return _answer(reply)
 
@@ -428,6 +460,7 @@ def _advance(state, message, history, project=None):
                 "Diga 'eu aprovo' ou 'não autorizo'; fazer perguntas não a executa.", **state,
             )
         receipt = perform(state["tool"], state["arguments"], dry_run=False)
+        proof = _tool_result(state["tool"], receipt)
         current, result = _answer(
             "Execução confirmada: " + receipt["tool"] + ".\n"
             + json.dumps(receipt["result"], ensure_ascii=False)[:6000],
@@ -436,6 +469,7 @@ def _advance(state, message, history, project=None):
         if isinstance(goal, dict) and goal.get("goal_id"):
             current = {"phase": "goal", **goal}
             result["phase"] = "goal"
+        current["last_result"] = proof
         result["events"] = [{"tool": receipt["tool"], "status": receipt["status"]}]
         if receipt["tool"] == "images.generate" and receipt["status"] == "executed":
             proof = artifact_receipt(receipt["result"])
