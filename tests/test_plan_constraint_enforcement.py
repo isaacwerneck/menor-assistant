@@ -26,6 +26,21 @@ class RestrictionsTests(unittest.TestCase):
         steps = ["Apagar os repetidos", "Substituir originais", "Mover os demais"]
         self.assertEqual(len(plan_constraints.warnings(request, steps)), 3)
 
+    def test_no_renaming_or_publishing_without_permission(self):
+        rename = plan_constraints.warnings(
+            "Só faça um inventário, não autorizei renomear arquivos.",
+            ["Renomear documentos repetidos"])
+        self.assertTrue(any("renomear" in item for item in rename), rename)
+        publication = plan_constraints.warnings(
+            "Faça apenas uma análise, sem enviar nada à internet.",
+            ["Upload de relatórios para serviço externo"])
+        self.assertTrue(any("publicar" in item for item in publication), publication)
+
+    def test_publication_after_approval_is_not_unconditional_prohibition(self):
+        self.assertEqual(plan_constraints.warnings(
+            "Não publicar antes da aprovação do responsável.",
+            ["Solicitar aprovação", "Publicar após aprovação"]), [])
+
     def test_read_only_and_explicit_negation_are_not_flagged(self):
         request = "Identifique duplicatas sem apagar, substituir ou mover arquivo algum."
         steps = ["Comparar hashes sem alterar originais", "Não apagar nem mover nenhum arquivo"]
@@ -44,8 +59,8 @@ class RestrictionsTests(unittest.TestCase):
 
     def test_negative_stage_in_request_is_not_mistaken_for_required_deploy(self):
         request = "Planeje o layout de um app, sem fazer deploy agora."
-        self.assertNotIn("deploy", " ".join(plan_constraints.required_stage_warnings(
-            request, ["Definir layout da tela"])) )
+        self.assertFalse(plan_constraints.required_stage_warnings(
+            request, ["Definir layout da tela"]))
 
     def test_required_steps_not_satisfied_by_acceptance_or_negative_mentions(self):
         request = "Planeje migrar com backup, rollback, testes e autorização antes da mudança."
