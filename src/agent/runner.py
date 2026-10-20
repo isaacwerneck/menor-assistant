@@ -18,6 +18,7 @@ from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
 from src.agent.tasks import TaskStore
 from src.agent import research, intelligence, plan_review
+from src.agent.plan_constraints import warnings as constraint_warnings, required_stage_warnings
 from src.agent.context_engine import assemble_memory
 from src.projects.workspace import ProjectWorkspace
 from src.agent.approval import decision as approval_decision
@@ -256,6 +257,14 @@ def _selected_tool(name, arguments):
 
 def _critique_plan(message, history, pending, skills, facts, state, tools, decision):
     """Revisa apenas decisões de planejamento, com no máximo UMA reformulação."""
+    if decision.get("move") in ("plan", "continue"):
+        problems = constraint_warnings(message, decision.get("steps", []))
+        problems += required_stage_warnings(message, decision.get("steps", []))
+        if problems:
+            # Sem nova chamada cara ao modelo, nem permissão para execução.
+            issue = " ".join(problems[:2])
+            return {**decision, "reply": ("Plano preliminar: " + issue + "\n" +
+                                           decision["reply"])[:900]}, "constraint_warning"
     if not plan_review.should_review(decision):
         return decision, "disabled"
     verdict = plan_review.review(message, decision, pending=pending)
