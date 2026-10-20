@@ -80,7 +80,6 @@ def publish_summary(summary):
     return response.json()["content"]["html_url"]
 
 
-
 class GitHubReportConflict(RuntimeError):
     """Um relatório diferente já ocupa o mesmo caminho; nunca sobrescrever."""
 
