@@ -133,7 +133,8 @@ async function batchRefresh(){
  push.disabled=true;try{const res=await fetch("/lab/reports/"+encodeURIComponent(item.run_id)+"/publish",{method:"POST",credentials:"same-origin"});
  if(!res.ok){const body=await res.json().catch(()=>({}));throw new Error(body.detail||"HTTP "+res.status);}
  const data=await res.json();$("batchStatus").textContent="Relatório publicado: "+data.url;push.textContent="Enviado";
- }catch(e){$("batchStatus").textContent="Falha ao publicar: "+e.message;push.disabled=false;}\n });p.append(push);target.append(p);}
+ }catch(e){$("batchStatus").textContent="Falha ao publicar: "+e.message;push.disabled=false;}
+ });p.append(push);target.append(p);}
  if(!reports.length)target.textContent="Nenhum relatório salvo.";
  }catch(e){$("batchStatus").textContent=e.message;}
 }
