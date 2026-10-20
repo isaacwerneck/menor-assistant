@@ -1,57 +1,103 @@
-# Gaveta de avaliações do Menor
+# Gaveta de avaliações do Menor — comportamento atual (20/10/2026)
 
-Acesse `/lab/view` autenticado como proprietário. A seção **Gaveta de testes** lista baterias pré-instaladas, permite importar JSON, iniciar a execução em segundo plano e baixar relatórios completos.
+> Consulte também [catálogo das baterias](catalogo_baterias_v1.md),
+> [resultados reais e erros](handoff/04_BATERIAS_E_DIAGNOSTICOS.md) e
+> [comparativo v2](segundo_lote_qualidade_v2.md).
+> Este laboratório **não executa ferramentas**, não treina pesos do Qwen e
+> não demonstra, sozinho, autonomia de ponta a ponta.
+
+## Execução autenticada
+
+Na interface privada `/lab/view`, a **Gaveta de testes** permite listar as
+baterias pré-instaladas (`lab/suites/*.json`), importar suítes privadas,
+iniciar uma execução por vez, consultar progresso e baixar relatório completo.
 
 - Bateria inicial: `lab/suites/diagnostico-inicial.json`.
-- Baterias importadas: `~/menor-data/lab/suites/` (fora do checkout).
-- Relatórios completos: `~/menor-data/lab/<run-id>.json`, disponíveis apenas na sessão autenticada.
-- Resumos sem perguntas ou respostas: `~/menor-data/lab/<run-id>.summary.json`.
-- Limite: 200 casos por bateria; uma execução por vez. O executor reutiliza os modos `direct` e `planner` do laboratório e **não executa ferramentas**.
-- `automatic_pass` é calculado apenas com critérios determinísticos: `expected_contains`,
-  `expected_exact` estrito ou `grader=boolean` para `SIM`/`NÃO` (com pontuação final
-  opcional); casos com apenas `review_criteria` permanecem **sem nota automática**.
-- Há 16 baterias de 12 casos, triagem de 16, agregação de 192 e duas suítes
-  pareadas A/B de 24 casos. Consulte [catálogo](catalogo_baterias_v1.md) e
-  [relatórios/diagnóstico de 20/10](handoff/04_BATERIAS_E_DIAGNOSTICOS.md).
+- Baterias importadas: `~/menor-data/lab/suites/` (fora do Git).
+- Relatório completo: `~/menor-data/lab/<run-id>.json`, apenas para proprietário autenticado.
+- Resumo sem perguntas/respostas: `~/menor-data/lab/<run-id>.summary.json`.
+- Máximo de 200 casos por bateria; execução em thread do processo FastAPI,
+  sem fila persistente. **Reiniciar API interrompe uma bateria ativa**;
+  não iniciar outra nem benchmark simultâneo.
+- Cada caso usa `mode=direct` (Ollama cru, com `profile=baseline` por padrão
+  ou `natural` para avaliação da voz) ou `mode=planner` (decisão JSON);
+  nenhum dos dois executa ferramentas.
+- `decision_validated` demonstra contrato/JSON válido, **não qualidade do plano**.
 
-## Publicação automática opcional no GitHub
+### Avaliação automática, sem falsas notas
 
-Apenas métricas agregadas, nunca prompts, histórico ou respostas, são publicadas na branch `lab-reports`, pasta `lab/reports/`. Configure no ambiente do serviço:
+- `expected_contains`: todas as substrings devem ocorrer (teste sintático,
+  não prova conteúdo correto).
+- `expected_exact` com `grader=strict` (padrão): igualdade de texto sem
+  diferenças de maiúsculas/espaços externos, **não** tolera ponto extra.
+- `grader=boolean`: somente quando explicitamente marcado no JSON e o
+  esperado é SIM ou NÃO. Aceita variação de acento/maiúscula/pontuação
+  final simples, mas rejeita explicações e contradições.
+- Sem critério automático: `automatic_pass=null` (revisar manualmente a
+  `review_criteria`; **não** contabilizar como erro).
+- `automatic_pass=false` pode indicar bug do avaliador e exige inspeção.
+- A suite armazena `split` (`development/validation`) mas **nenhuma parte
+  é cega** se os exemplos são usados para otimizar o modelo/prompt.
+
+## Publicação opcional de resumo estatístico (sem prompts/respostas)
+
+**Opt-in separado**, executado automaticamente depois de finalizar a bateria
+quando `MENOR_LAB_REPORTS_PUBLISH=1` estiver configurada pelo operador.
+Envia métricas agregadas à branch privada `lab-reports`, caminho
+`lab/reports/<run-id>.json`. Usa token no servidor com acesso apropriado.
+Comportamento do resumo é diferente do botão de publicação completa.
+Publicação de resumos duplicados pode falhar; o relatório local permanece salvo.
 
 ```ini
 MENOR_LAB_REPORTS_PUBLISH=1
-MENOR_LAB_GITHUB_TOKEN=<token de escrita restrito ao repositório>
+MENOR_LAB_GITHUB_TOKEN=<token restrito, armazenado somente no Ubuntu>
 ```
 
-O token deve ficar **somente no Ubuntu**, fora do Git e de conversas. O servidor precisa ter acesso de saída a `api.github.com`. A publicação ocorre ao concluir a bateria; se falhar, o relatório local permanece disponível e a interface mostra `publish_status=failed:...`. O GitHub recebe somente estatísticas agregadas e identificadores, mas esses metadados são visíveis caso o repositório seja público.
+## Publicação MANUAL de relatório completo no GitHub
 
-**Importante:** a branch `lab-reports` é separada da `main` para não disparar
-um deploy a cada avaliação. Relatório apenas salvo no Ubuntu **não fica automaticamente
-acessível por ChatGPT**; com conexão GitHub autorizada e publicação manual
-aprovada, os relatórios completos já publicados na branch privada podem ser
-consultados sem necessidade de anexar o JSON ao chat. Nunca exponha respostas
-ou tokens em repositório público.
-
-Para importar baterias, use o esquema JSON do exemplo inicial. A interface exige sessão do proprietário. Esta é uma primeira versão sem filas persistentes: reiniciar a API interrompe uma bateria em andamento.
-
-
-## Enviar relatório completo ao GitHub manualmente
-
-O botão **Enviar ao GitHub** aparece ao lado de cada relatório salvo. Ele envia o JSON
-completo para a branch `lab-reports`, pasta `lab/reports/full/`, somente depois
-da confirmação do proprietário. A publicação exige no ambiente privado do Ubuntu:
+O botão **Enviar ao GitHub**, ao lado de cada relatório local salvo, faz
+`POST /lab/reports/{run_id}/publish` autenticado. Envia **o JSON completo**
+(perguntas, respostas, histórico sintético e pontuações) para a branch
+`lab-reports`, pasta `lab/reports/full/`, **apenas por clique do dono**.
+Não cria PR, não faz merge na `main`, não dispara deploy por alteração da
+`lab-reports`.
 
 ```ini
 MENOR_LAB_REPORTS_ALLOW_FULL_PUSH=1
-MENOR_LAB_GITHUB_TOKEN=<token GitHub restrito a este repositório>
+MENOR_LAB_GITHUB_TOKEN=<fine-grained PAT, Contents: Read and write no repo>
 ```
 
-O token precisa de permissão de escrita em Contents. Não o coloque no Git ou no chat.
-**Confirme que o repositório é privado antes de ativar a publicação completa.**
-O servidor não verifica a visibilidade do repositório automaticamente. Mesmo num
-repositório privado, quem tiver acesso ao GitHub poderá ler os relatórios completos.
-Não use essa opção para baterias que contenham credenciais ou dados sensíveis.
-A função não abre PR nem faz merge na `main`. Desde o PR #83, o envio é
-**idempotente**: conteúdo idêntico já publicado retorna o link; conteúdo
-diferente no mesmo caminho gera conflito e não é sobrescrito. Falhas de API
-mantêm o arquivo local disponível. O PAT exige **Contents: Read and write**.
+Usar permissão **Contents: Read and write** somente no repositório privado.
+Guardar essas configurações em arquivo `.env` fora do Git, por exemplo
+`~/.config/menor/lab.env`, carregado por um `EnvironmentFile` privado do
+`menor-api.service`. Permissões de filesystem restritas. Não compartilhar
+PAT, snapshots de variáveis, cookies, conversas privadas nem arquivos de
+configuração em mensagens ou commits. Se o token já apareceu em screenshot,
+revogar e criar novo.
+
+**Idempotência desde PR #83:** se já existe um relatório idêntico no mesmo
+caminho da branch, a API devolve o link sem regravar; se já existe um conteúdo
+**diferente**, retorna conflito `409` sem sobrescrever. O PR #82 distinguiu
+falhas sanitizadas de `422` do GitHub (validação), `401/403` (token/permissões)
+e problemas de rede. Não confiar em `422` como prova isolada de duplicação.
+
+**Privacidade:** GitHub privado não significa anonimização. Quem tem acesso
+à branch `lab-reports` pode ler as respostas completas. Não publicar relatórios
+com senhas, credenciais, mensagens privadas ou dados sensíveis. Este chat pode
+ler relatórios pelo **conector GitHub** após a publicação; não precisa importar
+o JSON manualmente se ele já estiver acessível na branch.
+
+## Resultados conhecidos e próximos testes
+
+- `20261020T022255Z-4f73ee58` (`triagem-16-v1`): 16 casos, 7 acertos
+  automáticos, 2 falhas automáticas, 7 sem nota, 0 erros de inferência.
+- Duas falhas automáticas têm origens diferentes: confusão sobre execução real
+  de comando (modelo) e `Não.` versus `NÃO` (avaliador antigo, corrigido no v2).
+- `segundo-lote-base-v2` vs `segundo-lote-naturalidade-v2`:
+  24 cenários iguais sob perfis A/B para medir naturalidade, contexto, segurança,
+  latência e planos. Ainda precisam ser executados no Qwen real após deploy.
+- Medição independente do Qwen em CPU: **10,24 tokens/s** de mediana. Não
+  usar apenas tempo bruto sem olhar quantidade de tokens de resposta.
+
+Limites e plano de análise: [handoff de testes](handoff/04_BATERIAS_E_DIAGNOSTICOS.md)
+e [programa de avaliação](pesquisa_metodologia_evals.md).
