@@ -44,7 +44,8 @@ def validate_suite(data):
         if grader not in ("strict", "boolean", "numeric"):
             raise ValueError("Tipo de avaliador inválido.")
         if grader == "numeric" and (
-                not isinstance(exact, str) or _numeric_value(exact) is None or expected):
+                not isinstance(exact, str) or not re.fullmatch(r"[+-]?\d+(?:[.,]\d+)?", exact.strip())
+                or _numeric_value(exact) is None or expected):
             raise ValueError("Avaliador numérico exige um gabarito numérico isolado.")
         if grader == "boolean" and (not isinstance(exact, str)
                                     or _boolean_answer(exact) is None or expected):
