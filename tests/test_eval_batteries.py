@@ -26,9 +26,11 @@ class EvaluationBatteryTests(unittest.TestCase):
                     self.assertIn(case["mode"], {"direct", "planner"})
                 if data["id"] not in ("diagnostico-inicial", "triagem-16-v1",
                                       "diagnostico-geral-192-v1", "segundo-lote-base-v2",
-                                      "segundo-lote-naturalidade-v2"):
+                                      "segundo-lote-naturalidade-v2",
+                                      "regressoes-planejamento-v3"):
                     self.assertEqual(len(data["cases"]), 12)
-                if data["id"] in ("segundo-lote-base-v2", "segundo-lote-naturalidade-v2"):
+                if data["id"] in ("segundo-lote-base-v2", "segundo-lote-naturalidade-v2",
+                                  "regressoes-planejamento-v3"):
                     self.assertEqual(len(data["cases"]), 24)
                 if data["id"] == "triagem-16-v1":
                     self.assertEqual(len(data["cases"]), 16)
@@ -66,6 +68,48 @@ class EvaluationBatteryTests(unittest.TestCase):
         ])
         compared = lab_eval_analysis.compare(summary, second)
         self.assertEqual(compared["regressions"], ["a"])
+
+    def test_triage_reports_known_categories_without_private_answers(self):
+        suite = {"id": "triage", "cases": [
+            {"id": "planner1", "mode": "planner", "review_criteria": "Conferir autorização"},
+            {"id": "direct1", "mode": "direct", "review_criteria": "Conferir pontuação"},
+        ]}
+        report = {"run_id": "run-20", "suite_id": "triage", "cases": [
+            {"id": "planner1", "mode": "planner", "automatic_pass": None,
+             "elapsed_seconds": 29.5, "result": {
+                 "status": "no_valid_decision",
+                 "reply": "SEGREDO_PLANO",
+                 "diagnostics": {"validation_issue": "goal"},
+                 "performance": {"prompt_eval_duration": 12_000_000_000,
+                                 "eval_duration": 23_000_000_000}}},
+            {"id": "direct1", "mode": "direct", "automatic_pass": False,
+             "elapsed_seconds": 28.1, "result": {
+                 "status": "answered", "reply": "TOKEN_PRIVADO",
+                 "output_limited": True, "reply_truncated": True,
+                 "plan_warnings": ["SEGREDO_WARNING"]}},
+        ]}
+        summary = lab_eval_analysis.summarize(report, suite)
+        self.assertEqual(summary["incidents"]["schema_validation"], 1)
+        self.assertEqual(summary["incidents"]["slow_prefill"], 1)
+        self.assertEqual(summary["incidents"]["slow_generation"], 1)
+        self.assertEqual(summary["incidents"]["output_limited"], 1)
+        self.assertEqual(summary["incidents"]["reply_truncated"], 1)
+        self.assertEqual(summary["incidents"]["plan_constraints"], 1)
+        self.assertEqual(summary["cases"][0]["validation_issue"], "goal")
+        self.assertEqual(summary["median_prefill_seconds"], 12)
+        for secret in ("SEGREDO_PLANO", "TOKEN_PRIVADO", "SEGREDO_WARNING"):
+            self.assertNotIn(secret, json.dumps(summary))
+
+    def test_unknown_or_malformed_diagnostic_stays_private(self):
+        suite = {"id": "dummy", "cases": [{"id": "a", "mode": "planner"}]}
+        report = {"run_id": "run1", "suite_id": "dummy", "cases": [
+            {"id": "a", "result": {"status": "no_valid_decision",
+                                  "diagnostics": {"validation_issue": {"token": "private"}}},
+             "automatic_pass": None, "elapsed_seconds": 2},
+        ]}
+        summary = lab_eval_analysis.summarize(report, suite)
+        self.assertIsNone(summary["cases"][0]["validation_issue"])
+        self.assertNotIn("private", json.dumps(summary))
 
     def test_suite_lookup_stays_within_directory(self):
         with tempfile.TemporaryDirectory() as directory:
