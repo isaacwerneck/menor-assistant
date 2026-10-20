@@ -102,10 +102,10 @@ class EvaluationBatteryTests(unittest.TestCase):
 
     def test_unknown_or_malformed_diagnostic_stays_private(self):
         suite = {"id": "dummy", "cases": [{"id": "a", "mode": "planner"}]}
+        bad_result = {"status": "no_valid_decision",
+                      "diagnostics": {"validation_issue": {"token": "private"}}}
         report = {"run_id": "run1", "suite_id": "dummy", "cases": [
-            {"id": "a", "result": {"status": "no_valid_decision",
-                                 "diagnostics": {"validation_issue": {"token": "private"}}},
-             "automatic_pass": None, "elapsed_seconds": 2},
+            {"id": "a", "result": bad_result, "automatic_pass": None, "elapsed_seconds": 2},
         ]}
         summary = lab_eval_analysis.summarize(report, suite)
         self.assertIsNone(summary["cases"][0]["validation_issue"])
