@@ -229,6 +229,15 @@ def _human_tool_result(receipt):
         url = output.get("url")
         if output.get("status") == "pr_created" and isinstance(url, str):
             return "Abri uma proposta de revisão: " + url + ". Ainda depende de testes e merge."
+    if name == "math.calculate" and isinstance(output, dict):
+        number = output.get("value")
+        if output.get("expression_verified") is True and isinstance(number, str):
+            return ("Resultado calculado: " + number
+                    + ". Confira se a expressão corresponde ao que você pediu.")
+    if name == "projects.list" and isinstance(output, list):
+        names = [p["name"] for p in output[:12] if isinstance(p, dict)
+                 and isinstance(p.get("name"), str)]
+        return ("Projetos encontrados: " + ", ".join(names)) if names else "Nenhum projeto encontrado."
     if name == "projects.create":
         return "Criei o registro do projeto no Menor."
     if name == "projects.add_task":
