@@ -1,0 +1,280 @@
+{
+  "id": "memoria-contexto-curto",
+  "title": "Contexto local, correção e continuidade",
+  "description": "Uso de histórico simulado, sem testar memória persistente.",
+  "methodology_version": "menor-eval-v1",
+  "cases": [
+    {
+      "id": "nome-projeto",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Qual o nome do projeto mencionado?",
+      "expected_contains": [
+        "Aurora"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Meu projeto se chama Aurora."
+        },
+        {
+          "role": "assistant",
+          "content": "Entendido: Aurora."
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "sobrescrever-preferencia",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Qual cor eu escolhi por último?",
+      "expected_contains": [
+        "verde"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Escolhi azul."
+        },
+        {
+          "role": "assistant",
+          "content": "Beleza."
+        },
+        {
+          "role": "user",
+          "content": "Mudei de ideia: prefiro verde."
+        },
+        {
+          "role": "assistant",
+          "content": "Vou considerar verde."
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "recuperar-versao",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Qual versão do aplicativo foi mencionada?",
+      "expected_contains": [
+        "2.4.1"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hoje usamos a versão 2.4.1."
+        },
+        {
+          "role": "assistant",
+          "content": "Registrado para esta conversa."
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "nao-confundir-pessoas",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Quem prefere chá, Alice ou Beto?",
+      "expected_contains": [
+        "Alice"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Alice prefere chá e Beto prefere café."
+        },
+        {
+          "role": "assistant",
+          "content": "Entendi."
+        }
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "restricao-historico",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Qual sistema operacional devo considerar?",
+      "expected_contains": [
+        "Ubuntu"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Estou usando Ubuntu, não Windows."
+        },
+        {
+          "role": "assistant",
+          "content": "Vou considerar Ubuntu."
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "ultima-correção",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Qual é o nome corrigido da pasta?",
+      "expected_contains": [
+        "relatorios"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "A pasta se chama relatoris."
+        },
+        {
+          "role": "assistant",
+          "content": "OK."
+        },
+        {
+          "role": "user",
+          "content": "Corrigindo: o nome é relatorios."
+        },
+        {
+          "role": "assistant",
+          "content": "Entendido."
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "contexto-numero",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Quantos relatórios eu disse que havia salvo?",
+      "expected_contains": [
+        "7"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Já tenho sete relatórios salvos."
+        },
+        {
+          "role": "assistant",
+          "content": "Sete relatórios."
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "contexto-objeto",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Que tipo de arquivo eu pedi para analisar?",
+      "expected_contains": [
+        "CSV"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Quero analisar um CSV."
+        },
+        {
+          "role": "assistant",
+          "content": "Posso orientar."
+        }
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "referencia-pronome",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "A que objeto se refere 'ela' em 'preciso revisá-la'?",
+      "expected_contains": [
+        "planilha"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Criei uma planilha com despesas."
+        },
+        {
+          "role": "assistant",
+          "content": "Entendido."
+        },
+        {
+          "role": "user",
+          "content": "Preciso revisá-la."
+        },
+        {
+          "role": "assistant",
+          "content": "Qual parte?"
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "nao-criar-memoria",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Nesta conversa eu informei a senha do meu roteador? Responda sim ou não, sem inventar.",
+      "expected_contains": [
+        "não"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Minha rede é chamada TesteLocal."
+        },
+        {
+          "role": "assistant",
+          "content": "Entendido."
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "soma-historico",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Tenho 2 tarefas pendentes e adicionei mais 3. Quantas ficaram pendentes? Apenas número.",
+      "expected_contains": [
+        "5"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Tenho duas tarefas pendentes."
+        },
+        {
+          "role": "assistant",
+          "content": "Entendido."
+        },
+        {
+          "role": "user",
+          "content": "Adicionei mais três tarefas pendentes."
+        },
+        {
+          "role": "assistant",
+          "content": "Anotado."
+        }
+      ],
+      "split": "development"
+    },
+    {
+      "id": "contexto-regras",
+      "category": "memoria-contexto-curto",
+      "mode": "direct",
+      "message": "Resuma a única regra de publicação mencionada, sem inventar outra.",
+      "expected_contains": [
+        "aprovação"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "Só publique relatórios com aprovação explícita."
+        },
+        {
+          "role": "assistant",
+          "content": "Certo, vou respeitar essa regra."
+        }
+      ],
+      "split": "holdout"
+    }
+  ]
+}
