@@ -765,6 +765,7 @@
             <span class="sidebar-nav-label">ÁREA DE TRABALHO</span>
             <span class="app-nav-current" aria-current="page">Conversas</span>
             <button type="button" onclick="openObjectives()">Objetivos</button>
+            <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
             <a href="/lab/view" aria-label="Abrir Laboratório de testes">Laboratório · Testes</a>
             <a href="/workspace/system">Sistema</a>
@@ -855,7 +856,6 @@
         <nav class="mobile-nav" aria-label="Navegação rápida">
             <button type="button" onclick="toggleSidebar()" aria-label="Abrir conversas">Conversas</button>
             <button type="button" onclick="openObjectives()">Objetivos</button>
-            <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
             <a href="/lab/view" aria-label="Abrir Laboratório de testes">Lab</a>
             <button type="button" onclick="openBrain()">Memória</button>
@@ -965,6 +965,7 @@
         let conversations = loadConversations();
         let activeConvId = null;
         let isGenerating = false;
+        let sidebarShown = !window.matchMedia('(max-width: 768px)').matches;
         let generationSequence = 0;
         let activeGeneration = null;
 
@@ -1529,7 +1530,6 @@
         }
 
         // ========== UI HELPERS ==========
-        let sidebarShown = !window.matchMedia('(max-width: 768px)').matches;
         function setSidebarShown(show) {
             sidebarShown = Boolean(show);
             const sidebar = document.getElementById('sidebar');

@@ -266,3 +266,7 @@ test("E7: laboratório preserva resultados, seleção e atalhos de navegação",
     assert.match(lab, /class="batch-action-bar"/);
     assert.match(lab, /aria-label="Seções do laboratório"/);
 });
+
+test("E7: painel de teste avulso fecha semanticamente antes dos dois resultados", () => {
+    assert.match(lab, /id="teste-avulso"[\s\S]*id="status"[\s\S]*<\/section>\s*<div class="compare-results"/);
+});

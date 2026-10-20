@@ -1749,3 +1749,17 @@ test('E7: exclusão de conversa exige confirmação explícita', () => {
     ui.context.deleteConv(conv.id, { stopPropagation() {} });
     assert.equal(ui.context.getActiveConv(), undefined);
 });
+
+test('E7: estado da sidebar existe antes da inicialização da página em mobile', () => {
+    const state = script.indexOf("let sidebarShown =");
+    const init = script.indexOf("showWelcome();");
+    assert.ok(state >= 0 && state < init,
+        "A inicialização mobile não pode acessar sidebarShown antes de declará-lo.");
+});
+
+test('E7: menu de projetos permanece acessível na sidebar e navegação inferior tem cinco entradas', () => {
+    const sidebar = html.match(/<nav class="app-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+    const mobile = html.match(/<nav class="mobile-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+    assert.match(sidebar, /onclick="openProjects\(\)"/);
+    assert.equal((mobile.match(/<button\b|<a\b/g) || []).length, 5);
+});
