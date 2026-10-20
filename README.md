@@ -23,7 +23,8 @@ e a configuração manual do túnel e do DNS; nenhuma instalação é automátic
 O laboratório autenticado `/lab/view` compara Qwen direto com o
 raciocinador JSON, sem executar ferramentas nem salvar históricos. Os relatórios
 distinguem timeout, JSON/contrato inválido e limite de saída, com métricas
-numéricas de inferência; veja o [contrato do laboratório](docs/laboratorio_baterias.md).
+numéricas de inferência, também visíveis nos cartões dos testes individuais;
+veja o [contrato do laboratório](docs/laboratorio_baterias.md).
 
 O Netlify oferece somente uma **página estática de entrada** neste estágio.
 Não coloque `/chat/stream` atrás de proxy Netlify: o timeout da camada
