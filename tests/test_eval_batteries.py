@@ -27,11 +27,16 @@ class EvaluationBatteryTests(unittest.TestCase):
                 if data["id"] not in ("diagnostico-inicial", "triagem-16-v1",
                                       "diagnostico-geral-192-v1", "segundo-lote-base-v2",
                                       "segundo-lote-naturalidade-v2",
-                                      "regressoes-planejamento-v3"):
+                                      "regressoes-planejamento-v3",
+                                      "comparacao-qualidade-baseline-v1",
+                                      "comparacao-qualidade-assistente-v1"):
                     self.assertEqual(len(data["cases"]), 12)
                 if data["id"] in ("segundo-lote-base-v2", "segundo-lote-naturalidade-v2",
                                   "regressoes-planejamento-v3"):
                     self.assertEqual(len(data["cases"]), 24)
+                if data["id"] in ("comparacao-qualidade-baseline-v1",
+                                  "comparacao-qualidade-assistente-v1"):
+                    self.assertEqual(len(data["cases"]), 46)
                 if data["id"] == "triagem-16-v1":
                     self.assertEqual(len(data["cases"]), 16)
                 if data["id"] == "diagnostico-geral-192-v1":

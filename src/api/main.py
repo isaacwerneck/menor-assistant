@@ -15,6 +15,7 @@ import requests
 
 from src.agent.runner import run as run_agent
 from src.agent.voice import NATURAL_VOICE
+from src.agent.response_budget import output_budget
 from src.agent.context_engine import select_history
 from src.agent.artifacts import artifact_receipt
 from src.agent.feedback import FeedbackStore
@@ -738,6 +739,7 @@ def open_ollama(req: ChatRequest, stream: bool):
         ],
         "stream": stream,
         "keep_alive": KEEP_ALIVE,
+        "options": {"num_predict": output_budget(req.message, chat=True)},
     }
     try:
         response = requests.post(

@@ -17,6 +17,8 @@ p{color:var(--muted);line-height:1.55}
 label{display:block;font-size:.88rem;margin:12px 0 8px;color:var(--muted)}
 textarea{width:100%;background:#0e0f18;color:var(--text);border:1px solid var(--border);padding:14px;border-radius:12px;font:inherit;resize:vertical;min-height:96px}
 textarea:focus,button:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+#directProfile{width:100%;max-width:620px;background:#11111d;color:var(--text);border:1px solid var(--border);padding:12px;border-radius:10px;font:inherit}
+#directProfile:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 button{background:#302a43;border:1px solid #53446f;border-radius:10px;padding:12px 16px;color:var(--text);font:inherit;cursor:pointer;min-height:44px}
 button.primary{background:#9d89ed;color:#171222;border-color:transparent;font-weight:700}
@@ -78,6 +80,14 @@ footer{color:var(--muted);font-size:.78rem}
 <textarea id="history" maxlength="2800" placeholder="user: Meu servidor utiliza Ubuntu.
 assistant: Entendido.
 user: Gosto de música eletrônica."></textarea>
+<label for="directProfile">Perfil de comparação do modelo direto</label>
+<select id="directProfile" aria-label="Perfil do modelo direto">
+<option value="baseline">Controle original (comparável aos relatórios antigos)</option>
+<option value="natural">Linguagem natural v2 (histórico)</option>
+<option value="assistant">Assistente aprimorado v4 (estilo, evidência e tempo)</option>
+</select>
+<p class="helper">No modo direto não há ferramentas. O perfil aprimorado usa instruções e limite de resposta novos;
+para comparar tempo e qualidade, registre também o número de tokens.</p>
 <div class="actions">
 <button type="button" class="primary" id="runDirect">Testar modelo direto</button>
 <button type="button" id="runPlanner">Testar raciocinador</button>
@@ -200,7 +210,9 @@ async function run(mode) {
         const response = await fetch("/lab/compare", {
             method:"POST", credentials:"same-origin",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({mode,message,history}),
+            body:JSON.stringify({mode,message,history,
+                profile: mode === "direct" && ["baseline","natural","assistant"].includes($("directProfile").value)
+                    ? $("directProfile").value : "baseline"}),
         });
         if (!response.ok) throw new Error("HTTP " + response.status + ": verifique sessão ou limite de testes.");
         const result = await response.json();
@@ -211,6 +223,9 @@ async function run(mode) {
             + " · Movimento: " + (result.move || "—")
             + " · Tempo: " + result.elapsed_seconds + "s"
             + " · Ferramentas executadas: 0"
+            + (mode === "direct" ? " · Perfil: " + (result.profile || $("directProfile").value || "baseline") : "")
+            + (Number.isInteger(result.output_budget_tokens)
+               ? " · Limite: " + result.output_budget_tokens + " tokens" : "")
             + (diagnostic ? " · " + diagnostic : "");
         $("status").textContent = "Teste finalizado. Compare o conteúdo, não apenas o status.";
     } catch (e) {

@@ -19,7 +19,8 @@ from pydantic import BaseModel, Field, model_validator
 from src.agent import intelligence
 from src.agent.plan_constraints import warnings as constraint_warnings, required_stage_warnings
 from ops.model_latency import local_endpoint, model_identifier, numeric_summary
-from src.agent.voice import LAB_BASELINE_VOICE, NATURAL_VOICE
+from src.agent.voice import LAB_BASELINE_VOICE, NATURAL_VOICE, LAB_ASSISTANT_VOICE
+from src.agent.response_budget import output_budget
 from src.security import auth
 
 router = APIRouter()
@@ -39,7 +40,7 @@ class LabMessage(BaseModel):
 
 class LabRequest(BaseModel):
     mode: Literal["planner", "direct"]
-    profile: Literal["baseline", "natural"] = "baseline"
+    profile: Literal["baseline", "natural", "assistant"] = "baseline"
     message: str = Field(min_length=1, max_length=1200)
     history: list[LabMessage] = Field(default_factory=list, max_length=8)
 
@@ -66,7 +67,12 @@ def _direct(payload):
     url = local_endpoint(os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
     model = model_identifier(os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
     natural = payload.profile == "natural"
-    messages = [{"role": "system", "content": NATURAL_VOICE if natural else LAB_BASELINE_VOICE}]
+    assistant = payload.profile == "assistant"
+    voice = LAB_ASSISTANT_VOICE if assistant else (
+        NATURAL_VOICE if natural else LAB_BASELINE_VOICE
+    )
+    token_budget = output_budget(payload.message) if assistant else 256
+    messages = [{"role": "system", "content": voice}]
     messages.extend(item.model_dump() for item in payload.history)
     messages.append({"role": "user", "content": payload.message})
     with requests.post(
@@ -74,7 +80,7 @@ def _direct(payload):
         json={"model": model, "messages": messages,
               "stream": False, "options": {
                   "temperature": 0.25 if natural else 0.1,
-                  "num_predict": 256,
+                  "num_predict": token_budget,
               }},
         timeout=(4, 50),
     ) as response:
@@ -86,6 +92,7 @@ def _direct(payload):
     return {"status": "answered", "reply": item["content"][:1800],
             "model": model, "move": None, "performance": numeric_summary(result),
             "prompt_chars": sum(len(entry["content"]) for entry in messages),
+            "output_budget_tokens": token_budget, "profile": payload.profile,
             "output_limited": result.get("done_reason") == "length",
             "reply_truncated": len(item["content"]) > 1800}
 

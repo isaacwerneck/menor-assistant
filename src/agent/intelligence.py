@@ -3,6 +3,7 @@
 O LLM sugere o próximo movimento em qualquer domínio. O código continua
 sendo a autoridade para permissão, ferramentas e resultados verificáveis.
 """
+import copy
 import hashlib
 import json
 import logging
@@ -104,6 +105,23 @@ DECISION_SCHEMA = {
 }
 
 
+def _schema_for_tools(tools):
+    """Sem catálogo explícito, o modelo NÃO pode gerar ação executável.
+
+    Usa restrição no decodificador do Ollama, além do validador Python.
+    Com ferramentas presentes, preserva integralmente o contrato anterior.
+    """
+    if tools is None or tools:
+        return DECISION_SCHEMA
+    narrowed = copy.deepcopy(DECISION_SCHEMA)
+    for choice in narrowed["oneOf"]:
+        moves = choice["properties"]["move"]["enum"]
+        choice["properties"]["move"]["enum"] = [move for move in moves if move != "act"]
+        choice["properties"].pop("tool", None)
+        choice["properties"].pop("arguments", None)
+    return narrowed
+
+
 def _strings(items, limit):
     return (isinstance(items, list) and len(items) <= limit
             and all(isinstance(item, str) and 6 <= len(item.strip()) <= 150 for item in items))
@@ -156,6 +174,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
     """Retorna decisão validada, ou None se Ollama falhar; nunca age diretamente."""
     if not isinstance(message, str) or not message.strip() or len(message) > 8000:
         raise ValueError("Mensagem inválida.")
+    schema = _schema_for_tools(tools)
     if diagnostics is not None:
         if not isinstance(diagnostics, dict):
             raise ValueError("Destino de diagnóstico inválido.")
@@ -164,7 +183,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             outcome="invalid_decision", options=INFERENCE_OPTIONS.copy(),
             read_timeout_seconds=INFERENCE_TIMEOUT[1],
             prompt_sha256=hashlib.sha256(SYSTEM.encode()).hexdigest(),
-            schema_sha256=hashlib.sha256(json.dumps(DECISION_SCHEMA, sort_keys=True).encode()).hexdigest(),
+            schema_sha256=hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest(),
         )
     if feedback_examples is None:
         # Exemplos aprovados pelo dono adaptam o estilo sem treino ou permissão.
@@ -246,7 +265,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
                 ),
                 "messages": [{"role": "system", "content": SYSTEM}, *turns,
                              {"role": "user", "content": context_json}],
-                "format": DECISION_SCHEMA, "stream": False,
+                "format": schema, "stream": False,
                 "keep_alive": os.environ.get("OLLAMA_KEEP_ALIVE", "24h"),
                 "options": INFERENCE_OPTIONS,
             },
