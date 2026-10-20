@@ -4,6 +4,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,6 +35,12 @@ def validate_suite(data):
         remote_lab.LabRequest.model_validate(case)
         expected = case.get("expected_contains", [])
         exact = case.get("expected_exact")
+        grader = case.get("grader", "strict")
+        if grader not in ("strict", "boolean"):
+            raise ValueError("Tipo de avaliador inválido.")
+        if grader == "boolean" and (not isinstance(exact, str)
+                                    or _boolean_answer(exact) is None or expected):
+            raise ValueError("Avaliador binário exige resposta exata SIM ou NÃO.")
         if not isinstance(expected, list) or len(expected) > 10 or any(
             not isinstance(x, str) or not x or len(x) > 200 for x in expected
         ):
@@ -49,6 +56,16 @@ def validate_suite(data):
     return data
 
 
+def _boolean_answer(value):
+    """Extrai apenas sim/não isolados, aceitando acento e pontuação final simples."""
+    if not isinstance(value, str):
+        return None
+    folded = unicodedata.normalize("NFKD", value.strip().casefold())
+    folded = "".join(letter for letter in folded if not unicodedata.combining(letter))
+    match = re.fullmatch(r"(sim|nao)[.!]?", folded)
+    return match.group(1) if match else None
+
+
 def grade_case(case, result):
     """Apenas verificações determinísticas; casos subjetivos continuam sem nota."""
     exact = case.get("expected_exact")
@@ -61,6 +78,8 @@ def grade_case(case, result):
     if not isinstance(reply, str):
         return False
     if exact is not None:
+        if case.get("grader") == "boolean":
+            return _boolean_answer(reply) == _boolean_answer(exact)
         return reply.strip().casefold() == exact.strip().casefold()
     return all(token.casefold() in reply.casefold() for token in tokens)
 
@@ -127,6 +146,7 @@ def _run(suite, run_id):
             passed = grade_case(case, output)
             results.append({"id": case["id"], "category": case.get("category", "geral"),
                             "split": case.get("split", "development"), "mode": payload.mode,
+                            "profile": payload.profile, "grader": case.get("grader", "strict"),
                             "question": payload.message, "history": [item.model_dump() for item in payload.history],
                             "expected_contains": case.get("expected_contains", []),
                             "expected_exact": case.get("expected_exact"),
