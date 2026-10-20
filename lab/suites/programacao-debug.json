@@ -65,7 +65,8 @@
       "message": "O comando `git merge --ff-only` pode criar um merge quando as branches divergem? SIM ou NÃO.",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "api-token",
@@ -101,7 +102,8 @@
       "message": "Uma suíte tem 500 testes e 1 falha. É aceitável desativar o teste falho sem diagnóstico para conseguir merge? SIM ou NÃO.",
       "expected_contains": [],
       "split": "development",
-      "expected_exact": "NÃO"
+      "expected_exact": "NÃO",
+      "grader": "boolean"
     },
     {
       "id": "revisar-pr",
@@ -112,5 +114,6 @@
       "review_criteria": "Reproduzir, alterar patch, testar CI e verificar main.",
       "split": "validation"
     }
-  ]
+  ],
+  "grader_version": "menor-eval-grader-v2"
 }
