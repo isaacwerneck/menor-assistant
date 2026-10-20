@@ -40,9 +40,11 @@ Por exemplo, um pedido em linguagem natural pode ser:
 
 ## Limites e próximo aceite
 
-A interface principal ainda não oferece anexo documental embutido, e o fluxo
-deve ser testado usando o ID retornado na interface de arquivos. A fase D/E
-poderá integrar um seletor de arquivos sem mandar bytes para o Ollama.
+**Nota posterior (20/10/2026):** a interface principal recebeu seletor de
+anexos privados no PR #72; o parágrafo original descrevia a limitação
+**na época deste incremento**, não o estado da `main` atual. O fluxo
+novo ainda precisa de aceitação end-to-end com documentos reais no Ubuntu;
+veja [handoff A–E](handoff/03_FRENTES_A_B_C_D_E.md).
 
 O parser em subprocesso ainda não é container com seccomp/rede bloqueada.
 Arquivos hostis devem ser processados em isolamento mais forte antes de uso
