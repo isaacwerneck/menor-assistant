@@ -17,6 +17,22 @@ def response(data):
 
 
 class InferenceDiagnosticsTests(unittest.TestCase):
+    def test_generation_requires_fields_that_each_move_needs_to_be_valid(self):
+        variants = intelligence.DECISION_SCHEMA["oneOf"]
+        branches = {move: variant for variant in variants
+                    for move in variant["properties"]["move"]["enum"]}
+        self.assertEqual(set(branches), set(intelligence.MOVES))
+        for move in ("plan", "continue"):
+            self.assertIn("goal", branches[move]["required"])
+            self.assertIn("steps", branches[move]["required"])
+            self.assertEqual(branches[move]["properties"]["steps"]["minItems"], 1)
+        self.assertIn("question", branches["clarify"]["required"])
+        self.assertEqual(branches["clarify"]["properties"]["question"]["minLength"], 1)
+        for move in ("answer", "act", "research", "inspect_result"):
+            self.assertEqual(branches[move]["required"], ["move", "reply"])
+        for variant in variants:
+            self.assertFalse(variant["additionalProperties"])
+
     def infer(self, diagnostics):
         return intelligence.decide("Pergunta sintética", feedback_examples=[], preferences="",
                                    diagnostics=diagnostics)

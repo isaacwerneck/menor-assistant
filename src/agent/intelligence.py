@@ -73,7 +73,7 @@ Não preencha campos vazios numa resposta simples.
 """ + "\n" + NATURAL_VOICE
 
 
-DECISION_SCHEMA = {
+_DECISION_OBJECT = {
     "type": "object",
     "properties": {
         "move": {"type": "string", "enum": list(MOVES)},
@@ -93,6 +93,30 @@ DECISION_SCHEMA = {
         }},
     },
     "required": ["move", "reply"], "additionalProperties": False,
+}
+
+
+# Cada alternativa completa evita combinar properties e oneOf no mesmo objeto.
+DECISION_SCHEMA = {
+    "oneOf": [
+        {
+            **_DECISION_OBJECT,
+            "properties": {**_DECISION_OBJECT["properties"],
+                           "move": {"type": "string", "enum": moves}, **fields},
+            "required": ["move", "reply", *fields],
+        }
+        for moves, fields in (
+            (["answer", "act", "research", "inspect_result"], {}),
+            (["plan", "continue"], {
+                "goal": {"type": "string", "minLength": 1, "maxLength": 220},
+                "steps": {**_DECISION_OBJECT["properties"]["steps"], "minItems": 1},
+            }),
+            (["clarify"], {
+                "goal": {"type": "string", "minLength": 1, "maxLength": 220},
+                "question": {"type": "string", "minLength": 1, "maxLength": 220},
+            }),
+        )
+    ],
 }
 
 
