@@ -78,6 +78,14 @@ footer{color:var(--muted);font-size:.78rem}
 <textarea id="history" maxlength="2800" placeholder="user: Meu servidor utiliza Ubuntu.
 assistant: Entendido.
 user: Gosto de música eletrônica."></textarea>
+<label for="directProfile">Perfil de comparação do modelo direto</label>
+<select id="directProfile" aria-label="Perfil do modelo direto">
+<option value="baseline">Controle original (comparável aos relatórios antigos)</option>
+<option value="natural">Linguagem natural v2 (histórico)</option>
+<option value="assistant">Assistente aprimorado v4 (estilo, evidência e tempo)</option>
+</select>
+<p class="helper">No modo direto não há ferramentas. O perfil aprimorado usa instruções e limite de resposta novos;
+para comparar tempo e qualidade, registre também o número de tokens.</p>
 <div class="actions">
 <button type="button" class="primary" id="runDirect">Testar modelo direto</button>
 <button type="button" id="runPlanner">Testar raciocinador</button>
@@ -200,7 +208,9 @@ async function run(mode) {
         const response = await fetch("/lab/compare", {
             method:"POST", credentials:"same-origin",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({mode,message,history}),
+            body:JSON.stringify({mode,message,history,
+                profile: mode === "direct" && ["baseline","natural","assistant"].includes($("directProfile").value)
+                    ? $("directProfile").value : "baseline"}),
         });
         if (!response.ok) throw new Error("HTTP " + response.status + ": verifique sessão ou limite de testes.");
         const result = await response.json();
@@ -211,6 +221,9 @@ async function run(mode) {
             + " · Movimento: " + (result.move || "—")
             + " · Tempo: " + result.elapsed_seconds + "s"
             + " · Ferramentas executadas: 0"
+            + (mode === "direct" ? " · Perfil: " + (result.profile || $("directProfile").value || "baseline") : "")
+            + (Number.isInteger(result.output_budget_tokens)
+               ? " · Limite: " + result.output_budget_tokens + " tokens" : "")
             + (diagnostic ? " · " + diagnostic : "");
         $("status").textContent = "Teste finalizado. Compare o conteúdo, não apenas o status.";
     } catch (e) {
