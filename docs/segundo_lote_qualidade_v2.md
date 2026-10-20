@@ -61,10 +61,10 @@ de capacidade geral definitiva.
   harness com ferramenta isolada, recibos e verificação do estado final.
 - Não auto-ajustamos `num_ctx`, `num_thread`, `num_gpu`, overclock,
   permissões de sistema nem instalação de drivers por causa destes testes.
-- O perfil novo limita a geração direta no laboratório a 192 tokens, contra
-  256 no baseline, para experimentar brevidade e tempo. Portanto, qualquer
-  ganho de velocidade deve considerar a diferença no orçamento de saída.
-  Comparações de qualidade e latência precisam observar também truncamentos.
+- Os dois perfis diretos têm o mesmo teto de 256 tokens no laboratório. O
+  perfil natural muda a orientação e a temperatura de amostragem; os ganhos
+  de tempo precisam ser conferidos com métricas de tokens por segundo e
+  comprimento de resposta, não apenas com segundos brutos.
 
 ## Diagnóstico do hardware Ubuntu, sem alterações
 
