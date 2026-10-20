@@ -196,7 +196,7 @@ def _run(suite, run_id):
                             "review_criteria": case.get("review_criteria", ""), "result": output,
                             "elapsed_seconds": round(time.monotonic() - began, 3),
                             "automatic_pass": passed,
-                            "format_compliant": numeric_format_compliance(case, output)})
+                            "format_compliant": numeric_format_compliance(case, output) if passed is True else None})
         report = {"run_id": run_id, "suite_id": suite["id"],
                   "comparison_group": suite.get("comparison_group"),
                   "methodology_version": suite.get("methodology_version", "legacy"),
