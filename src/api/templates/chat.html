@@ -543,6 +543,14 @@
         }
         .app-nav-current { color: var(--text-primary); background: rgba(157, 139, 231, .13); cursor: default; }
         .app-nav a:hover, .app-nav button:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .lab-top-link {
+            flex-shrink: 0; text-decoration: none; padding: 8px 11px;
+            border: 1px solid rgba(174, 154, 238, .35); border-radius: 10px;
+            background: rgba(157, 139, 231, .11); color: #e4dafa;
+            font: inherit; font-size: .84rem; font-weight: 650;
+        }
+        .lab-top-link:hover { background: rgba(157, 139, 231, .23); }
+        .lab-top-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
         .sidebar-section-title { letter-spacing: .075em; font-size: .69rem; }
         .conv-item { border-radius: 9px; padding: 11px 12px; }
         .conv-item.active { background: rgba(165, 148, 236, .11); }
@@ -608,7 +616,7 @@
             .input-area { padding: 8px 12px 10px; }
             .input-wrapper { padding: 9px 10px; }
             .mobile-nav {
-                display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+                display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
                 gap: 2px; min-height: 56px;
                 padding: 4px 6px max(5px, env(safe-area-inset-bottom));
                 border-top: 1px solid rgba(184, 173, 226, .13);
@@ -653,7 +661,7 @@
         @media (max-width: 768px) {
             .objectives-sheet { max-height: 88dvh; padding: 18px; }
             .objectives-heading { flex-wrap: wrap; }
-            .mobile-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+            .mobile-nav { grid-template-columns: repeat(6, minmax(0, 1fr)); }
             .mobile-nav button, .mobile-nav a { font-size: .7rem; }
         }
     </style>
@@ -676,6 +684,7 @@
             <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
+            <a href="/lab/view" aria-label="Abrir Laboratório de testes">Laboratório · Testes</a>
             <button type="button" onclick="openBrain()">Conhecimentos</button>
             <button type="button" onclick="openFeedback()">Ensinar uma resposta</button>
         </nav>
@@ -693,6 +702,7 @@
         <div class="topbar">
             <button class="toggle-sidebar-btn" aria-label="Alternar conversas" onclick="toggleSidebar()">☰</button>
             <div class="topbar-title" id="topbarTitle">Menor AI</div>
+            <a href="/lab/view" class="lab-top-link" title="Abrir baterias de testes">Lab · Testes</a>
             <button class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
                 aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
             <button class="toggle-sidebar-btn" onclick="openBrain()" aria-label="Abrir conhecimentos salvos" title="Conhecimentos salvos">Memória</button>
@@ -747,6 +757,7 @@
             <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
+            <a href="/lab/view" aria-label="Abrir Laboratório de testes">Lab</a>
             <button type="button" onclick="openBrain()">Memória</button>
         </nav>
     </div>
