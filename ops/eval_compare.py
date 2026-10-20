@@ -69,12 +69,11 @@ def compare(baseline, candidate):
                     and new[key].get("automatic_pass") is True]
     baseline_summary = summarize(baseline)
     candidate_summary = summarize(candidate)
+    completion_delta = _difference(baseline_summary["completion_rate"], candidate_summary["completion_rate"])
+    pass_delta = _difference(baseline_summary["graded_pass_rate"], candidate_summary["graded_pass_rate"])
     return {"baseline": baseline_summary, "candidate": candidate_summary,
             "new_regressions": regressions, "resolved_failures": improvements,
-            "completion_delta": _difference(baseline_summary["completion_rate"],
-                                            candidate_summary["completion_rate"]),
-            "graded_pass_delta": _difference(baseline_summary["graded_pass_rate"],
-                                            candidate_summary["graded_pass_rate"]),
+            "completion_delta": completion_delta, "graded_pass_delta": pass_delta,
             "note": "Notas automáticas medem apenas critérios determinísticos; rubricas abertas exigem revisão."}
 
 
