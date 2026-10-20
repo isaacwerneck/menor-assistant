@@ -12,6 +12,8 @@ _ACTIONS = {
     "mover": r"\b(?:mover|mov(?:a|am|endo)|transferir|transfir(?:a|am)|deslocar|desloqu(?:e|em))\b",
     "substituir": r"\b(?:substituir|substitu(?:a|am|indo)|sobrescrever|sobrescrev(?:a|am))\b",
     "alterar": r"\b(?:alterar|alter(?:e|em|ando)|modificar|modifiqu(?:e|em)|editar|edit(?:e|em|ando))\b",
+    "renomear": r"\b(?:renomear|renome(?:ie|iem|ando)|mudar\s+(?:o\s+)?nome)\b",
+    "publicar": r"\b(?:publicar|publique|publicac\w*|enviar|envie|upload|subir\s+(?:para|na)\s+(?:web|nuvem))\b",
 }
 _NEGATIONS = r"\b(?:nao|sem|nunca|evitar|evite|proibido|proibida)\b"
 _BREAKS = re.compile(r"[.;!?\n]|\b(?:mas|porem|entretanto)\b")
@@ -50,6 +52,9 @@ def _explicitly_forbidden(message):
             # A short local window, never a whole document or a later contrasting sentence.
             phrase = clause[negative.end():negative.end() + 100]
             for action, expression in _ACTIONS.items():
+                if action == "publicar" and re.search(r"\b(?:antes\s+de|ate\s+(?:a\s+)?aprovac)", phrase):
+                    # 'não publicar antes da aprovação' is a conditional gate, not a total ban.
+                    continue
                 if re.search(expression, phrase):
                     forbidden.add(action)
     return forbidden
