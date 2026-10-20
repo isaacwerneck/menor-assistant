@@ -69,6 +69,45 @@ class ApprovalTests(unittest.TestCase):
             self.assertIn("Execução confirmada", result["reply"])
             run.assert_called_once_with("projects.create", {"name": "Exemplo"}, dry_run=False)
 
+    def test_clarification_preserves_pending_tool_and_approval_after_question(self):
+        from src.agent.tasks import TaskStore
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {"MENOR_DATA_DIR": temp}):
+            store = TaskStore()
+            session = "dialogueApproveE8"
+            proposed = {
+                "phase": "approval", "tool": "projects.create",
+                "arguments": {"name": "Cobrinha"},
+            }
+            with store.session_lock(session):
+                store.claim(session, "turnProposalE8", {"message": "criar projeto"})
+                store.finish(session, "turnProposalE8", proposed, {"phase": "approval", "handled": True})
+            with patch.object(runner, "perform", return_value={
+                "tool": "projects.create", "status": "executed",
+                "result": {"path": "projetos/cobrinha"},
+            }) as executor:
+                explanation = runner.run(session, "turnQuestionE8", "que branch? não entendi",
+                                         [], tasks=store)
+                self.assertEqual(explanation["phase"], "approval")
+                self.assertIn("pendente", explanation["reply"])
+                self.assertEqual(store.inspect(session)["tool"], "projects.create")
+                executor.assert_not_called()
+                approved = runner.run(session, "turnApproveE8", "eu aprovo", [], tasks=store)
+                self.assertIn("Execução confirmada", approved["reply"])
+                executor.assert_called_once_with(
+                    "projects.create", {"name": "Cobrinha"}, dry_run=False,
+                )
+
+    def test_new_game_does_not_route_into_menor_self_edit(self):
+        from src.agent.self_edit import is_new_project_request, propose
+        issue = "Criar um jogo da cobrinha em JavaScript com Raylib"
+        self.assertTrue(is_new_project_request(issue))
+        with self.assertRaisesRegex(ValueError, "não cria jogos"):
+            propose(issue, dry_run=False)
+        with patch.object(runner, "perform") as executor:
+            _, answer = runner._selected_tool("developer.propose", {"issue": issue})
+            self.assertIn("não consigo criar", answer["reply"])
+            executor.assert_not_called()
+
 
 class CustomSandboxTests(unittest.TestCase):
     def test_docker_skill_uses_single_readonly_file_and_no_network_or_secrets(self):

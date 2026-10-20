@@ -23,6 +23,7 @@ from src.agent.plan_constraints import warnings as constraint_warnings, required
 from src.agent.context_engine import assemble_memory
 from src.projects.workspace import ProjectWorkspace
 from src.agent.approval import decision as approval_decision
+from src.agent.self_edit import is_new_project_request, ImprovementUnavailable
 from src.memory.search import contextual_knowledge
 from src.memory.semantic import relevant_context
 from src.tools import images
@@ -34,8 +35,34 @@ YES = re.compile(r"^(sim+|simm+|pode|bora|vamos|claro|isso|fechou|confirmo)[.!]?
 NO = re.compile(r"^(nao|deixa|cancela|cancelar|nao precisa)[.!]?$")
 
 
+def _approval_details(tool):
+    """Descrição do escopo real, sem parâmetros internos ou promessas de execução."""
+    details = {
+        "developer.propose": (
+            "Propor correção no Menor",
+            "Prepara uma alteração do próprio Menor em branch separada e PR rascunho. "
+            "Não cria aplicativos nem altera a versão principal diretamente.",
+        ),
+        "developer.build": (
+            "Propor ferramenta de texto",
+            "Cria uma proposta de ferramenta simples de texto, testa em ambiente isolado "
+            "e abre um PR rascunho. Não cria jogos ou aplicativos completos.",
+        ),
+        "projects.create": ("Criar projeto", "Cria o registro de um projeto no Menor."),
+        "projects.add_task": ("Adicionar tarefa", "Registra uma tarefa no projeto selecionado."),
+        "brain.remember": ("Salvar na memória", "Registra a informação no cérebro local do Menor."),
+        "images.generate": ("Gerar imagem", "Inicia o gerador configurado para criar um arquivo de imagem."),
+        "images.edit": ("Editar imagem", "Envia uma imagem existente para edição."),
+    }
+    return details.get(tool, ("Confirmar ação", "Uma operação com efeito real aguarda sua autorização."))
+
+
 def _answer(reply, phase="idle", **state):
-    return {"phase": phase, **state}, {"handled": True, "reply": reply, "phase": phase}
+    response = {"handled": True, "reply": reply, "phase": phase}
+    if phase == "approval" and state.get("tool") in TOOLS:
+        title, description = _approval_details(state["tool"])
+        response["approval"] = {"title": title, "description": description}
+    return {"phase": phase, **state}, response
 
 
 def _begin_mission(message, history):
@@ -227,14 +254,17 @@ def _tool_loop(message, history):
             )
         seen.add(signature)
         if TOOLS[name].writes:
-            current, response = _observed_answer(
-                "Plano: " + (step.get("reply") or TOOLS[name].description)
-                + "\nFerramenta: " + name + "\nParâmetros: "
-                + json.dumps(arguments, ensure_ascii=False)
-                + "\nPosso executar essa ação? Responda sim ou não.",
-                observations, "approval",
+            if name == "developer.propose" and is_new_project_request(arguments["issue"]):
+                return _answer(
+                    "Essa ferramenta só corrige código do próprio Menor; não consegue montar "
+                    "um jogo ou aplicativo novo. Posso ajudar a estruturar o projeto, "
+                    "mas não vou abrir uma correção fictícia.",
+                )
+            title, description = _approval_details(name)
+            current, response = _answer(
+                title + ". " + description + " Quer que eu siga?", "approval",
+                tool=name, arguments=arguments,
             )
-            current.update(tool=name, arguments=arguments)
             return current, response
         receipt = perform(name, arguments, dry_run=False)
         if receipt.get("status") != "executed":
@@ -256,13 +286,19 @@ def _selected_tool(name, arguments):
     """Executa apenas ferramentas conhecidas, com pré-validação e aprovação."""
     if name not in TOOLS:
         raise ValueError("Ferramenta fora do catálogo.")
+    if (name == "developer.propose" and isinstance(arguments, dict)
+            and is_new_project_request(arguments.get("issue", ""))):
+        return _answer(
+            "Eu não consigo criar esse aplicativo usando a ferramenta de correção do Menor. "
+            "Ela só prepara mudanças no próprio assistente. "
+            "Posso te ajudar a montar o projeto e definir a implementação, "
+            "sem fingir que já criei arquivos.",
+        )
     perform(name, arguments, dry_run=True)
     if TOOLS[name].writes:
+        title, description = _approval_details(name)
         return _answer(
-            "Ação planejada: " + TOOLS[name].description
-            + "\nFerramenta: " + name + "\nParâmetros: "
-            + json.dumps(arguments, ensure_ascii=False)
-            + "\nPosso executar? A decisão será registrada antes da execução.",
+            title + ". " + description + " Quer que eu siga?",
             "approval", tool=name, arguments=arguments,
         )
     receipt = perform(name, arguments, dry_run=False)
@@ -495,14 +531,28 @@ def _advance(state, message, history, project=None, metrics=None):
                 )
             return _answer("Ação cancelada, sem executar a ferramenta.")
         if choice != "approve":
+            title, description = _approval_details(state["tool"])
             return _answer(
-                "Esta ação específica está pendente de autorização. "
-                "Diga 'eu aprovo' ou 'não autorizo'; fazer perguntas não a executa.", **state,
+                "Branch é uma cópia separada do código; o PR é o pedido de revisão "
+                "antes de juntar a mudança à versão principal. " + description
+                if state["tool"] in ("developer.propose", "developer.build")
+                else title + ": " + description
+                + " A ação continua pendente, sem executar nada. "
+                "Você pode aprovar, pedir detalhes ou cancelar.",
+                **state,
             )
-        receipt = perform(state["tool"], state["arguments"], dry_run=False)
+        try:
+            receipt = perform(state["tool"], state["arguments"], dry_run=False)
+        except ImprovementUnavailable as error:
+            LOGGER.warning("Proposta supervisionada indisponível: %s", type(error).__name__)
+            return _answer(
+                "Não consegui concluir a proposta automática: " + str(error)
+                + " Não há um PR confirmado; confira o GitHub antes de tentar novamente.",
+                "blocked",
+            )
         proof = _tool_result(state["tool"], receipt)
         current, result = _answer(
-            "Execução confirmada: " + receipt["tool"] + ".\n"
+            "Execução confirmada. Resultado: "
             + json.dumps(receipt["result"], ensure_ascii=False)[:6000],
         )
         goal = state.get("return_goal")
@@ -597,8 +647,10 @@ def _run_locked(session, turn, message, history, project, tasks):
         error_type = type(error).__name__
         LOGGER.warning("Execução do agente interrompida: %s", error_type)
         current, result = _answer(
-            "A execução falhou e foi interrompida. Nenhuma nova ação será repetida automaticamente. "
-            "Consulte o estado antes de tentar novamente.", "failed",
+            "Não consegui concluir essa ação (" + error_type + "). "
+            "O resultado pode estar incompleto ou incerto; confira o estado e os "
+            "arquivos envolvidos antes de pedir outra tentativa. "
+            "Não vou executar de novo sem sua confirmação.", "failed",
         )
     if metrics:
         metrics["agent_wall_ms"] = round((time.monotonic() - started) * 1000, 2)
