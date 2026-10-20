@@ -57,7 +57,7 @@ class SpeechAndEvalTests(unittest.TestCase):
         self.assertEqual(result["reply"], "Não.")
         self.assertEqual(result["performance"]["generation_tokens_per_second"], 8.0)
         self.assertIn("natural", payload["messages"][0]["content"])
-        self.assertEqual(payload["options"]["num_predict"], 192)
+        self.assertEqual(payload["options"]["num_predict"], 256)
         self.assertNotIn("content", str(result["performance"]))
 
     @patch("src.api.remote_lab.requests.post")
