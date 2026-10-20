@@ -61,6 +61,22 @@ class InferenceDiagnosticsTests(unittest.TestCase):
         self.assertEqual(diagnostics["outcome"], "invalid_decision")
 
     @patch.object(intelligence.requests, "post")
+    def test_validation_issue_names_field_without_copying_rejected_content(self, post):
+        for item, issue in (
+            ({"move": "plan", "reply": "PRIVATE", "steps": ["Validar o resultado"]}, "goal"),
+            ({"move": "plan", "goal": "Objetivo", "reply": "PRIVATE"}, "steps_required"),
+            ({"move": "plan", "goal": "Objetivo", "reply": "PRIVATE", "steps": ["x"]}, "steps_or_acceptance"),
+            ({"move": "act", "reply": "PRIVATE", "tool": "shell.exec"}, "tool"),
+        ):
+            with self.subTest(issue=issue):
+                post.return_value = response({"message": {"content": json.dumps(item)}})
+                diagnostics = {}
+                self.assertIsNone(self.infer(diagnostics))
+                self.assertEqual(diagnostics["outcome"], "invalid_decision")
+                self.assertEqual(diagnostics["validation_issue"], issue)
+                self.assertNotIn("PRIVATE", json.dumps(diagnostics))
+
+    @patch.object(intelligence.requests, "post")
     def test_timeout_network_and_bad_protocol_never_export_exception_text(self, post):
         for error, expected in ((requests.ReadTimeout("senha privada"), "timeout"),
                                 (requests.ConnectionError("senha privada"), "request_failed")):

@@ -85,7 +85,7 @@ test("Menor Lab: loads saved reports and offers explicit manual GitHub push", as
 test("Menor Lab: shows safe diagnostics and generation metrics without exposing raw text", async () => {
     const { elements } = browser({
         reply: "Não consegui validar", status: "no_valid_decision", elapsed_seconds: 29,
-        diagnostics: { outcome: "invalid_json", output_limited: true, raw_error: "PRIVATE" },
+        diagnostics: { outcome: "invalid_decision", output_limited: true, raw_error: "PRIVATE", validation_issue: "goal" },
         performance: { eval_count: 480, generation_tokens_per_second: 7.23 },
         reply_truncated: true,
     });
@@ -93,7 +93,8 @@ test("Menor Lab: shows safe diagnostics and generation metrics without exposing 
     elements.get("question").value = "Planeje um exemplo";
     await elements.get("runPlanner").listeners.click();
     const meta = elements.get("plannerMeta").textContent;
-    assert.match(meta, /JSON inválido/);
+    assert.match(meta, /Contrato rejeitado/);
+    assert.match(meta, /Objetivo ausente ou inválido/);
     assert.match(meta, /Limite de geração atingido/);
     assert.match(meta, /Trecho exibido limitado/);
     assert.match(meta, /480 tokens gerados/);
@@ -105,7 +106,7 @@ test("Menor Lab: shows safe diagnostics and generation metrics without exposing 
 test("Menor Lab: older responses and malformed metrics remain readable", async () => {
     const { elements } = browser({
         reply: "Resposta antiga", status: "answered", elapsed_seconds: 2,
-        diagnostics: { outcome: "PRIVATE" },
+        diagnostics: { outcome: "PRIVATE", validation_issue: "PRIVATE" },
         performance: { eval_count: "PRIVATE", generation_tokens_per_second: Infinity },
     });
     await new Promise(resolve => setImmediate(resolve));
