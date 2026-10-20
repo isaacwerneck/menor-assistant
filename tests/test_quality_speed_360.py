@@ -3,13 +3,15 @@
 Os testes não enviam textos privados para rede. Respostas do modelo são fake.
 """
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from ops import lab_batch_audit, lab_eval_analysis
-from src.agent import intelligence
+from src.agent import intelligence, runner
+from src.agent.tasks import TaskStore
 from src.agent.response_budget import output_budget
 from src.agent.voice import LAB_ASSISTANT_VOICE, LAB_BASELINE_VOICE
 from src.api import lab_batches, remote_lab, main
@@ -211,6 +213,37 @@ class OfflineAuditTests(unittest.TestCase):
             (root / "not-a-run.json").write_text("{}")
             self.assertEqual(lab_batch_audit.inspect(root)["reports"], 0)
 
+
+class ToolReceiptIntegrationTests(unittest.TestCase):
+    def test_math_receipt_survives_next_turn_and_is_not_faked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                patch.dict(os.environ, {"MENOR_DATA_DIR": directory,
+                                     "MENOR_INTELLIGENCE_ENABLED": "1"}),
+                patch.object(runner, "relevant_context", return_value=""),
+                patch.object(runner, "contextual_knowledge", return_value=""),
+                patch.object(runner.intelligence, "decide", side_effect=[
+                    {"move":"act", "tool":"math.calculate",
+                     "arguments":{"expression":"250*(1-12/100)"}, "reply":"Calculando."},
+                    {"move":"inspect_result", "reply":"Qual foi o resultado anterior?"},
+                ]),
+            ):
+                store = TaskStore()
+                session = "receiptIntegration01"
+                first = runner.run(session, "receiptTurn01",
+                                   "Qual preço após 12% de desconto de 250?", [],
+                                   tasks=store)
+                self.assertEqual(first["events"][0]["status"], "executed")
+                self.assertIn('"value": "220"', first["reply"])
+                state = store.inspect(session)
+                self.assertEqual(state["last_result"]["tool"], "math.calculate")
+                self.assertFalse(state["last_result"]["content_verified"])
+                with patch.object(runner, "perform") as repeat:
+                    second = runner.run(session, "receiptTurn02",
+                                        "O que a calculadora respondeu antes?", [],
+                                        tasks=store)
+                    repeat.assert_not_called()
+                self.assertIn("math.calculate", second["reply"])
 
 if __name__ == "__main__":
     unittest.main()
