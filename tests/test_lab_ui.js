@@ -236,3 +236,23 @@ test("Lab: declining queue confirmation starts nothing", async () => {
     await ui.click("batchRun");
     assert.equal(ui.requests.filter(x => x.url === "/lab/batches/queue").length, 0);
 });
+
+
+test("Lab: manual direct comparison allows selecting improved profile without changing historical default", async () => {
+    const ui = browser({compare:{
+        reply:"Não.", status:"answered", elapsed_seconds:1.4, profile:"assistant",
+        output_budget_tokens:56, performance:{eval_count:3, generation_tokens_per_second:10},
+    }});
+    await ui.ready();
+    ui.elements.get("question").value = "Só SIM ou NÃO.";
+    ui.elements.get("directProfile").value = "assistant";
+    await ui.click("runDirect");
+    const calls = ui.requests.filter(x => x.url === "/lab/compare");
+    assert.equal(calls.length, 1);
+    assert.equal(JSON.parse(calls[0].opts.body).profile, "assistant");
+    assert.match(ui.elements.get("directMeta").textContent, /Perfil: assistant/);
+    assert.match(ui.elements.get("directMeta").textContent, /56 tokens/);
+    ui.elements.get("directProfile").value = "";
+    await ui.click("runDirect");
+    assert.equal(JSON.parse(ui.requests.at(-1).opts.body).profile, "baseline");
+});
