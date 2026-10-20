@@ -82,6 +82,8 @@ def batch_publish(run_id: str, request: Request):
         raise HTTPException(404, "Relatório não encontrado.") from error
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+    except lab_publish.GitHubReportConflict as error:
+        raise HTTPException(409, str(error)) from error
     except lab_publish.GitHubPublishRejected as error:
         raise HTTPException(502, str(error)) from error
     except requests.Timeout as error:
