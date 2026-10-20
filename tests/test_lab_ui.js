@@ -84,7 +84,7 @@ function browser(overrides = {}) {
     vm.runInContext(source, context);
     const ready = () => new Promise(resolve => setImmediate(resolve));
     const list = () => elements.get("suiteList").children;
-    const idText = node => node.children[0].children[1].children[2].textContent;
+    const idText = node => node.children[0].children[1].children[2].textContent.replace(/^ID: /, "");
     const cards = () => list().map(node => ({node, id:idText(node), checkbox:node.children[0].children[0]}));
     const click = (id) => elements.get(id).listeners.click();
     const input = (id, value) => {
