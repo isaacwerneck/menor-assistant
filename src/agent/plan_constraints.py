@@ -8,7 +8,8 @@ import unicodedata
 
 
 _ACTIONS = {
-    "apagar": r"\b(?:apagar|apagu(?:e|em)|apagando|excluir|exclu(?:a|am|ir)|deletar|delet(?:e|em)|remover|remov(?:a|am))\b",
+    "apagar": (r"\b(?:apagar|apagu(?:e|em)|apagando|excluir|exclu(?:a|am|ir)|"
+               r"deletar|delet(?:e|em)|remover|remov(?:a|am))\b"),
     "mover": r"\b(?:mover|mov(?:a|am|endo)|transferir|transfir(?:a|am)|deslocar|desloqu(?:e|em))\b",
     "substituir": r"\b(?:substituir|substitu(?:a|am|indo)|sobrescrever|sobrescrev(?:a|am))\b",
     "alterar": r"\b(?:alterar|alter(?:e|em|ando)|modificar|modifiqu(?:e|em)|editar|edit(?:e|em|ando))\b",
@@ -52,7 +53,8 @@ def _explicitly_forbidden(message):
             # A short local window, never a whole document or a later contrasting sentence.
             phrase = clause[negative.end():negative.end() + 100]
             for action, expression in _ACTIONS.items():
-                if action == "publicar" and re.search(r"\b(?:antes\s+d(?:e|o|a|os|as)|ate\s+(?:a\s+)?aprovac)", phrase):
+                condition = r"\b(?:antes\s+d(?:e|o|a|os|as)|ate\s+(?:a\s+)?aprovac)"
+                if action == "publicar" and re.search(condition, phrase):
                     # 'não publicar antes da aprovação' is a conditional gate, not a total ban.
                     continue
                 if re.search(expression, phrase):
