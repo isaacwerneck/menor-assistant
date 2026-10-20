@@ -42,7 +42,9 @@ class LatencyTests(unittest.TestCase):
             "eval_count": 20, "eval_duration": 2_000_000_000,
         }
         post = MagicMock(return_value=response)
-        result = model_latency.benchmark(samples=2, post=post, model="qwen2.5-coder:7b")
+        # Deploy sets OLLAMA_URL to a non-routable loopback port; keep this default-case test hermetic.
+        with patch.dict(os.environ, {"OLLAMA_URL": "http://127.0.0.1:11434"}):
+            result = model_latency.benchmark(samples=2, post=post, model="qwen2.5-coder:7b")
         self.assertEqual(result["probes"], 2)
         self.assertEqual(result["median_tokens_per_second"], 10)
         self.assertEqual(result["privacy"], "fixed_public_prompts_only")
@@ -55,6 +57,17 @@ class LatencyTests(unittest.TestCase):
             self.assertEqual(payload["messages"][-1]["content"], model_latency.PUBLIC_PROBES[index])
             self.assertLessEqual(payload["options"]["num_predict"], 80)
         self.assertNotIn("Nada privado", str(result))
+
+    def test_benchmark_uses_configured_local_endpoint_without_network(self):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.json.return_value = {"message": {"content": "OK"}}
+        post = MagicMock(return_value=response)
+        # Deployment test isolation must not make the benchmark test fail.
+        with patch.dict(os.environ, {"OLLAMA_URL": "http://127.0.0.1:9"}):
+            result = model_latency.benchmark(samples=1, post=post)
+        self.assertEqual(result["probes"], 1)
+        self.assertEqual(post.call_args.args[0], "http://127.0.0.1:9/api/chat")
 
     def test_no_live_flag_never_requests_model(self):
         with patch("ops.model_latency.requests.post") as post:
