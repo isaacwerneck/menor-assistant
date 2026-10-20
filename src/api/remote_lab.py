@@ -107,12 +107,13 @@ def _planner(payload):
     if result["move"] in ("plan", "continue"):
         plan_warnings = constraint_warnings(payload.message, result.get("steps", []))
         plan_warnings += required_stage_warnings(payload.message, result.get("steps", []))
+    if result["move"] in ("plan", "continue"):
+        reply = intelligence.render_plan(result)
+    else:
+        reply = result.get("reply") or result.get("question") or ""
     return {"status": "decision_validated", "plan_quality_verified": False,
-            "plan_warnings": plan_warnings, "reply": (
-        intelligence.render_plan(result)
-        if result["move"] in ("plan", "continue") else
-        (result.get("reply") or result.get("question") or "")
-    )[:1800], "model": model, "move": result["move"]}
+            "plan_warnings": plan_warnings, "reply": reply[:1800],
+            "model": model, "move": result["move"]}
 
 
 @router.get("/lab/view", response_class=HTMLResponse)
