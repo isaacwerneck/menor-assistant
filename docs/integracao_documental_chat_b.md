@@ -1,5 +1,12 @@
 # Chat B — integração fundamentada de arquivos com o agente principal
 
+> **Atualização posterior (20/10/2026):** a afirmação histórica abaixo de
+> que a interface principal ainda não oferece anexos está superada pelo
+> [PR #72](https://github.com/isaacwerneck/menor-assistant/pull/72),
+> que adicionou anexos privados ao chat PC/iPhone. Contratos, sandbox e
+> instalação opcional ainda requerem validação; ver
+> [estado da frente B](handoff/03_FRENTES_A_B_C_D_E.md).
+
 Esta entrega registra dois contratos já existentes no catálogo confiável do
 agente: `files.context` e `vision.inspect`. Não instala modelos, não altera
 arquivos privados e não habilita OCR sem pedido explícito do proprietário.
