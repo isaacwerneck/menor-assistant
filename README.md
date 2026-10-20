@@ -1,8 +1,18 @@
 # Menor - Assistente Pessoal de IA
 
-Assistente local com FastAPI, interface web com streaming e inferência pelo Ollama
-(`qwen2.5-coder:7b`). Voz, memória Markdown e ferramentas agênticas estão no
-[roadmap](docs/roadmap.md).
+Assistente pessoal local com FastAPI, interface web para PC/iPhone, Ollama,
+memória/projetos, ferramentas supervisionadas, trabalhos em progresso e Menor Lab.
+O modelo medido em outubro de 2026 é o `qwen2.5-coder:7b` na CPU; voz
+bidirecional plena, autonomia longa e agente programador end-to-end ainda não
+foram comprovados. As implementações existentes não equivalem a capacidade
+completa em produção.
+
+**Migrando o projeto para Codex?** Comece em
+[`AGENTS.md`](AGENTS.md) e no
+[`handoff de 20/10/2026`](docs/handoff/00_COMECE_AQUI_CODEX.md).
+Lá estão status A–E, progresso estimado, relatórios reais, hardware,
+latência, limites e próximos marcos. O [roadmap histórico](docs/roadmap.md)
+não deve ser lido como checklist integral do estado atual.
 
 ## Acesso remoto e laboratório de inteligência (opcional)
 
