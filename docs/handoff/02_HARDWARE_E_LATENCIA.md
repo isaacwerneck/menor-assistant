@@ -7,7 +7,7 @@
 | Item | Medida ou constatação | Evidência/nota |
 |---|---|---|
 | Máquina | Notebook/servidor `nakedrift`, usuário local `isaac` | Prompt de shell `isaac@nakedrift:~/menor-assistant` |
-| SO | Ubuntu Server 24.04 LTS (instalado previamente) | `docs/roadmap.md`; terminal mostra Python 3.12 do Ubuntu |
+| SO | Ubuntu Linux; **Ubuntu Server 24.04 LTS consta no plano, mas a versão instalada não foi confirmada por `os-release`** | Terminal Python 3.12 e plano original; confirmar com `cat /etc/os-release` |
 | CPU | **Intel Core i7-1185G7 @ 3,00 GHz**, 11ª geração, 4 núcleos/8 threads | `lscpu | grep 'Model name'` e `os.cpu_count() = 8` |
 | RAM física | Comercialmente 32 GB; **31,06 GiB** reportados em `/proc/meminfo` | Medida em 20/10 |
 | RAM disponível | **23,87 GiB** | Snapshot, não consumo fixo ou medida de benchmark |
