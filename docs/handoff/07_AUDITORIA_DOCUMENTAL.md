@@ -1,6 +1,6 @@
 # Auditoria dos documentos — snapshot da migração para Codex
 
-**Data:** 20/10/2026. **Base auditada:** `main` em `826b3b5` antes deste PR. Foram inventariados e lidos, ao menos por seções, **58 arquivos Markdown versionados**; nenhum foi excluído ou movido. Esta auditoria distingue documentação histórica de instruções operacionais atuais.
+**Data:** 20/10/2026. **Base auditada:** `main` em `826b3b5` antes deste PR. Foram inventariados e examinados, ao menos por seções, **58 arquivos Markdown versionados**; nenhum foi excluído ou movido. Esta auditoria distingue documentação histórica de instruções operacionais atuais.
 
 ## Achados: inconsistências e decisão
 
