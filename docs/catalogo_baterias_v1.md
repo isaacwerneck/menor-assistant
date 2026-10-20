@@ -25,8 +25,6 @@ ferramentas reais. Estes testes usam somente os modos `direct` e `planner`.
 | `diagnostico-geral-192-v1` | 192 | Todas as 16 categorias em **uma rodada longa**. |
 | `segundo-lote-base-v2` | 24 | Controle A: voz anterior, restrições, planejamento, contexto e desempenho. |
 | `segundo-lote-naturalidade-v2` | 24 | Variante B: as mesmas questões sob perfil natural (modo direto). |
-| `segundo-lote-base-v2` | 24 | Segundo lote, perfil antigo; controle A/B. |
-| `segundo-lote-naturalidade-v2` | 24 | Mesmos 24 prompts com perfil novo para inferência direta. |
 
 Há **192 cenários únicos** nas 16 baterias temáticas. A triagem de 16 e o
 agregado de 192 reutilizam questões dessas categorias. O segundo lote apresenta
@@ -35,10 +33,8 @@ contar 48 prompts únicos. Cada conjunto é um teste de desenvolvimento, não ce
 
 Para a passagem entre ChatGPT/Codex, consulte [handoff de 20/10](handoff/00_COMECE_AQUI_CODEX.md)
 e [resultados verificados](handoff/04_BATERIAS_E_DIAGNOSTICOS.md).
-O segundo lote acrescenta **24 prompts novos**, repetidos entre os perfis A e B.
-Os testes de `planner` não isolam uma mudança de estilo: usam o mesmo
-raciocinador, e cada bateria é de desenvolvimento, não um conjunto cego.
-Veja [a análise da triagem real e a sequência A/B](handoff/04_BATERIAS_E_DIAGNOSTICOS.md).
+Os testes de `planner` dos dois perfis usam o mesmo raciocinador e não
+isolam uma mudança de estilo de planejamento.
 
 ## Como testar (ordem recomendada)
 
@@ -84,8 +80,7 @@ python3 -m ops.eval_compare ~/menor-data/lab/ARQUIVO_ANTES.json ~/menor-data/lab
 
 A comparação A/B v2 exige grupo de comparação comum e conteúdo/critério
 idênticos nos 24 casos (exceto perfil). O script compara resultados apenas
-entre casos compatíveis e retorna
-regressões, falhas resolvidas, latência e categorias com problemas sem publicar
+entre casos compatíveis e retorna regressões, falhas resolvidas, latência e categorias com problemas sem publicar
 perguntas nem respostas no terminal.
 
 **Limite de escopo:** planos podem parecer bons sem serem executáveis. Antes
