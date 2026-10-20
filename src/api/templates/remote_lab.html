@@ -243,7 +243,7 @@ const filterButtons = {
 };
 const fmt = count => String(count);
 function shortDate(runId) {
-    if (!/^\\d{8}T\\d{6}Z-[a-f0-9]{8}$/.test(runId || "")) return "";
+    if (!/^\d{8}T\d{6}Z-[a-f0-9]{8}$/.test(runId || "")) return "";
     return runId.slice(6, 8) + "/" + runId.slice(4, 6) + "/" + runId.slice(0, 4)
         + " " + runId.slice(9, 11) + ":" + runId.slice(11, 13) + " UTC";
 }
