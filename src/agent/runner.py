@@ -263,8 +263,8 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
         if problems:
             # Sem nova chamada cara ao modelo, nem permissão para execução.
             issue = " ".join(problems[:2])
-            return {**decision, "reply": ("Plano preliminar: " + issue + "\n" +
-                                           decision["reply"])[:900]}, "constraint_warning"
+            warning_reply = "Plano preliminar: " + issue + "\n" + decision["reply"]
+            return {**decision, "reply": warning_reply[:900]}, "constraint_warning"
     if not plan_review.should_review(decision):
         return decision, "disabled"
     verdict = plan_review.review(message, decision, pending=pending)
