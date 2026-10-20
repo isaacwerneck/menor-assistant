@@ -5,7 +5,7 @@
 ## Inventário operacional
 
 - Repositório: [`isaacwerneck/menor-assistant`](https://github.com/isaacwerneck/menor-assistant), **privado**; checkout do usuário no Ubuntu: `/home/isaac/menor-assistant` (`~/menor-assistant`).
-- Host conhecido: `nakedrift`, usuário local `isaac`; FastAPI em `127.0.0.1:8000` para túnel e interface de rede local quando configurado. Ollama em `127.0.0.1:11434` por padrão.
+- Host conhecido: `nakedrift`, usuário local `isaac`; FastAPI na porta `8000` (interface de escuta depende da configuração do serviço; houve acesso pela LAN e túnel). Ollama em `127.0.0.1:11434` por padrão.
 - `systemd --user`: `menor-api.service`, `menor-deploy.service`, `menor-deploy.timer`. Comando instalado `menor start|stop|restart|status|monitor` (confirmar versão com `menor --help`).
 - CI: `.github/workflows/ci.yml` (flake8, unittest, Node tests, scripts) e workflow adicional de análise de arquivos. `scripts/deploy.sh` integra mudanças `main` apenas por fast-forward, roda testes e reinicia serviço quando aplicável. **Não há rollback automático comprovado**; timer não garante que `HEAD` aplicado no servidor iguala `main` agora.
 - Dados locais privados fora do Git: `~/menor-data/` e ambientes em `~/.config/menor/`. Não copiar para branch de handoff nem sair mostrando diretórios privados.
