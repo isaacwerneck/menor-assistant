@@ -15,6 +15,8 @@ def calculate(expression):
         raise ValueError("Expressão fora do limite.")
     if not re.fullmatch(r"[\d\s.+*/()\-]+", expression) or "**" in expression:
         raise ValueError("Expressão deve conter somente operações aritméticas simples.")
+    if expression.count("(") > 12 or expression.count(")") > 12:
+        raise ValueError("Expressão contém aninhamento excessivo.")
     try:
         tree = ast.parse(expression, mode="eval")
     except SyntaxError as error:
