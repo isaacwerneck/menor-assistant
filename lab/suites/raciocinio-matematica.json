@@ -1,0 +1,128 @@
+{
+  "id": "raciocinio-matematica",
+  "title": "Raciocínio matemático com resposta verificável",
+  "description": "Aritmética, problemas de texto e consistência numérica.",
+  "methodology_version": "menor-eval-v1",
+  "cases": [
+    {
+      "id": "multiplicacao-23x17",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Calcule 23 vezes 17. Responda só o número.",
+      "expected_contains": [
+        "391"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "divisao-exata",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Divida 1.728 por 12. Responda apenas o número inteiro.",
+      "expected_contains": [
+        "144"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "porcentagem-desconto",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Um produto custa R$ 250 e recebe desconto de 12%. Qual é o preço final em reais? Apenas o número.",
+      "expected_contains": [
+        "220"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "soma-decimal",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Quanto é 7,5 + 2,35? Responda apenas o resultado com vírgula decimal.",
+      "expected_contains": [
+        "9,85"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "tempo-total",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Uma tarefa dura 45 minutos e outra 1 hora e 35 minutos. Qual o total em minutos? Apenas número.",
+      "expected_contains": [
+        "140"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "regra-de-tres",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Se 4 arquivos ocupam 18 MB em média no total, quanto ocupam 10 arquivos iguais em MB? Apenas o número.",
+      "expected_contains": [
+        "45"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "sequencia-aritmetica",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Complete a sequência 4, 9, 14, 19, __. Apenas o número seguinte.",
+      "expected_contains": [
+        "24"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "ordem-operacoes",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Calcule 8 + 6 × 3 - 4. Responda só número.",
+      "expected_contains": [
+        "22"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "media-aritmetica",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Qual é a média de 10, 18, 20 e 32? Responda só número.",
+      "expected_contains": [
+        "20"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "probabilidade-simples",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Uma caixa tem 3 bolas azuis e 2 vermelhas. Qual a probabilidade de sair vermelha, em porcentagem? Apenas número seguido de %.",
+      "expected_contains": [
+        "40%"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "juros-simples",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "R$ 1.000 rende 2% ao mês em juros simples por 3 meses. Qual é o montante final em reais? Só número.",
+      "expected_contains": [
+        "1060"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "logica-soma-intervalo",
+      "category": "raciocinio-matematica",
+      "mode": "direct",
+      "message": "Quanto é a soma dos inteiros de 1 a 20? Apenas número.",
+      "expected_contains": [
+        "210"
+      ],
+      "split": "holdout"
+    }
+  ]
+}
