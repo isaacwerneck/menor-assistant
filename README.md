@@ -174,7 +174,9 @@ A autoedição legada `developer.propose` ainda depende do CI para os testes de 
 
 A visão completa, a proposta anterior preservada e os marcos pendentes estão em
 [PLANO_REFINAMENTO.md, R12](PLANO_REFINAMENTO.md#r12--assistente-autônomo-de-pesquisa-estudo-construção-e-autoevolução).
-Veja limites e operação em [busca de conhecimentos](docs/busca_conhecimentos.md#pesquisa-web-e-estudos-por-assunto).
+A pesquisa limita os trechos enviados ao modelo e distingue falha de busca,
+leitura e validação da síntese. Estudo negado não deve ser gravado apenas pela
+presença da palavra. Veja [fluxo, limites e operação](docs/busca_conhecimentos.md#pesquisa-web-e-estudos-por-assunto).
 
 ## Comandos curtos no servidor
 

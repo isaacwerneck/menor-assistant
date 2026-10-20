@@ -39,6 +39,28 @@ def _overlap(request, candidate):
     return intersection / (len(request) ** 0.5 * len(candidate) ** 0.5) if intersection else 0.0
 
 
+def select_passages(text, query, max_chars=2400):
+    """Seleciona trechos literais de uma fonte longa, sem sintetizar conteúdo."""
+    if (not isinstance(text, str) or not isinstance(query, str)
+            or type(max_chars) is not int or not 400 <= max_chars <= 12000):
+        raise ValueError("Texto, consulta ou orçamento inválido.")
+    if len(text) <= max_chars:
+        return text
+    request = terms(query)
+    passages = [(offset, text[offset:offset + 1200]) for offset in range(0, len(text), 1000)]
+    ranked = sorted(passages, key=lambda pair: (-_overlap(request, terms(pair[1])), pair[0]))
+    selected, size = [], 0
+    marker = "\n[trecho omitido]\n"
+    for offset, passage in ranked:
+        room = max_chars - size - (len(marker) if selected else 0)
+        if room <= 0:
+            break
+        passage = passage[:room]
+        selected.append((offset, passage))
+        size += len(passage) + (len(marker) if len(selected) > 1 else 0)
+    return marker.join(passage for _, passage in sorted(selected))
+
+
 def _excerpt(content, limit):
     if len(content) <= limit:
         return content

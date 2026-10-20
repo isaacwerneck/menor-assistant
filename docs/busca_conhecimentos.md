@@ -62,18 +62,23 @@ de pesquisa/estudo são tratados antes da conversa comum. Com
 a web; esta inferência pode errar e aumenta a latência. O modelo atual não foi
 substituído ou treinado novamente.
 
-Fluxo: consulta pública → até cinco resultados → leitura de até três páginas →
+Fluxo: consulta pública → até cinco resultados candidatos → até três páginas legíveis →
 síntese de até três afirmações → verificação dos trechos e URLs →
 resposta com fontes ou reconhecimento de insuficiência. Informações da internet
 são dados não confiáveis e não autorizam comandos, escrita em produção ou código.
 
-`estude`/`aprenda` salva a pesquisa em
+Um pedido explícito de `estude`/`aprenda`, classificado como estudo para registro,
+salva a pesquisa em
 `conhecimentos/programacao/estudo-<hash-da-consulta>.md` para assuntos de programação,
 ou `conhecimentos/pesquisas/` nos demais casos. Uma nova pesquisa com a mesma consulta
 atualiza essa nota. Fonte, consulta, trecho e limitações permanecem no Markdown.
 O índice FTS inclui essas notas (até 200 fontes no total) e remove entradas quando
 a nota é excluída do disco. A gestão pelo painel ainda edita somente aprendizados gerais.
 As notas de estudo precisam ser geridas no disco; mantenha backup do cérebro.
+A simples presença de “estude” em uma negação ou citação não basta para gravar:
+o planejador também precisa declarar `study=true` como booleano. Uma proibição
+de salvar deve produzir `study=false`. Essa classificação ainda pode errar;
+não é garantia formal de interpretação da intenção.
 
 A leitura aceita HTTPS público, porta 443, sem credenciais. Cada resolução DNS
 é verificada e a conexão fixa o IP verificado, mantendo validação TLS do hostname.
@@ -86,7 +91,30 @@ O tráfego da página é intermediado pelo mesmo leitor público; páginas que d
 de recursos não suportados podem falhar. Nenhum CAPTCHA é contornado.
 A busca usa HTML público do DuckDuckGo e, em falha, o feed RSS público do Bing.
 Ambos podem falhar por bloqueio ou mudança de formato.
-Uma fonte recusada é registrada como falha parcial; sem fontes legíveis, há abstenção.
+Uma fonte recusada é registrada como falha parcial; a leitura tenta o próximo
+candidato, até cinco candidatos e três páginas legíveis. Sem fontes legíveis, há abstenção.
+
+### Contexto e diagnóstico da pesquisa (segunda avaliação, 19/10/2026)
+
+O planejador de busca usa schema com `action`, `query` e `study`, com teto de
+180 tokens de saída. A síntese mantém seu teto independente de 900 tokens.
+Esse limite reduz geração desnecessária; não é medição de velocidade real.
+
+`web.read(url, query=consulta)` seleciona trechos literais relevantes do texto
+completo obtido, antes do antigo corte dos primeiros 12.000 caracteres.
+Sem query, a interface anterior continua retornando o início da página.
+A pesquisa envia no máximo 2.400 caracteres de texto por fonte, até 7.200
+no total, inclusive se usar o navegador opcional. A seleção usa sobreposição
+de termos, preserva a ordem dos trechos e marca omissões; pode perder sinônimos,
+contexto ou fronteiras de frases. Uma citação precisa existir dentro de um
+único trecho: o marcador de omissão não é evidência.
+
+Falhas passam a distinguir `failure_stage=search` (buscadores), `read`
+(páginas ilegíveis) e `synthesis` (resposta/citações não validadas). O texto
+exibido informa a etapa sem devolver exceções ou dados privados. A ausência
+de afirmações sustentadas continua sendo insuficiência de evidência, sem
+salvar estudo ou inventar conteúdo. Nenhum novo provedor, dependência ou
+modelo foi adicionado.
 
 Limites: checar a existência da citação não prova que a frase sintetizada decorre
 dela. A seleção de autoridade, confirmação entre fontes, revisão de versões e
