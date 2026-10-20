@@ -50,12 +50,22 @@ def _progress_from_summaries():
                 continue
             if path.name != run_id + ".summary.json":
                 continue
-            counts = [summary.get(field) for field in (
-                "total", "automatic_passes", "automatic_failures", "ungraded"
-            )]
-            if any(type(n) is not int or n < 0 or n > 200 for n in counts):
+            if not (DATA / (run_id + ".json")).is_file():
                 continue
-            if counts[1] + counts[2] + counts[3] != counts[0]:
+            total = summary.get("total")
+            passed = summary.get("automatic_passes")
+            ungraded = summary.get("ungraded")
+            if any(type(n) is not int or not 0 <= n <= 200
+                   for n in (total, passed, ungraded)):
+                continue
+            failures = summary.get("automatic_failures")
+            if failures is None:
+                # Resumos de versões antigas nem sempre possuem esta coluna.
+                failures = total - passed - ungraded
+            if type(failures) is not int or failures < 0 or failures > 200:
+                continue
+            counts = [total, passed, failures, ungraded]
+            if passed + failures + ungraded != total:
                 continue
             item = progress.setdefault(suite_id, {"run_count": 0, "last_report": None})
             item["run_count"] += 1
