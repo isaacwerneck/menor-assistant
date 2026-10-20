@@ -21,6 +21,10 @@ STATE = {"status":  "idle"}
 def validate_suite(data):
     if not isinstance(data, dict) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", str(data.get("id", ""))):
         raise ValueError("ID de bateria inválido.")
+    group = data.get("comparison_group")
+    if group is not None and (not isinstance(group, str)
+                              or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", group)):
+        raise ValueError("Grupo de comparação inválido.")
     cases = data.get("cases")
     if not isinstance(cases, list) or not 1 <= len(cases) <= 200:
         raise ValueError("Bateria deve ter de 1 a 200 casos.")
@@ -154,6 +158,7 @@ def _run(suite, run_id):
                             "elapsed_seconds": round(time.monotonic() - began, 3),
                             "automatic_pass": passed})
         report = {"run_id": run_id, "suite_id": suite["id"],
+                  "comparison_group": suite.get("comparison_group"),
                   "methodology_version": suite.get("methodology_version", "legacy"),
                   "started_at": started, "finished_at": datetime.now(timezone.utc).isoformat(),
                   "total": len(results),
