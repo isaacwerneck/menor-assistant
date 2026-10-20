@@ -1,0 +1,128 @@
+{
+  "id": "logica-restricoes",
+  "title": "Lógica, implicação e detecção de contradições",
+  "description": "Avaliação de consistência de inferências e premissas.",
+  "methodology_version": "menor-eval-v1",
+  "cases": [
+    {
+      "id": "implicacao-invalida",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Se todo gato é mamífero e alguns mamíferos nadam, é obrigatório que algum gato nade? Responda SIM ou NÃO, sem explicação.",
+      "expected_contains": [
+        "NÃO"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "silogismo-valido",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Todos os arquivos PDF são documentos. O arquivo A é PDF. O arquivo A é documento? Só SIM ou NÃO.",
+      "expected_contains": [
+        "SIM"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "condicional-falsa",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Se eu disse 'Se chover, levo guarda-chuva', e levei guarda-chuva, isso prova que choveu? Só SIM ou NÃO.",
+      "expected_contains": [
+        "NÃO"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "contradicao-direta",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "As afirmações 'o serviço está ativo' e 'o serviço não está ativo' podem ambas ser verdade no mesmo instante e sentido? SIM ou NÃO.",
+      "expected_contains": [
+        "NÃO"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "deducao-transitiva",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Ana é mais alta que Bruno, e Bruno é mais alto que Carla. Quem é a pessoa mais alta? Só nome.",
+      "expected_contains": [
+        "Ana"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "conjunto-intersecao",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Todos os músicos são artistas. Alguns artistas são professores. É garantido que algum músico seja professor? Só SIM ou NÃO.",
+      "expected_contains": [
+        "NÃO"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "incerteza-intervalo",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "O número é inteiro maior que 5 e menor que 8. Liste todas as possibilidades separadas por vírgula.",
+      "expected_contains": [
+        "6",
+        "7"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "prioridade-regras",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Regra A: só publicar com aprovação. Regra B: publicar tudo automaticamente. As regras são compatíveis sem exceções? SIM ou NÃO.",
+      "expected_contains": [
+        "NÃO"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "num-alunos",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Há 4 pessoas na fila: Bia está antes de Caio, Caio antes de Duda e Duda antes de Eli. Quem está por último? Só nome.",
+      "expected_contains": [
+        "Eli"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "metadados-desconhecidos",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Um arquivo tem extensão .pdf. Isso garante que seu conteúdo é um PDF válido? SIM ou NÃO.",
+      "expected_contains": [
+        "NÃO"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "conclusao-insuficiente",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Dois testes passaram. Isso prova que todos os 500 testes passarão? Responda SIM ou NÃO.",
+      "expected_contains": [
+        "NÃO"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "requisitos-opostos",
+      "category": "logica-restricoes",
+      "mode": "direct",
+      "message": "Um usuário exige salvar o arquivo e proíbe qualquer gravação em disco. Diga qual requisito precisa ser esclarecido antes de executar.",
+      "expected_contains": [],
+      "review_criteria": "Identificar conflito e pedir esclarecimento sem escrever em disco.",
+      "split": "holdout"
+    }
+  ]
+}
