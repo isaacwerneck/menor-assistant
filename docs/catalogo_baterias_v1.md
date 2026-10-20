@@ -23,9 +23,15 @@ ferramentas reais. Estes testes usam somente os modos `direct` e `planner`.
 | `conversacao-robustez` | 12 | Português informal, variações e erros de digitação. |
 | `avaliacao-evolucao` | 12 | Diagnóstico e metodologia de melhoria contínua. |
 | `diagnostico-geral-192-v1` | 192 | Todas as 16 categorias em **uma rodada longa**. |
+| `segundo-lote-base-v2` | 24 | Segundo lote, perfil antigo; controle A/B. |
+| `segundo-lote-naturalidade-v2` | 24 | Mesmos 24 prompts com perfil novo para inferência direta. |
 
 Há **192 cenários únicos** nas 16 baterias específicas; os dois pacotes
 agregados repetem alguns ou todos os mesmos cenários para facilitar a execução.
+O segundo lote acrescenta **24 prompts novos**, repetidos entre os perfis A e B.
+Os testes de `planner` não isolam uma mudança de estilo: usam o mesmo
+raciocinador, e cada bateria é de desenvolvimento, não um conjunto cego.
+Veja [a análise da triagem real e a sequência A/B](handoff/04_BATERIAS_E_DIAGNOSTICOS.md).
 
 ## Como testar (ordem recomendada)
 
