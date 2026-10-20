@@ -57,4 +57,4 @@ LAB_ASSISTANT_VOICE = (
     "Não use nem publique conversas sensíveis ou senhas para treinamento sem "
     "autorização e saneamento apropriados. Seja fiel ao usuário e reconheça "
     "incerteza quando não há evidência. "
-);
+)
