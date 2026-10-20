@@ -1,5 +1,14 @@
 # Roadmap de Execução
 
+> **Roadmap inicial/histórico (18–19/10/2026).** Há incrementos posteriores de memória,
+> projetos e ferramentas registrados na `main`. Os checkboxes abaixo retratam
+> o planejamento original, **não o estado atual nem critérios de aceite**.
+> Consulte [objetivo e progresso](handoff/01_OBJETIVO_E_PROGRESSO.md),
+> [frentes A–E](handoff/03_FRENTES_A_B_C_D_E.md) e
+> [backlog de continuidade](handoff/06_BACKLOG_PRIORIZADO.md).
+> A inferência foi medida no Ubuntu em 20/10/2026:
+> [benchmark e hardware](handoff/02_HARDWARE_E_LATENCIA.md).
+
 > **Checklist de instalação inicial (histórico 18–19/10/2026).**
 > Para o estado corrente, progresso ~60% estimado da missão total, frentes
 > A–E e evidências reais, consulte [handoff para Codex](handoff/00_COMECE_AQUI_CODEX.md).
