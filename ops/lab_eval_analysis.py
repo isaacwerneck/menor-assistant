@@ -70,11 +70,14 @@ def summarize(report, suite):
     latencies = [item["elapsed_seconds"] for item in records if item["elapsed_seconds"] is not None]
     suggestions = []
     if incidents["inference_failed"] or incidents["busy"]:
-        suggestions.append("Investigar timeout, fila, recursos e disponibilidade do Ollama; separar infraestrutura de lógica.")
+        suggestions.append(
+            "Investigar timeout, fila e recursos do Ollama; separar infraestrutura de lógica.")
     if incidents["no_valid_decision"]:
-        suggestions.append("Reproduzir falhas do planner; inspecionar contrato JSON, validação e limites de inferência.")
+        suggestions.append(
+            "Reproduzir falhas do planner; inspecionar contrato JSON, validação e limites.")
     if incidents["objective_mismatch"]:
-        suggestions.append("Revisar respostas contra critérios; isolar problema de prompt, contexto, modelo ou parser.")
+        suggestions.append(
+            "Revisar respostas contra critérios; isolar problemas de prompt, contexto ou parser.")
     if incidents["qualitative_review"]:
         suggestions.append("Avaliar rubricas manualmente antes de afirmar sucesso; não tratar sem nota como falha.")
     if incidents["slow_execution"]:
