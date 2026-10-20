@@ -24,6 +24,45 @@ button:disabled{cursor:wait;opacity:.55}
 .status{font-size:.9rem;min-height:24px}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#11111d;padding:14px;border-radius:12px;min-height:90px;line-height:1.55;font-size:.93rem}
 .meta{font-size:.8rem;color:var(--muted);line-height:1.5}
+.lab-dashboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.dashboard-stat{padding:12px;border:1px solid var(--border);border-radius:12px;background:#13131f}
+.dashboard-stat strong{display:block;font-size:1.65rem;line-height:1.3;color:var(--text);font-variant-numeric:tabular-nums}
+.dashboard-stat span{font-size:.82rem;color:var(--muted)}
+.suite-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+.suite-tools button{padding:9px 12px;min-height:40px}
+.suite-tools button[aria-pressed=true]{background:#a48bea;color:#191326;border-color:transparent;font-weight:700}
+#suiteSearch{min-width:180px;flex:1;max-width:320px;background:#11111d;color:var(--text);border:1px solid #5a5370;padding:11px;border-radius:9px;font:inherit}
+#suiteSearch:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+.suite-list{display:grid;gap:10px;margin-top:12px;max-height:560px;overflow-y:auto;padding:2px}
+.suite-card{border:1px solid var(--border);background:#141521;border-radius:12px;padding:12px}
+.suite-card.suite-selected{border-color:#a996eb;background:#1c1a2d}
+.suite-card.suite-running{border-color:#c4b5fd}
+.suite-heading{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.suite-heading input{width:20px;height:20px;margin-top:5px;flex:0 0 auto;accent-color:#a995f3;cursor:pointer}
+.suite-copy{flex:1;min-width:0}
+.suite-title{font-weight:700;line-height:1.4;display:block}
+.suite-description{font-size:.84rem;color:var(--muted);margin:5px 0;overflow-wrap:anywhere}
+.suite-id{font: .74rem ui-monospace,SFMono-Regular,Consolas,monospace;color:#b1a8cf;overflow-wrap:anywhere}
+.suite-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.suite-chip{display:inline-block;padding:4px 8px;background:#29243b;border:1px solid #48415e;border-radius:100px;font-size:.74rem;white-space:normal}
+.suite-chip.done{background:#182d29;border-color:#337b60;color:#b6f2d8}
+.suite-chip.pending{background:#29253a;border-color:#605573;color:#ddd3ff}
+.suite-chip.running{background:#332a18;border-color:#977f48;color:#ffe4a8}
+.suite-details{font-size:.8rem;color:var(--muted);padding:7px 0 0 30px;line-height:1.5}
+.suite-details a{overflow-wrap:anywhere}
+.queue-panel{border:1px solid #65578b;border-radius:12px;background:#211c34;padding:14px;margin:12px 0}
+.queue-panel[hidden]{display:none}
+.queue-progress{display:block;width:100%;height:12px;accent-color:#ae9cf2;margin:10px 0}
+.history-details{border-top:1px solid var(--border);margin-top:18px;padding-top:12px}
+.history-details>summary{cursor:pointer;font-weight:650;padding:8px 0}
+.report-group{border-bottom:1px solid var(--border);padding:10px 0}
+.report-group>summary{cursor:pointer;font-size:.9rem;line-height:1.4}
+.report-record{padding:10px 12px;margin:8px 0 4px;background:#131320;border-radius:10px;font-size:.82rem;overflow-wrap:anywhere}
+.report-record .actions{margin-top:8px}
+.report-record button{padding:8px 11px;min-height:38px}
+.helper{font-size:.82rem;color:var(--muted);line-height:1.5;margin:8px 0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:520px){.lab-dashboard{gap:6px}.dashboard-stat{padding:10px 8px}.dashboard-stat strong{font-size:1.35rem}.suite-tools button{flex:1 1 auto}.suite-list{max-height:none}.suite-heading input{width:24px;height:24px}.actions button{flex:1 1 auto}.report-record .actions button{flex:1 1 auto}}
 footer{color:var(--muted);font-size:.78rem}
 @media(max-width:520px){.actions button{flex:1 1 100%}.panel{padding:14px}main{padding:14px 10px 40px}}
 </style>
@@ -48,12 +87,50 @@ user: Gosto de música eletrônica."></textarea>
 </div>
 <section class="panel" aria-label="Resultado do modelo direto"><h2>Modelo direto</h2><pre id="directResult">Nenhum teste executado.</pre><p class="meta" id="directMeta"></p></section>
 <section class="panel" aria-label="Resultado do raciocinador"><h2>Raciocinador JSON</h2><pre id="plannerResult">Nenhum teste executado.</pre><p class="meta" id="plannerMeta"></p></section>
-<section class="panel" aria-label="Baterias automáticas"><h2>Gaveta de testes</h2>
-<p>Selecione uma bateria pronta ou importe um JSON. Os relatórios completos ficam privados no Ubuntu.</p>
-<label for="batchSelect">Bateria disponível</label><select id="batchSelect" style="width:100%;padding:12px;background:#11111d;color:inherit;border:1px solid #53446f;border-radius:10px"></select>
-<div class="actions"><button id="batchRun" class="primary" type="button">Executar bateria</button><button id="batchRefresh" type="button">Atualizar gaveta</button></div>
-<label for="batchFile">Importar bateria JSON</label><input id="batchFile" type="file" accept=".json,application/json"><button id="batchImport" type="button">Importar arquivo</button>
-<p id="batchStatus" role="status" aria-live="polite">Nenhuma bateria iniciada.</p><h3>Relatórios salvos</h3><div id="batchReports">Carregando…</div></section>
+<section class="panel" aria-label="Baterias automáticas" id="baterias">
+<h2>Suas baterias de testes</h2>
+<p>Escolha várias baterias e execute tudo de uma vez. O Menor roda <strong>uma por vez</strong>, salva um relatório por bateria e mostra o progresso. Os resultados anteriores são reconhecidos neste servidor.</p>
+<div class="lab-dashboard" aria-label="Resumo dos testes">
+<div class="dashboard-stat"><strong id="suiteTotal">—</strong><span>Baterias disponíveis</span></div>
+<div class="dashboard-stat"><strong id="suiteDone">—</strong><span>Já executadas</span></div>
+<div class="dashboard-stat"><strong id="suitePending">—</strong><span>Ainda pendentes</span></div>
+</div>
+<p class="helper">“Executada” significa que existe um relatório salvo, <strong>não</strong> que o modelo acertou tudo. Testes avulsos acima não contam como uma bateria completa.</p>
+<div id="queuePanel" class="queue-panel" hidden role="status" aria-live="polite">
+<strong id="queueTitle">Aguardando execução</strong>
+<p id="queueCurrent" class="helper"></p>
+<progress id="queueProgress" class="queue-progress" max="1" value="0"></progress>
+<span id="queueNumbers" class="meta"></span>
+</div>
+<div class="suite-tools" role="group" aria-label="Filtrar baterias">
+<button type="button" id="filterPending" aria-pressed="true">Pendentes</button>
+<button type="button" id="filterDone" aria-pressed="false">Feitas</button>
+<button type="button" id="filterRecommended" aria-pressed="false">Recomendadas</button>
+<button type="button" id="filterAll" aria-pressed="false">Todas</button>
+</div>
+<label for="suiteSearch">Buscar por nome ou identificação</label>
+<input type="search" id="suiteSearch" autocomplete="off" placeholder="Ex.: matemática, planejamento, v3">
+<div class="suite-tools" role="group" aria-label="Seleção de testes">
+<button type="button" id="selectRecommended">Selecionar as 4 recomendadas</button>
+<button type="button" id="selectPending">Marcar pendentes visíveis</button>
+<button type="button" id="clearSelection">Desmarcar tudo</button>
+<button type="button" id="batchRefresh">Atualizar situação</button>
+</div>
+<div id="suiteList" class="suite-list" aria-label="Baterias com seleção múltipla">Carregando baterias…</div>
+<p id="selectionCount" class="helper" role="status" aria-live="polite">Nenhuma bateria selecionada.</p>
+<div class="actions"><button id="batchRun" class="primary" type="button" disabled>Executar baterias selecionadas</button></div>
+<p id="batchStatus" class="status" role="status" aria-live="polite">Preparando sua gaveta.</p>
+<details class="history-details" id="reportsHistory">
+<summary id="historySummary">Histórico de relatórios (0)</summary>
+<p class="helper">Cada bateria aparece agrupada abaixo. Os arquivos completos ficam privados no Ubuntu; enviar ao GitHub exige sua confirmação.</p>
+<div id="batchReports">Carregando…</div>
+</details>
+<details class="history-details">
+<summary>Importar uma bateria JSON personalizada</summary>
+<label for="batchFile">Escolher arquivo JSON</label><input id="batchFile" type="file" accept=".json,application/json">
+<div class="actions"><button id="batchImport" type="button">Importar arquivo</button></div>
+</details>
+</section>
 <footer>Modo laboratório: inferência sem ferramentas, histórico efêmero, limite de requisições. O chat real continua disponível em /. Para avaliar a IA completa, teste também a conversa principal.</footer>
 </main>
 <script>
@@ -153,47 +230,312 @@ $("clear").addEventListener("click", () => {
     $("status").textContent = "Resultados limpos; nada foi salvo no servidor.";
 });
 
-async function batchRefresh(){
- try{
- const [b,r]=await Promise.all([fetch("/lab/batches",{credentials:"same-origin"}),fetch("/lab/reports",{credentials:"same-origin"})]);
- if(!b.ok||!r.ok)throw new Error("Sessão expirada ou servidor indisponível.");
- const suites=(await b.json()).items, reports=(await r.json()).items;
- const select=$("batchSelect");select.replaceChildren();
- for(const item of suites){const opt=document.createElement("option");opt.value=item.id;opt.textContent=item.title+" ("+item.cases+" casos)";select.append(opt);}
- const target=$("batchReports");target.replaceChildren();
- for(const item of reports){const p=document.createElement("p"),a=document.createElement("a");
- a.href="/lab/reports/"+encodeURIComponent(item.run_id)+"/download";a.textContent=item.run_id+" · "+item.automatic_passes+"/"+item.total+" acertos automáticos · "+item.ungraded+" sem nota";a.setAttribute("download","");p.append(a);const push=document.createElement("button");push.type="button";push.textContent="Enviar ao GitHub";push.style.marginLeft="12px";push.addEventListener("click",async()=>{
- if(!confirm("Publicar perguntas e respostas completas no GitHub privado?"))return;
- push.disabled=true;try{const res=await fetch("/lab/reports/"+encodeURIComponent(item.run_id)+"/publish",{method:"POST",credentials:"same-origin"});
- if(!res.ok){const body=await res.json().catch(()=>({}));throw new Error(body.detail||"HTTP "+res.status);}
- const data=await res.json();$("batchStatus").textContent="Relatório publicado: "+data.url;push.textContent="Enviado";
- }catch(e){$("batchStatus").textContent="Falha ao publicar: "+e.message;push.disabled=false;}
- });p.append(push);target.append(p);}
- if(!reports.length)target.textContent="Nenhum relatório salvo.";
- }catch(e){$("batchStatus").textContent=e.message;}
+
+let suiteItems = [];
+let savedReports = [];
+const selectedSuites = new Set();
+let currentFilter = "pending";
+let queueRunning = false;
+let pollHandle = null;
+const filterButtons = {
+    pending: $("filterPending"), done: $("filterDone"),
+    recommended: $("filterRecommended"), all: $("filterAll"),
+};
+const fmt = count => String(count);
+function shortDate(runId) {
+    if (!/^\\d{8}T\\d{6}Z-[a-f0-9]{8}$/.test(runId || "")) return "";
+    return runId.slice(6, 8) + "/" + runId.slice(4, 6) + "/" + runId.slice(0, 4)
+        + " " + runId.slice(9, 11) + ":" + runId.slice(11, 13) + " UTC";
 }
-$("batchRefresh").addEventListener("click",batchRefresh);
-$("batchImport").addEventListener("click",async()=>{
- const file=$("batchFile").files[0];if(!file){$("batchStatus").textContent="Selecione um JSON.";return;}
- const data=new FormData();data.append("file",file);
- try{const r=await fetch("/lab/batches/import",{method:"POST",credentials:"same-origin",body:data});
- if(!r.ok)throw new Error("Importação recusada (HTTP "+r.status+").");
- $("batchStatus").textContent="Bateria importada.";await batchRefresh();
- }catch(e){$("batchStatus").textContent=e.message;}
+function progressCount() {
+    const selected = suiteItems.filter(item => selectedSuites.has(item.id));
+    const cases = selected.reduce((sum, item) => sum + item.cases, 0);
+    $("selectionCount").textContent = selected.length
+        + " bateria(s) selecionada(s) · " + cases + " caso(s)"
+        + (queueRunning ? " · execução em andamento" : "");
+    $("batchRun").disabled = queueRunning || selected.length === 0;
+    $("batchRun").textContent = queueRunning ? "Execução em andamento"
+        : "Executar " + selected.length + " bateria(s) em sequência";
+}
+function suiteRank(item) {
+    return Number.isInteger(item.recommended_order) ? item.recommended_order : 999;
+}
+function suiteMatches(item) {
+    const matchesFilter = currentFilter === "all"
+        || (currentFilter === "recommended" && Number.isInteger(item.recommended_order))
+        || (currentFilter === "done" && item.run_count > 0)
+        || (currentFilter === "pending" && item.run_count === 0);
+    const term = $("suiteSearch").value.trim().toLocaleLowerCase("pt-BR");
+    return matchesFilter && (!term || [
+        item.id, item.title, item.description, item.recommended_label,
+    ].some(value => String(value || "").toLocaleLowerCase("pt-BR").includes(term)));
+}
+function renderSuites() {
+    const list = $("suiteList"); list.replaceChildren();
+    const filtered = suiteItems.filter(suiteMatches);
+    filtered.sort((a, b) => suiteRank(a) - suiteRank(b) || a.title.localeCompare(b.title, "pt-BR"));
+    for (const item of filtered) {
+        const card = document.createElement("article");
+        card.className = "suite-card"
+            + (selectedSuites.has(item.id) ? " suite-selected" : "")
+            + (item.status === "running" ? " suite-running" : "");
+        const label = document.createElement("label"); label.className = "suite-heading";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox"; checkbox.checked = selectedSuites.has(item.id);
+        checkbox.disabled = queueRunning; checkbox.value = item.id;
+        checkbox.setAttribute("aria-label", "Selecionar bateria " + item.title);
+        checkbox.addEventListener("change", () => {
+            if (checkbox.checked) selectedSuites.add(item.id);
+            else selectedSuites.delete(item.id);
+            card.className = "suite-card" + (checkbox.checked ? " suite-selected" : "");
+            progressCount();
+        });
+        const copy = document.createElement("span"); copy.className = "suite-copy";
+        const title = document.createElement("span"); title.className = "suite-title";
+        title.textContent = item.title;
+        const desc = document.createElement("span"); desc.className = "suite-description";
+        desc.textContent = item.description || "Bateria de avaliação";
+        const id = document.createElement("span"); id.className = "suite-id";
+        id.textContent = "ID: " + item.id;
+        copy.append(title, desc, id); label.append(checkbox, copy); card.append(label);
+        const details = document.createElement("div"); details.className = "suite-details";
+        const chips = document.createElement("div"); chips.className = "suite-meta";
+        const status = document.createElement("span");
+        status.className = "suite-chip " + (item.status === "running" ? "running"
+            : item.run_count ? "done" : "pending");
+        status.textContent = item.status === "running" ? "Em andamento"
+            : item.run_count ? "Feita " + item.run_count + " vez(es)" : "Pendente";
+        const size = document.createElement("span"); size.className = "suite-chip";
+        size.textContent = fmt(item.cases) + " perguntas";
+        chips.append(status, size);
+        if (Number.isInteger(item.recommended_order)) {
+            const badge = document.createElement("span"); badge.className = "suite-chip";
+            badge.textContent = "Etapa " + item.recommended_order + " · "
+                + (item.recommended_label || "Recomendada");
+            chips.append(badge);
+        }
+        details.append(chips);
+        if (item.last_report) {
+            const recent = document.createElement("div");
+            recent.textContent = "Última execução: " + shortDate(item.last_report.run_id)
+                + " · " + item.last_report.automatic_passes + " acertos automáticos · "
+                + item.last_report.automatic_failures + " falhas automáticas · "
+                + item.last_report.ungraded + " sem nota";
+            details.append(recent);
+            const link = document.createElement("a");
+            link.href = "/lab/reports/" + encodeURIComponent(item.last_report.run_id) + "/download";
+            link.textContent = "Baixar último relatório";
+            link.setAttribute("download", "");
+            details.append(link);
+        }
+        card.append(details); list.append(card);
+    }
+    if (!filtered.length) list.textContent = "Nenhuma bateria corresponde a este filtro.";
+    progressCount();
+}
+function renderCounters() {
+    $("suiteTotal").textContent = fmt(suiteItems.length);
+    $("suiteDone").textContent = fmt(suiteItems.filter(item => item.run_count > 0).length);
+    $("suitePending").textContent = fmt(suiteItems.filter(item => item.run_count === 0).length);
+}
+function renderReports() {
+    const target = $("batchReports"); target.replaceChildren();
+    $("historySummary").textContent = "Histórico de relatórios (" + savedReports.length + ")";
+    const bySuite = new Map();
+    for (const report of savedReports) {
+        const key = report.suite_id || "desconhecida";
+        if (!bySuite.has(key)) bySuite.set(key, []);
+        bySuite.get(key).push(report);
+    }
+    for (const [suiteId, reports] of bySuite) {
+        const group = document.createElement("details"); group.className = "report-group";
+        const summary = document.createElement("summary");
+        const meta = suiteItems.find(item => item.id === suiteId);
+        summary.textContent = (meta ? meta.title : suiteId)
+            + " · " + reports.length + " execução(ões)";
+        group.append(summary);
+        for (const item of reports) {
+            const record = document.createElement("div"); record.className = "report-record";
+            const time = document.createElement("div");
+            time.textContent = shortDate(item.run_id) + " · "
+                + item.automatic_passes + " acertos automáticos · "
+                + (item.automatic_failures ?? "—") + " falhas · "
+                + item.ungraded + " sem nota";
+            const actions = document.createElement("div"); actions.className = "actions";
+            const download = document.createElement("a");
+            download.href = "/lab/reports/" + encodeURIComponent(item.run_id) + "/download";
+            download.textContent = "Baixar JSON";
+            download.setAttribute("download", "");
+            const push = document.createElement("button"); push.type = "button";
+            push.textContent = "Enviar ao GitHub";
+            push.addEventListener("click", async () => {
+                if (!confirm("Publicar perguntas e respostas completas no GitHub privado?")) return;
+                push.disabled = true;
+                try {
+                    const url = "/lab/reports/" + encodeURIComponent(item.run_id) + "/publish";
+                    const res = await fetch(url, {method:"POST", credentials:"same-origin"});
+                    if (!res.ok) {
+                        const body = await res.json().catch(() => ({}));
+                        throw new Error(body.detail || "HTTP " + res.status);
+                    }
+                    const data = await res.json();
+                    $("batchStatus").textContent = "Relatório publicado: " + data.url;
+                    push.textContent = "Enviado";
+                } catch (e) {
+                    $("batchStatus").textContent = "Falha ao publicar: " + e.message;
+                    push.disabled = false;
+                }
+            });
+            actions.append(download, push); record.append(time, actions); group.append(record);
+        }
+        target.append(group);
+    }
+    if (!savedReports.length) target.textContent = "Nenhum relatório salvo neste servidor.";
+}
+async function batchRefresh() {
+    try {
+        const [batchRes, reportRes] = await Promise.all([
+            fetch("/lab/batches", {credentials:"same-origin"}),
+            fetch("/lab/reports", {credentials:"same-origin"}),
+        ]);
+        if (!batchRes.ok || !reportRes.ok) throw new Error("Sessão expirada ou servidor indisponível.");
+        suiteItems = (await batchRes.json()).items;
+        savedReports = (await reportRes.json()).items;
+        const valid = new Set(suiteItems.map(item => item.id));
+        for (const id of selectedSuites) if (!valid.has(id)) selectedSuites.delete(id);
+        renderCounters(); renderSuites(); renderReports();
+        $("batchStatus").textContent = "Gaveta atualizada. Os nomes técnicos aparecem em cada cartão.";
+    } catch (e) {
+        $("batchStatus").textContent = "Não foi possível atualizar: " + e.message;
+    }
+}
+function setFilter(filter) {
+    currentFilter = filter;
+    for (const [name, button] of Object.entries(filterButtons))
+        button.setAttribute("aria-pressed", name === filter ? "true" : "false");
+    renderSuites();
+}
+for (const [filter, button] of Object.entries(filterButtons))
+    button.addEventListener("click", () => setFilter(filter));
+$("suiteSearch").addEventListener("input", renderSuites);
+$("selectRecommended").addEventListener("click", () => {
+    if (queueRunning) return;
+    selectedSuites.clear();
+    for (const item of suiteItems) if (Number.isInteger(item.recommended_order))
+        selectedSuites.add(item.id);
+    setFilter("recommended");
 });
-$("batchRun").addEventListener("click",async()=>{
- const id=$("batchSelect").value;if(!id)return;
- $("batchRun").disabled=true;
- try{const r=await fetch("/lab/batches/"+encodeURIComponent(id)+"/run",{method:"POST",credentials:"same-origin"});
- if(!r.ok)throw new Error("Não foi possível iniciar (HTTP "+r.status+").");
- $("batchStatus").textContent="Bateria iniciada. Acompanhe o progresso.";
- const poll=async()=>{const st=await fetch("/lab/batches/status",{credentials:"same-origin"}).then(x=>x.json());
- $("batchStatus").textContent="Status: "+st.status+" · "+(st.done||0)+"/"+(st.total||0)+" · publicação: "+(st.publish_status||"pendente");
- if(st.status==="running")setTimeout(poll,2500);else{$("batchRun").disabled=false;await batchRefresh();}
- };await poll();
- }catch(e){$("batchStatus").textContent=e.message;$("batchRun").disabled=false;}
+$("selectPending").addEventListener("click", () => {
+    if (queueRunning) return;
+    for (const item of suiteItems.filter(suiteMatches))
+        if (item.run_count === 0) selectedSuites.add(item.id);
+    renderSuites();
 });
-batchRefresh();
+$("clearSelection").addEventListener("click", () => {
+    if (queueRunning) return;
+    selectedSuites.clear(); renderSuites();
+});
+$("batchRefresh").addEventListener("click", async () => {
+    await batchRefresh(); await refreshQueueStatus();
+});
+function renderQueue(st) {
+    const active = st.status === "running";
+    const queueData = Number.isInteger(st.queue_total) && st.queue_total > 0;
+    queueRunning = active;
+    $("queuePanel").hidden = !queueData;
+    if (queueData) {
+        const current = suiteItems.find(item => item.id === st.suite_id);
+        const index = Math.min(st.queue_index || 1, st.queue_total);
+        const total = st.queue_total;
+        const finished = st.queue_finished || [];
+        const errors = st.queue_failures || [];
+        $("queueTitle").textContent = active
+            ? "Executando bateria " + index + " de " + total
+            : st.status === "completed_with_errors"
+                ? "Fila concluída com falhas" : st.status === "completed"
+                    ? "Todas as baterias da fila terminaram" : "Fila interrompida";
+        $("queueCurrent").textContent = active
+            ? "Agora: " + (current ? current.title : st.suite_id)
+            : finished.length + " bateria(s) finalizada(s)"
+                + (errors.length ? " · " + errors.length + " com erro" : "");
+        const totalCases = Number.isInteger(st.overall_total) ? st.overall_total : 0;
+        const done = Math.max(0, Math.min(Number(st.overall_done) || 0, totalCases));
+        $("queueProgress").max = Math.max(totalCases, 1);
+        $("queueProgress").value = done;
+        $("queueNumbers").textContent = done + "/" + totalCases + " perguntas processadas. "
+            + (active ? "Pode fechar a aba; a fila roda enquanto a API estiver ativa."
+                : "Relatórios finalizados disponíveis no histórico.");
+    }
+    renderSuites();
+}
+async function refreshQueueStatus() {
+    try {
+        const res = await fetch("/lab/batches/status", {credentials:"same-origin"});
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const st = await res.json();
+        const wasRunning = queueRunning;
+        renderQueue(st);
+        if (st.status === "running" || st.status === "completed_with_errors") {
+            $("batchStatus").textContent = st.status === "running"
+                ? "Execução sequencial em andamento, sem enviar relatórios ao GitHub automaticamente."
+                : "Fila terminou com erro em uma ou mais baterias; confira os relatórios.";
+        }
+        if (wasRunning && !queueRunning) await batchRefresh();
+        if (pollHandle !== null) { clearTimeout(pollHandle); pollHandle = null; }
+        if (queueRunning) pollHandle = setTimeout(refreshQueueStatus, 2500);
+    } catch (e) {
+        $("batchStatus").textContent = "Não foi possível consultar o andamento: " + e.message;
+        if (pollHandle !== null) clearTimeout(pollHandle);
+        pollHandle = setTimeout(refreshQueueStatus, 6000);
+    }
+}
+$("batchImport").addEventListener("click", async () => {
+    const file = $("batchFile").files[0];
+    if (!file) { $("batchStatus").textContent = "Selecione um JSON."; return; }
+    const data = new FormData(); data.append("file", file);
+    try {
+        const r = await fetch("/lab/batches/import", {
+            method:"POST", credentials:"same-origin", body:data,
+        });
+        if (!r.ok) throw new Error("Importação recusada (HTTP " + r.status + ").");
+        $("batchStatus").textContent = "Bateria importada.";
+        await batchRefresh();
+    } catch (e) { $("batchStatus").textContent = e.message; }
+});
+$("batchRun").addEventListener("click", async () => {
+    if (queueRunning) return;
+    const ids = suiteItems.filter(item => selectedSuites.has(item.id))
+        .sort((a,b) => suiteRank(a) - suiteRank(b) || a.title.localeCompare(b.title, "pt-BR"))
+        .map(item => item.id);
+    if (!ids.length) return;
+    const cases = suiteItems.filter(item => selectedSuites.has(item.id))
+        .reduce((sum, item) => sum + item.cases, 0);
+    if (!confirm("Executar " + ids.length + " bateria(s), " + cases
+        + " perguntas, uma por vez? Pode levar bastante tempo e gerar carga na CPU.")) return;
+    $("batchRun").disabled = true;
+    try {
+        const response = await fetch("/lab/batches/queue", {
+            method:"POST", credentials:"same-origin",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({suite_ids:ids}),
+        });
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.detail || "HTTP " + response.status);
+        }
+        selectedSuites.clear();
+        $("batchStatus").textContent = "Fila iniciada. Acompanhe o andamento abaixo.";
+        await refreshQueueStatus();
+    } catch (e) {
+        $("batchStatus").textContent = "Falha ao iniciar: " + e.message;
+        $("batchRun").disabled = false;
+    }
+});
+(async () => {
+    await batchRefresh();
+    await refreshQueueStatus();
+})();
+
 })();
 </script>
 </body>
