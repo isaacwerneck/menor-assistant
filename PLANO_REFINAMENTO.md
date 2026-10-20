@@ -1,5 +1,8 @@
 # PLANO DE REFINAMENTO — Qualidade, autonomia e autoaperfeiçoamento do Menor
 
+**Atualização de status — 20/10/2026:** preserve as hipóteses e contratos abaixo, mas priorize as falhas reais e medições do [handoff de Codex](docs/handoff/00_COMECE_AQUI_CODEX.md). As melhorias de linguagem, avaliação e segurança do PR #84 estão integradas no código; ainda aguardam comparação experimental A/B no Ubuntu. 
+
+
 > **Direção consolidada em 19/10/2026:** [Plano integrado A–E](docs/plano_integrado_a_e.md).
 > O Menor interpreta por modelo e contexto, não por palavras isoladas; aprendizado
 > é supervisionado e nenhuma inferência concede permissão. A lista histórica
