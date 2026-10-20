@@ -109,6 +109,54 @@ Os testes de contrato também reproduziram um bug independente: ações e pesqui
 mínimas, permitidas pelo schema, eram rejeitadas por falta de `goal` redundante.
 O PR #91 corrige esse caminho; ainda requer nova consulta real após deploy.
 
+## Checkpoint após acesso SSH e reprodução — 20/10/2026
+
+Estado integrado: `8615dedac0156f2334560ad5817860c72c9b3d2f` (PR #92).
+Confirmados por SSH: checkout Ubuntu limpo nessa revisão, API/timer ativos,
+Ollama 0.40.6, `qwen2.5-coder:7b` 100% CPU/contexto 4096, sem swap em uso.
+Nenhuma instalação ou alteração de modelo/driver foi feita no Ubuntu.
+
+- Sondagem sem dados pessoais: seleção válida de `system.diagnose` em **5,673 s**.
+  Plano com catálogo de ferramentas atingiu timeout em **40,042 s**.
+- Sondagem com contexto obtido pelo mesmo `_understand` do chat, interrompida
+  antes de executar: seleção válida em **24,572 s**, dos quais **20,345 s** de
+  avaliação do prompt; 27 tokens gerados. Memória relacionada ficou vazia nesse caso.
+- Novo teste no chat completo executou realmente `system.diagnose`, exibiu resultado
+  e recibo `executed`. A pergunta seguinte identificou a ferramenta anterior sem
+  apresentar nova execução. Um acerto não prova estabilidade ou ganho de velocidade.
+- Novo teste de migração no Lab: rejeição em **28,142 s**, 181 tokens/7,00 tokens/s,
+  motivo **objetivo ausente ou inválido**. O schema de geração permitia omitir
+  `goal` em `plan`, mas o parser corretamente o exigia.
+
+**Candidato salvo em `codex/contrato-planejamento`:** o formato de geração usa
+alternativas completas `oneOf`; `plan/continue` exigem objetivo e pelo menos uma
+etapa, `clarify` exige objetivo/pergunta. Respostas/ações/pesquisas curtas continuam
+sem objetivo redundante. O parser e as aprovações continuam independentes.
+Base técnica: [saídas estruturadas do Ollama](https://docs.ollama.com/capabilities/structured-outputs)
+e [limitações de conversão do llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/grammars/README.md).
+
+O candidato foi carregado apenas em um processo de sondagem temporário no Ubuntu,
+sem substituir a API, executar ferramentas ou acessar preferências/conversas.
+Resultados: migração **21,330 s**, organização de documentos inédita **26,969 s**,
+seleção de ferramenta **29,009 s**; os três contratos foram válidos, sem corte.
+Hashes: prompt `e390f1ddaff1160bb4174e231c3f229520fb5c60439395afccd6ded9b9d7af05`,
+schema candidato `6d1295fa95add81e2ade2ee1e34d45ad79717e4ef0ed1a557959efc64c016938`.
+Isso **não comprova planos corretos**: a migração omitiu autorização nas etapas;
+o plano de documentos propôs mover originais apesar da restrição de preservação.
+A chamada de ferramenta levou **24,868 s só de prefill**. Cache/carga mudaram;
+não atribuir diferenças de tempo apenas ao schema.
+
+Verificação local do candidato: **17 testes passaram**, Flake8/diff check passaram.
+A suíte que importa `fcntl` não roda neste Windows; a CI Linux completa é obrigatória
+antes de integração. Credenciais, cliente SSH temporário, capturas e dados privados
+ficaram fora do Git. Os arquivos de sondagem remotos temporários foram removidos.
+
+**Retomar daqui:** conferir CI e diff do candidato; avaliar revisão de planos com
+restrições explícitas e prompts inéditos; medir separadamente prefill/geração com
+cache controlado; verificar se timeout do raciocinador aciona uma segunda inferência
+que nega ferramentas registradas. Preservar recibos e objetivos; não concluir a meta
+Jarvis nem declarar melhora de inteligência apenas por JSON válido ou CI verde.
+
 ## Como executar a segunda rodada após o deploy
 
 1. Confirmar `main` no checkout Ubuntu e versão/estado dos serviços. Não iniciar trabalho destrutivo.

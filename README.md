@@ -14,6 +14,12 @@ Lá estão status A–E, progresso estimado, relatórios reais, hardware,
 latência, limites e próximos marcos. O [roadmap histórico](docs/roadmap.md)
 não deve ser lido como checklist integral do estado atual.
 
+O [checkpoint de continuidade](docs/handoff/00_COMECE_AQUI_CODEX.md#checkpoint-de-continuidade--20102026)
+registra a revisão integrada e a proposta em avaliação para exigir, já na geração
+JSON, os campos obrigatórios de planos e esclarecimentos. As sondagens reais e
+falhas de qualidade ainda abertas estão documentadas; contrato válido não prova
+plano correto.
+
 ## Acesso remoto e laboratório de inteligência (opcional)
 
 É possível acessar o Menor por **Cloudflare Tunnel com Access protegido**,

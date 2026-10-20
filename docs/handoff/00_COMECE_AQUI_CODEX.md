@@ -4,6 +4,29 @@
 
 > Este diretório contém o estado **atual** para a migração de conversas para Codex. Planos antigos continuam preservados no repositório como histórico e visão de produto. Não interprete um checklist histórico como descrição completa do software hoje. A documentação aqui registra evidência e pendências — não certifica autonomia plena do Menor.
 
+## Checkpoint de continuidade — 20/10/2026
+
+- `main` e Ubuntu confirmados em `8615dedac0156f2334560ad5817860c72c9b3d2f`
+  após os PRs #86–#92, todos integrados com CI completa verde.
+- As duas baterias v2 de 24 casos foram executadas e publicadas em `lab-reports`.
+  Não demonstraram melhora consistente; números e limites estão em
+  [04 — Laboratório e resultados](04_BATERIAS_E_DIAGNOSTICOS.md).
+- O SSH autorizado funcionou. API e timer de deploy ativos, checkout limpo,
+  Ollama 0.40.6 e Qwen 7B carregado **100% na CPU**, contexto 4096.
+- O chat finalmente executou `system.diagnose` com recibo `executed`; uma consulta
+  seguinte identificou o recibo sem nova execução. Isso não elimina falhas anteriores.
+- **Trabalho ainda em avaliação:** branch `codex/contrato-planejamento`, que torna
+  obrigatórios no schema de geração os campos já exigidos pelo validador de planos.
+  Três sondagens sintéticas no Ubuntu retornaram contratos válidos; a qualidade dos
+  planos ainda falhou em restrições. Não confundir checkpoint com correção completa.
+- Para retomar: conferir esta branch/PR e CI; ler a seção de checkpoint do documento
+  04; revisar os planos por restrições, investigar prefill/timeout e fallback, depois
+  repetir testes completos no chat. Não repetir automaticamente baterias longas,
+  publicar relatórios, instalar modelos ou alterar hardware.
+
+O restante deste documento preserva o snapshot original da transição; prevalecem
+as evidências datadas acima e no documento 04. Nenhuma credencial foi salva no Git.
+
 ## Leia nesta ordem
 
 1. [01 — Objetivo e status geral](01_OBJETIVO_E_PROGRESSO.md): o produto sonhado, definição de pronto, estimativa de progresso e grandes lacunas.

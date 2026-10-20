@@ -41,6 +41,14 @@ um contrato válido, a tarefa existente permanece intacta.
 
 ## Permissões e efeitos externos
 
+O schema de geração agora separa respostas/ações/pesquisas curtas, planos e pedidos
+de esclarecimento em alternativas completas `oneOf`. `plan/continue` exigem `goal`
+e pelo menos uma etapa; `clarify` exige `goal/question`. Isso evita permitir na
+geração uma omissão que o parser recusaria depois. A validação Python de tipos,
+limites, ferramentas e autorizações permanece obrigatória; JSON válido não prova
+qualidade do plano. A evidência do candidato e as falhas semânticas ainda abertas
+estão no [checkpoint de avaliação](handoff/04_BATERIAS_E_DIAGNOSTICOS.md).
+
 Uma decisão \`plan/continue/clarify\` só salva plano; não executa ferramenta.
 Uma decisão \`act\` entrega a solicitação e o objetivo ao catálogo autorizado,
 cuja etapa de planejamento e aprovação continua no Python.

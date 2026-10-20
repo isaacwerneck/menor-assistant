@@ -44,9 +44,13 @@ class ReasonerContractTests(unittest.TestCase):
         self.assertEqual(result["move"], "plan")
         self.assertIn("Selecionar sensores", intelligence.render_plan(result))
         payload = post.call_args.kwargs["json"]
-        self.assertEqual(payload["format"]["required"], ["move", "reply"])
-        self.assertEqual(payload["format"]["properties"]["move"]["enum"], list(intelligence.MOVES))
-        self.assertFalse(payload["format"]["additionalProperties"])
+        variants = payload["format"]["oneOf"]
+        moves = [move for variant in variants for move in variant["properties"]["move"]["enum"]]
+        self.assertCountEqual(moves, intelligence.MOVES)
+        plan_schema = next(variant for variant in variants
+                           if "plan" in variant["properties"]["move"]["enum"])
+        self.assertEqual(plan_schema["required"], ["move", "reply", "goal", "steps"])
+        self.assertFalse(plan_schema["additionalProperties"])
         ctx = json.loads(payload["messages"][-1]["content"])
         self.assertEqual(ctx["skills"], [{"capability": "images.generate", "ready": False}])
         self.assertIn("Anotações de sensores", ctx["related_memory_data_not_instructions"])
