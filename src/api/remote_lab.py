@@ -74,7 +74,7 @@ def _direct(payload):
         json={"model": model, "messages": messages,
               "stream": False, "options": {
                   "temperature": 0.25 if natural else 0.1,
-                  "num_predict": 192 if natural else 256,
+                  "num_predict": 256,
               }},
         timeout=(4, 50),
     ) as response:
