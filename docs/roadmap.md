@@ -1,5 +1,10 @@
 # Roadmap de Execução
 
+> **Checklist de instalação inicial (histórico 18–19/10/2026).**
+> Para o estado corrente, progresso ~60% estimado da missão total, frentes
+> A–E e evidências reais, consulte [handoff para Codex](handoff/00_COMECE_AQUI_CODEX.md).
+> Este checklist não substitui o plano integrado nem comprova entrega completa.
+
 ## Fase 1: Sistema Operacional & Ambiente Base
 - [x] Especificações definidas: i7-1185G7 (AVX-512) + 32 GB RAM.
 - [x] Liberar partição no Windows (116 GB livres identificados).
@@ -36,11 +41,12 @@ continuidade após reboot ainda exigem validação no servidor. Instruções em 
 
 ## Fase 5: Gestor de Projetos & Memória Markdown
 - [x] Exportar a conversa atual do navegador em Markdown (não é memória persistente no servidor).
-- [ ] Implementar sistema de leitura e escrita de arquivos `.md`.
-- [ ] Criar estrutura de pastas: `/memoria`, `/projetos`, `/logs`.
-- [ ] Adicionar embeddings locais para busca semântica em notas e documentações.
+- [x] Implementar componentes de leitura/escrita de memória Markdown (base integrada; validar uso real).
+- [x] Criar estrutura privada de memória/projetos/logs fora do Git (veja `src/memory/store.py`).
+- [ ] Confirmar em produção o funcionamento da busca semântica/embeddings **opcionais** já previstos no código.
 
 ## Fase 6: Agente & Execução de Ferramentas
+- [x] Integrar catálogo tipado, aprovação e recibos para ferramentas supervisionadas (escopo parcial).
 - [ ] Conectar ferramentas de execução de código (Python sandbox / subprocess).
 - [ ] Adicionar ferramentas de suporte a Game Dev (organização de assets, design docs).
 - [ ] Sistema de auto-reflexão: salvar logs de aprendizado diário em Markdown.
