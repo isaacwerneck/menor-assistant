@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import sqlite3
+import time
 
 import requests
 
@@ -322,13 +323,14 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
     return plan_review.annotate(decision, status), status
 
 
-def _understand(state, message, history, project=None):
+def _understand(state, message, history, project=None, metrics=None):
     """Raciocínio contextual para qualquer assunto, sem executar ações do texto do LLM."""
     if state["phase"] == "goal" and approval_decision(message) == "reject":
         return abandon_active(state), {
             "handled": True, "reply": "Entendi. Cancelei este plano sem executar nenhuma ação.",
             "phase": "idle",
         }
+    context_started = time.monotonic()
     pending = pending_context(state)
     # Fontes são independentes: falha do índice semântico não elimina FTS ou projeto.
     semantic = lexical = project_facts = ""
@@ -354,11 +356,32 @@ def _understand(state, message, history, project=None):
     except (OSError, ValueError):
         skills = []
     tools = list_tools()
+    diagnostics = {} if metrics is not None else None
+    if metrics is not None:
+        metrics["context_retrieval_ms"] = round((time.monotonic() - context_started) * 1000, 2)
+        metrics["available_tools"] = len(tools)
+        metrics["memory_chars"] = len(facts)
     decision = intelligence.decide(
         message, history, pending=pending, capabilities=skills, knowledge=facts,
         last_result=state.get("last_result"), paused_goals=paused_context(state),
-        tools=tools,
+        tools=tools, diagnostics=diagnostics,
     )
+    if metrics is not None:
+        metrics["reasoner_wall_ms"] = diagnostics.get("ollama_wall_ms", 0)
+        metrics["prompt_assembly_ms"] = diagnostics.get("prompt_assembly_ms", 0)
+        metrics["context_chars"] = diagnostics.get("context_chars", 0)
+        metrics["system_chars"] = diagnostics.get("system_chars", 0)
+        metrics["history_chars"] = diagnostics.get("selected_history_chars", 0)
+        metrics["outcome"] = diagnostics.get("outcome", "unknown")
+        performance = diagnostics.get("performance", {})
+        if isinstance(performance, dict):
+            for field, key in (("prefill_ns", "prompt_eval_duration"),
+                               ("generation_ns", "eval_duration"),
+                               ("prompt_tokens", "prompt_eval_count"),
+                               ("generated_tokens", "eval_count")):
+                value = performance.get(key)
+                if type(value) is int and 0 <= value <= 10 ** 15:
+                    metrics[field] = value
     if decision is None:
         if pending:
             return _answer(
@@ -459,7 +482,7 @@ def _understand(state, message, history, project=None):
     return _answer(reply)
 
 
-def _advance(state, message, history, project=None):
+def _advance(state, message, history, project=None, metrics=None):
     normal = _normalize(message.strip())
     if state["phase"] == "approval":
         choice = approval_decision(message)
@@ -501,7 +524,7 @@ def _advance(state, message, history, project=None):
     if state["phase"] == "mission":
         return _mission_turn(state, message)
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
-        intelligent = _understand(state, message, history, project=project)
+        intelligent = _understand(state, message, history, project=project, metrics=metrics)
         if intelligent is not None:
             return intelligent
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
@@ -561,8 +584,10 @@ def _run_locked(session, turn, message, history, project, tasks):
     if cached is not None:
         return cached
     error_type = ""
+    started = time.monotonic()
+    metrics = {}
     try:
-        current, result = _advance(state, message, history, project=project)
+        current, result = _advance(state, message, history, project=project, metrics=metrics)
         if state.get("last_result") and "last_result" not in current:
             current["last_result"] = state["last_result"]
         for key in ("paused_goals", "goal_decisions"):
@@ -575,6 +600,10 @@ def _run_locked(session, turn, message, history, project, tasks):
             "A execução falhou e foi interrompida. Nenhuma nova ação será repetida automaticamente. "
             "Consulte o estado antes de tentar novamente.", "failed",
         )
+    if metrics:
+        metrics["agent_wall_ms"] = round((time.monotonic() - started) * 1000, 2)
+        # Publicação autenticada: somente tempos, quantidades e estados técnicos.
+        result["agent_metrics"] = metrics
     tasks.finish(session, turn, current, result)
     try:
         DecisionMetrics(tasks.store).record(session, turn, result, error_type)
