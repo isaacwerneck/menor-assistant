@@ -67,12 +67,80 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#11111d;padding:14px;
 @media(max-width:520px){.lab-dashboard{gap:6px}.dashboard-stat{padding:10px 8px}.dashboard-stat strong{font-size:1.35rem}.suite-tools button{flex:1 1 auto}.suite-list{max-height:none}.suite-heading input{width:24px;height:24px}.actions button{flex:1 1 auto}.report-record .actions button{flex:1 1 auto}}
 footer{color:var(--muted);font-size:.78rem}
 @media(max-width:520px){.actions button{flex:1 1 100%}.panel{padding:14px}main{padding:14px 10px 40px}}
+
+/* E7: hierarquia das áreas, botões alinhados e ação principal persistente. */
+main{max-width:1120px;padding:32px clamp(14px,3vw,38px) 70px}
+.lab-header{padding:6px 2px 20px;align-items:center;border-bottom:1px solid var(--border)}
+.lab-header h1{letter-spacing:-.045em;margin:7px 0 4px}.lab-header p{margin:0;max-width:600px}
+.lab-eyebrow{display:block;font-size:.7rem;letter-spacing:.13em;font-weight:700;color:var(--violet)}
+.lab-back{display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+padding:9px 14px;border:1px solid var(--border);border-radius:10px;text-decoration:none}
+.lab-back:hover{background:#2e2942}
+.lab-jump-nav{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 22px}
+.lab-jump-nav a{display:inline-flex;align-items:center;justify-content:center;text-align:center;
+text-decoration:none;min-height:44px;padding:10px 14px;border-radius:10px;
+border:1px solid var(--border);color:var(--text);font-size:.86rem}
+.lab-jump-nav a:hover{background:#342e47;border-color:#8174a5}
+.panel{margin:16px 0;padding:clamp(16px,2.4vw,24px)}
+.section-intro{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.section-intro h2{margin:4px 0 0;font-size:1.25rem;letter-spacing:-.025em}
+.section-note{font-size:.78rem;color:var(--muted);padding-bottom:4px}
+button{transition:background-color .16s ease,border-color .16s ease}
+button:hover:not(:disabled){background:#403650;border-color:#8c79bc}
+button.primary:hover:not(:disabled){background:#b4a2ff;border-color:transparent}
+button:disabled{opacity:.55;cursor:not-allowed}
+.actions{gap:10px}.actions button{min-height:44px}
+.compare-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.compare-results .panel{margin:0;min-width:0}.compare-results pre{max-height:460px;overflow:auto}
+.compare-results .meta{overflow-wrap:anywhere}
+.lab-dashboard{gap:12px;margin:17px 0}
+.dashboard-stat{padding:16px;border-radius:13px}.dashboard-stat strong{font-size:1.85rem}
+.suite-tools{gap:7px}.suite-tools button{min-height:44px;padding:10px 13px}
+.suite-search-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:15px 0 10px}
+.suite-search-row label{margin:0;font-weight:620}
+#suiteSearch{max-width:none;min-width:min(100%,230px)}
+.suite-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;max-height:650px;gap:12px}
+.suite-card{min-width:0;padding:16px;border-radius:13px;transition:border-color .16s ease}
+.suite-card:focus-within{border-color:var(--violet)}
+.suite-heading{align-items:center;gap:12px}.suite-heading input{margin:0;width:22px;height:22px}
+.suite-title{font-size:.94rem}.suite-description{line-height:1.5}
+.suite-details{padding:10px 0 0 34px}.suite-details a{display:inline-flex;align-items:center;min-height:44px}
+.batch-action-bar{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;
+justify-content:space-between;gap:14px;background:rgba(27,27,39,.97);
+border:1px solid #534569;border-radius:13px;padding:11px 12px;margin:14px 0 10px}
+.batch-action-bar .helper{margin:0;flex:1}.batch-action-bar button{flex:none;max-width:100%}
+.history-details{scroll-margin-top:14px}
+.history-details>summary,.report-group>summary{min-height:44px}
+@media(max-width:800px){.suite-list{grid-template-columns:1fr;max-height:570px}
+.compare-results{grid-template-columns:1fr}}
+@media(max-width:520px){
+main{padding:18px 12px max(54px,env(safe-area-inset-bottom))}
+.lab-header{align-items:flex-start}.lab-back{width:100%}
+.lab-jump-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.lab-jump-nav a:first-child{grid-column:1/-1}
+.dashboard-stat{padding:12px 9px}.dashboard-stat strong{font-size:1.5rem}
+.suite-tools button{flex:1 1 auto}
+.suite-search-row{display:grid;gap:7px}#suiteSearch{width:100%;max-width:100%}
+.suite-list{max-height:none}.suite-details{padding-left:35px}
+.batch-action-bar{flex-direction:column;align-items:stretch;bottom:env(safe-area-inset-bottom)}
+.batch-action-bar button{width:100%}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
 <body>
 <main>
-<header><div><h1>Menor Lab</h1><p>Diagnóstico privado da compreensão real do modelo no Ubuntu.</p></div><a href="/">Voltar ao chat</a></header>
-<div class="panel">
+<header class="lab-header"><div><span class="lab-eyebrow">MENOR AI / AVALIAÇÃO</span>
+<h1>Menor Lab</h1><p>Diagnóstico privado da compreensão real do modelo no Ubuntu.</p></div>
+<a class="lab-back" href="/">← Voltar ao chat</a></header>
+<nav class="lab-jump-nav" aria-label="Seções do laboratório">
+<a href="#baterias">Baterias e progresso</a>
+<a href="#teste-avulso">Teste avulso</a>
+<a href="#reportsHistory">Histórico</a>
+</nav>
+<div class="panel" id="teste-avulso">
+<div class="section-intro"><div><span class="lab-eyebrow">EXPERIMENTO</span>
+<h2>Comparação avulsa</h2></div><span class="section-note">Sem ferramentas</span></div>
 <p>Compare a mesma pergunta em dois modos. <strong>Modelo direto</strong> responde sem o JSON de planejamento. <strong>Raciocinador</strong> tenta a interpretação estruturada do Menor. Nenhum modo executa ferramentas ou salva memória.</p>
 <label for="question">Pergunta para testar</label>
 <textarea id="question" maxlength="1200" placeholder="Ex.: Ei, Menor! O que você pode fazer?">Ei, menor! Quem é você?</textarea>
@@ -95,10 +163,13 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 </div>
 <p class="status" id="status" role="status" aria-live="polite">Pronto. O modelo só recebe dados enviados nesta página.</p>
 </div>
+<div class="compare-results">
 <section class="panel" aria-label="Resultado do modelo direto"><h2>Modelo direto</h2><pre id="directResult">Nenhum teste executado.</pre><p class="meta" id="directMeta"></p></section>
 <section class="panel" aria-label="Resultado do raciocinador"><h2>Raciocinador JSON</h2><pre id="plannerResult">Nenhum teste executado.</pre><p class="meta" id="plannerMeta"></p></section>
+</div>
 <section class="panel" aria-label="Baterias automáticas" id="baterias">
-<h2>Suas baterias de testes</h2>
+<div class="section-intro"><div><span class="lab-eyebrow">AVALIAÇÃO EM LOTE</span>
+<h2>Suas baterias de testes</h2></div><span class="section-note">Execução sequencial</span></div>
 <p>Escolha várias baterias e execute tudo de uma vez. O Menor roda <strong>uma por vez</strong>, salva um relatório por bateria e mostra o progresso. Os resultados anteriores são reconhecidos neste servidor.</p>
 <div class="lab-dashboard" aria-label="Resumo dos testes">
 <div class="dashboard-stat"><strong id="suiteTotal">—</strong><span>Baterias disponíveis</span></div>
@@ -119,8 +190,8 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 <button type="button" id="filterRecommended" aria-pressed="false">Recomendadas</button>
 <button type="button" id="filterAll" aria-pressed="false">Todas</button>
 </div>
-<label for="suiteSearch">Buscar por nome ou identificação</label>
-<input type="search" id="suiteSearch" autocomplete="off" placeholder="Ex.: matemática, planejamento, v3">
+<div class="suite-search-row"><label for="suiteSearch">Buscar bateria</label>
+<input type="search" id="suiteSearch" autocomplete="off" placeholder="Nome, assunto ou ID"></div>
 <div class="suite-tools" role="group" aria-label="Seleção de testes">
 <button type="button" id="selectRecommended">Selecionar as 4 recomendadas</button>
 <button type="button" id="selectPending">Marcar pendentes visíveis</button>
@@ -128,8 +199,8 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 <button type="button" id="batchRefresh">Atualizar situação</button>
 </div>
 <div id="suiteList" class="suite-list" aria-label="Baterias com seleção múltipla">Carregando baterias…</div>
-<p id="selectionCount" class="helper" role="status" aria-live="polite">Nenhuma bateria selecionada.</p>
-<div class="actions"><button id="batchRun" class="primary" type="button" disabled>Executar baterias selecionadas</button></div>
+<div class="batch-action-bar"><p id="selectionCount" class="helper" role="status" aria-live="polite">Nenhuma bateria selecionada.</p>
+<button id="batchRun" class="primary" type="button" disabled>Executar baterias selecionadas</button></div>
 <p id="batchStatus" class="status" role="status" aria-live="polite">Preparando sua gaveta.</p>
 <details class="history-details" id="reportsHistory">
 <summary id="historySummary">Histórico de relatórios (0)</summary>
