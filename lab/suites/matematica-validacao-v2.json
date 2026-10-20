@@ -1,0 +1,128 @@
+{
+  "id": "matematica-validacao-v2",
+  "title": "Aritmética v2 — 12 exemplos novos, acerto e formato separados",
+  "description": "Substitui hipóteses por casos novos; grader numeric tolera unidade/cifrão para acerto semântico e registra violação de formato em métrica independente. Nenhum uso de calculadora neste modo direto.",
+  "methodology_version": "menor-eval-v3",
+  "cases": [
+    {
+      "id": "desconto-15",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Um item custa R$ 420 e recebe 15% de desconto. Qual é o preço final, em reais? Apenas o número.",
+      "split": "validation",
+      "expected_exact": "357",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "duracao-atividades",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Uma tarefa dura 1 hora e 15 minutos e outra dura 2 horas. Quantos minutos no total? Só o número.",
+      "split": "development",
+      "expected_exact": "195",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "arquivos-por-tamanho",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Se 6 arquivos idênticos ocupam 42 MB, quantos MB 15 arquivos iguais ocupam? Só o número.",
+      "split": "development",
+      "expected_exact": "105",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "bolas-vermelhas",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Um saco tem 7 bolas pretas e 3 brancas. Qual a chance percentual de tirar uma branca? Só o número.",
+      "split": "validation",
+      "expected_exact": "30",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "juros-simples-4",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Um empréstimo de R$ 800 rende 3% de juros simples por mês durante 4 meses. Qual o total? Só número.",
+      "split": "development",
+      "expected_exact": "896",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "desconto-percentual-8",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Qual é 8% de 750? Só o número.",
+      "split": "development",
+      "expected_exact": "60",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "media-quatro",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Qual é a média aritmética de 5, 15, 25 e 35? Só o número.",
+      "split": "validation",
+      "expected_exact": "20",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "intervalo-tempo",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Quanto é 4 horas e 20 minutos, em minutos? Só número.",
+      "split": "development",
+      "expected_exact": "260",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "regra-tres-copias",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Se 8 cópias custam R$ 24, quanto custam 18 cópias ao mesmo preço? Apenas número.",
+      "split": "development",
+      "expected_exact": "54",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "multiplicacao-decimal",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Qual é o resultado de 2,5 vezes 4? Só o número.",
+      "split": "validation",
+      "expected_exact": "10",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "fracao-percentual",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Qual é 3/5 em porcentagem? Só número, sem o símbolo %.",
+      "split": "development",
+      "expected_exact": "60",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    },
+    {
+      "id": "juros-simples-sem-composto",
+      "mode": "direct",
+      "profile": "baseline",
+      "message": "Quanto rende de juros simples R$ 1500 a 2% ao mês durante 2 meses? Apenas o juro, só número.",
+      "split": "development",
+      "expected_exact": "60",
+      "grader": "numeric",
+      "review_criteria": "Conferir aritmética e, separadamente, se a resposta obedece ao formato solicitado."
+    }
+  ]
+}
