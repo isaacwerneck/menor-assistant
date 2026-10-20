@@ -52,7 +52,7 @@ def _explicitly_forbidden(message):
             # A short local window, never a whole document or a later contrasting sentence.
             phrase = clause[negative.end():negative.end() + 100]
             for action, expression in _ACTIONS.items():
-                if action == "publicar" and re.search(r"\b(?:antes\s+de|ate\s+(?:a\s+)?aprovac)", phrase):
+                if action == "publicar" and re.search(r"\b(?:antes\s+d(?:e|o|a|os|as)|ate\s+(?:a\s+)?aprovac)", phrase):
                     # 'não publicar antes da aprovação' is a conditional gate, not a total ban.
                     continue
                 if re.search(expression, phrase):
