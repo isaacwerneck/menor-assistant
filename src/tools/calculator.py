@@ -31,7 +31,7 @@ def calculate(expression):
         if isinstance(node, ast.Expression):
             return evaluate(node.body, depth + 1)
         if isinstance(node, ast.Constant) and type(node.value) in (int, float):
-            value = Decimal(str(node.value))
+            value = Decimal(ast.get_source_segment(expression, node))
         elif isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
             item = evaluate(node.operand, depth + 1)
             value = -item if isinstance(node.op, ast.USub) else item
@@ -49,7 +49,7 @@ def calculate(expression):
                 value = left / right
         else:
             raise ValueError("Operação não permitida.")
-        if not value.is_finite() or abs(value) > MAX_ABS_VALUE:
+        if not value.is_finite() or value.copy_abs() > MAX_ABS_VALUE:
             raise ValueError("Valor matemático fora do limite.")
         return value
 
@@ -59,7 +59,7 @@ def calculate(expression):
             value = evaluate(tree)
     except (InvalidOperation, OverflowError, ZeroDivisionError) as error:
         raise ValueError("Expressão não pode ser calculada com segurança.") from error
-    text = format(value.normalize(), "f")
+    text = format(value, "f")
     if "." in text:
         text = text.rstrip("0").rstrip(".")
     return {"expression": expression.strip(), "value": text,

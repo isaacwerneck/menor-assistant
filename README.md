@@ -108,6 +108,12 @@ autenticado `GET /tools` e execução controlada em
 metadados locais de auditoria. O Menor ainda não cria/instala
 autonomamente ferramentas Python nem controla Git.
 
+A ferramenta `math.calculate` calcula expressões com decimais sem convertê-los
+primeiro para ponto flutuante binário. O agente recebe orientação para conferir
+fórmula e unidades e preferir essa ferramenta na aritmética; o recibo comprova
+a expressão calculada, não a interpretação da pergunta. O Lab direto não executa
+essa ferramenta. Veja [contrato e limites](docs/rodada_inferencia_contexto_e_ferramentas_v4.md).
+
 ## Imagens e revisões de código (v0.6 — em revisão)
 
 O chat identifica pedidos de gerar/editar imagem, faz perguntas curtas

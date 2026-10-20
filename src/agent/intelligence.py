@@ -31,6 +31,8 @@ plan: trabalho composto; proponha passos e critérios sem executar.
 continue: refine um objetivo pendente; não o troque por outro assunto.
 act: usuário pediu ação agora; escolha ferramenta EXATA do catálogo, com
 argumentos exigidos; catálogo não dá autorização. Sem ferramenta, planeje.
+Para aritmética, prefira a calculadora quando disponível; confira fórmula e
+unidades. O recibo verifica a expressão calculada, não a interpretação do pedido.
 research: informação pública atual; forneça query pública, nunca dados privados.
 inspect_result: leia somente recibo verificado anterior, não simule execução.
 
