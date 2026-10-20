@@ -409,7 +409,9 @@ def _understand(state, message, history, project=None):
                 receipt["phase"] = "goal"
         return next_state, receipt
     if move == "research":
-        evidence = research.handle(message, history, automatic=True)
+        evidence = research.handle(
+            message, history, automatic=True, planned_query=decision.get("query"),
+        )
         if evidence is not None:
             return _answer(evidence["reply"], **state) if pending else _answer(evidence["reply"])
         reply = ("Para pesquisar isso preciso de uma consulta pública segura. "

@@ -94,6 +94,20 @@ Ambos podem falhar por bloqueio ou mudança de formato.
 Uma fonte recusada é registrada como falha parcial; a leitura tenta o próximo
 candidato, até cinco candidatos e três páginas legíveis. Sem fontes legíveis, há abstenção.
 
+### Pesquisa com uma decisão contextual — 20/10/2026
+
+O raciocinador geral pode devolver `query` no movimento `research`, resolvendo
+referências como “essa versão” com o contexto que já recebeu. O executor valida
+a consulta pública e a reutiliza, sem pedir outra classificação ao Ollama.
+Assim elimina uma chamada de inferência nesse caminho, mantendo busca, leitura
+e verificação das citações. Ainda é necessário medir a latência total no Ubuntu.
+
+Sem `query`, o classificador anterior continua disponível. Pedidos de estudo
+continuam passando por ele para decidir separadamente se é permitido salvar.
+Reutilizar uma consulta não autoriza gravação de memória. Mensagem ou consulta
+identificada como privada é recusada antes da busca. A proteção continua limitada
+pelos validadores existentes; não constitui garantia de interpretação perfeita.
+
 ### Contexto e diagnóstico da pesquisa (segunda avaliação, 19/10/2026)
 
 O planejador de busca usa schema com `action`, `query` e `study`, com teto de

@@ -69,6 +69,35 @@ class ResearchBudgetTests(unittest.TestCase):
         research.handle("Estude programação Python e salve o estudo.", [])
         investigate.assert_called_with("Python functions", "programacao")
 
+    @patch.object(research, "investigate", return_value={"reply": "evidência"})
+    @patch.object(research, "plan")
+    def test_contextual_query_skips_duplicate_model_classification(self, plan, investigate):
+        result = research.handle("E a documentação dessa versão?", [], automatic=True,
+                                 planned_query="Python 3.12 pathlib documentation")
+        self.assertEqual(result["reply"], "evidência")
+        plan.assert_not_called()
+        investigate.assert_called_once_with("Python 3.12 pathlib documentation", None)
+
+    @patch.object(research, "investigate")
+    @patch.object(research, "plan")
+    def test_preplanned_query_does_not_bypass_privacy_or_allow_study(self, plan, investigate):
+        for query in ("api_key=segredo", "/home/isaac/segredo", "x", "x" * 281):
+            with self.subTest(query=query):
+                result = research.handle("Pesquise Python", [], planned_query=query)
+                self.assertIn("Não consegui confirmar", result["reply"])
+        plan.assert_not_called()
+        investigate.assert_not_called()
+        result = research.handle("pesquise minha senha do servidor", [],
+                                 planned_query="Python documentation")
+        self.assertIn("privados", result["reply"])
+        investigate.assert_not_called()
+        plan.return_value = {"action": "chat", "query": "", "study": False}
+        result = research.handle("Estude Python mas não pesquise nem salve", [],
+                                 planned_query="Python documentation")
+        self.assertIsNone(result)
+        plan.assert_called_once()
+        investigate.assert_not_called()
+
     @patch.object(research, "_claims", return_value=CLAIMS)
     @patch.object(web, "read")
     @patch.object(web, "search")

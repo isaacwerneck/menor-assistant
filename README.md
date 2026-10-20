@@ -275,6 +275,9 @@ registra testes reais no navegador, problemas encontrados e limites de medição
 O planejador preserva o pedido completo, recebe preferências, usa resposta JSON
 mínima para perguntas simples e valida a saída por schema. O fallback compartilha
 o orçamento de histórico; correções finais e fatos do usuário têm prioridade.
+A pesquisa reutiliza a consulta pública do raciocinador quando disponível,
+evitando uma segunda classificação no Ollama; pedidos de estudo ainda validam
+o registro separadamente. Sem consulta contextual, mantém o fluxo anterior.
 Pesquisa respeita a decisão de não buscar, e trocar o modelo de embeddings
 reconstrói o cache. A melhoria no servidor precisa ser medida após deploy.
 
