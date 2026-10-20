@@ -27,14 +27,15 @@ manual linha a linha de todos os 337 caminhos; nem foi acessado o Ubuntu.
    um caso sem campo `question` aumenta `cases_executed`, mas não participa
    de `prompts`; `total - len(prompts)` pode contar esse caso como repetido
    mesmo que exista apenas uma execução. **Corrigido nesta revisão:**
-   a contagem usa só perguntas e históricos elegíveis, com teste de entrada incompleta. Não altera os relatórios privados.
+   a contagem usa apenas casos com pergunta textual válida, incluindo o
+   histórico na chave de deduplicação. Testes cobrem entradas incompletas.
+   Nenhum relatório privado é modificado.
 
 3. **Latência não finita aceita pelo analisador**
    (`ops/lab_eval_analysis.py:summarize`):
-   `elapsed_seconds=float("nan")` satisfaz `elapsed >= 0`? Não;
-   porém `float("inf")` satisfaz e entra em medianas, produzindo números
-   não JSON-portáveis. **Pendente para a frente C:** validar com
-   `math.isfinite` e cobrir entradas malformadas.
+   `elapsed_seconds=float("inf")` passava pelo teste `elapsed >= 0`
+   e contaminava medianas com valores não finitos. **Corrigido nesta revisão:**
+   `math.isfinite` exclui infinito, NaN e números inválidos, com regressões.
 
 4. **Validação heurística do patch proposto**
    (`src/agent/self_edit.py:_validate_patch`):
