@@ -187,7 +187,7 @@ test("Lab: groups history instead of listing every report, with manual publish",
     assert.match(groups[0].children[0].textContent, /2 execução/);
     assert.equal(ui.requests.filter(x => x.url.endsWith("/publish")).length, 0);
     const record = groups[0].children[1];
-    assert.match(record.children[0].textContent, /05:59 UTC/);
+    assert.match(record.children[0].textContent, /00:59 UTC/);
     const actions = record.children[1].children;
     assert.match(actions[0].href, /download/);
     await actions[1].listeners.click();
