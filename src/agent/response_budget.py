@@ -33,7 +33,7 @@ def output_budget(message, *, chat=False):
     if re.search(r"\b(?:em|ate|no\s+maximo)\s+(?:uma|duas|tres|1|2|3)"
                  r"\s+(?:frases?|linhas?)\b", text):
         return 96
-    detailed = r"\b(?:detalhad[oa]s?|profund[oa]|passo\s+a\s+passo|exaustiv[oa]|completo|" \
+    detailed = r"\b(?:detalhad[oa]s?|detalhes?|profund[oa]|passo\s+a\s+passo|exaustiv[oa]|completo|" \
                r"codigo\s+completo|todas?\s+as\s+etapas|roteiro|plano\s+completo)\b"
     if re.search(detailed, text):
         return 512 if chat else 256
