@@ -73,6 +73,13 @@ def artifact_receipt(produced):
 
 
 def describe_artifact(receipt):
+    if (isinstance(receipt, dict) and receipt.get("kind") == "tool"
+            and receipt.get("status") == "executed"):
+        suffix = "\nTrecho limitado; consulte o resultado original para detalhes." if receipt.get("truncated") else ""
+        return (
+            "Recibo registrado nesta conversa: " + receipt["tool"] + " executada.\n"
+            "Conteúdo retornado, sem verificação independente:\n" + receipt["excerpt"] + suffix
+        )
     if not isinstance(receipt, dict) or receipt.get("kind") != "image":
         return "Não encontrei um artefato recente verificável nesta conversa."
     width, height = receipt.get("actual_size", ["?", "?"])
