@@ -46,6 +46,7 @@ def inspect(directory, limit=100):
     scanned, total, passes, failures, ungraded, technical = 0, 0, 0, 0, 0, 0
     timings, prefill, generation, token_rates = [], [], [], []
     statuses, by_suite, prompts = Counter(), {}, set()
+    prompt_executions = 0
     ceiling_hits = 0
     technical_graded_failures = 0
     completed_graded_failures = 0
@@ -149,6 +150,7 @@ def inspect(directory, limit=100):
             if isinstance(question, str) and len(question) <= 10000:
                 key = json.dumps([question, history], ensure_ascii=False, sort_keys=True)
                 prompts.add(hashlib.sha256(key.encode()).digest())
+                prompt_executions += 1
     for suite in by_suite.values():
         suite["latency_p50_seconds"] = _median(suite.pop("_timings"))
         suite["statuses"] = dict(sorted(suite["statuses"].items()))
@@ -162,7 +164,7 @@ def inspect(directory, limit=100):
     return {
         "reports": scanned, "cases_executed": total,
         "unique_prompt_history_pairs": len(prompts),
-        "repeated_prompt_executions": max(0, total - len(prompts)),
+        "repeated_prompt_executions": prompt_executions - len(prompts),
         "graded_passes": passes, "graded_failures": failures, "ungraded": ungraded,
         "technical_graded_failures": technical_graded_failures,
         "completed_graded_failures": completed_graded_failures,

@@ -68,5 +68,24 @@ class AuditTriageTests(unittest.TestCase):
             self.assertNotIn("TOKEN-SECRETO", json.dumps(audit))
 
 
+    def test_missing_questions_do_not_count_as_repeated_executions(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            report = {
+                "run_id": "20261020T180300Z-44444444", "suite_id": "suite-valid",
+                "cases": [
+                    {"question": "unique", "history": [], "result": {"status": "answered"}},
+                    {"history": [], "result": {"status": "inference_failed"}},
+                    {"question": 123, "result": {"status": "no_valid_decision"}},
+                    {"question": "unique", "history": [], "result": {"status": "answered"}},
+                ],
+            }
+            (root / (report["run_id"] + ".json")).write_text(
+                json.dumps(report), encoding="utf-8")
+            audit = inspect(root)
+            self.assertEqual(audit["cases_executed"], 4)
+            self.assertEqual(audit["unique_prompt_history_pairs"], 1)
+            self.assertEqual(audit["repeated_prompt_executions"], 1)
+
 if __name__ == "__main__":
     unittest.main()

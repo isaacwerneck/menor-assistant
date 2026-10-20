@@ -26,9 +26,8 @@ manual linha a linha de todos os 337 caminhos; nem foi acessado o Ubuntu.
    (`ops/lab_batch_audit.py:inspect`):
    um caso sem campo `question` aumenta `cases_executed`, mas não participa
    de `prompts`; `total - len(prompts)` pode contar esse caso como repetido
-   mesmo que exista apenas uma execução. **Pendente para a frente C:**
-   calcular repetições apenas entre perguntas/históricos elegíveis, com teste
-   de entrada incompleta. Não altera os relatórios privados.
+   mesmo que exista apenas uma execução. **Corrigido nesta revisão:**
+   a contagem usa só perguntas e históricos elegíveis, com teste de entrada incompleta. Não altera os relatórios privados.
 
 3. **Latência não finita aceita pelo analisador**
    (`ops/lab_eval_analysis.py:summarize`):

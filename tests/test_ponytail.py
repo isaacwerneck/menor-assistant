@@ -25,12 +25,12 @@ class PonytailTests(unittest.TestCase):
     def test_code_proposal_receives_guidelines_without_new_permissions(self, post):
         response = MagicMock()
         response.json.return_value = {"message": {"content": json.dumps({
-            "source": "def classify(x):\\n    return x + 1\\n",
+            "source": "def classify(x):\n    return x + 1\n",
             "reason": "Corrigir retorno", "tests": "testar retorno",
         })}}
         post.return_value = response
         code, review = _propose_with_model(
-            "Corrigir retorno", "src/agent/router.py", "def classify(x):\\n    return x\\n",
+            "Corrigir retorno", "src/agent/router.py", "def classify(x):\n    return x\n",
         )
         self.assertIn("return x + 1", code)
         self.assertEqual(review["reason"], "Corrigir retorno")
@@ -42,12 +42,12 @@ class PonytailTests(unittest.TestCase):
     def test_tool_generator_keeps_contract_and_receives_guidelines(self, post):
         response = MagicMock()
         response.json.return_value = {"message": {"content": json.dumps({
-            "source": "def run(text: str) -> str:\\n    return text\\n",
+            "source": "def run(text: str) -> str:\n    return text\n",
             "tests": (
-                "import unittest\\n"
-                "class TestRun(unittest.TestCase):\\n"
-                "    def test_run(self):\\n"
-                "        self.assertEqual(1, 1)\\n"
+                "import unittest\n"
+                "class TestRun(unittest.TestCase):\n"
+                "    def test_run(self):\n"
+                "        self.assertEqual(1, 1)\n"
             ),
             "description": "Recebe e devolve um texto",
         })}}
