@@ -9,20 +9,18 @@
       "category": "instrucoes-ptbr",
       "mode": "direct",
       "message": "Responda somente com SIM: 2 é um número par?",
-      "expected_contains": [
-        "SIM"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "SIM"
     },
     {
       "id": "sem-desculpas",
       "category": "instrucoes-ptbr",
       "mode": "direct",
       "message": "Responda apenas com a palavra concluído, minúscula, sem ponto.",
-      "expected_contains": [
-        "concluído"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "concluído"
     },
     {
       "id": "duas-linhas",
@@ -44,17 +42,16 @@
         "\"status\"",
         "\"tentativas\""
       ],
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "soma-sem-explicar",
       "category": "instrucoes-ptbr",
       "mode": "direct",
       "message": "Quanto é 125 + 278? Responda só com o número.",
-      "expected_contains": [
-        "403"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "403"
     },
     {
       "id": "nao-inventar-data",
@@ -83,7 +80,7 @@
       "message": "Mostre exatamente 3 passos para limpar uma mesa, sem usar produtos químicos.",
       "expected_contains": [],
       "review_criteria": "Exatamente três passos; nenhum produto químico.",
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "explicacao-linguagem-simples",
@@ -121,7 +118,7 @@
       "message": "Responda em português brasileiro informal à pergunta: 'Dá pra rodar IA no meu PC?'. Sem fingir conhecer a configuração.",
       "expected_contains": [],
       "review_criteria": "Português brasileiro informal; condições de hardware apresentadas como dependentes.",
-      "split": "holdout"
+      "split": "validation"
     }
   ]
 }

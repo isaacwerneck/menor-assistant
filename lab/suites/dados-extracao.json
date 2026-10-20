@@ -9,60 +9,54 @@
       "category": "dados-extracao",
       "mode": "direct",
       "message": "Texto: 'Nome: Alice; Idade: 28; Cidade: Recife'. Responda apenas o nome.",
-      "expected_contains": [
-        "Alice"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "Alice"
     },
     {
       "id": "extrair-idade",
       "category": "dados-extracao",
       "mode": "direct",
       "message": "Texto: 'Nome: Alice; Idade: 28; Cidade: Recife'. Responda apenas idade.",
-      "expected_contains": [
-        "28"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "28"
     },
     {
       "id": "somar-csv",
       "category": "dados-extracao",
       "mode": "direct",
-      "message": "CSV: produto,valor\\na,10\\nb,15\\nc,8. Qual a soma dos valores? Apenas número.",
-      "expected_contains": [
-        "33"
-      ],
-      "split": "development"
+      "message": "CSV:\nproduto,valor\na,10\nb,15\nc,8\nQual é a soma dos valores? Apenas número.",
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "33"
     },
     {
       "id": "contar-registros",
       "category": "dados-extracao",
       "mode": "direct",
-      "message": "CSV: id,nome\\n1,Ana\\n2,Bia\\n3,Luiz. Quantas linhas de dados existem, sem cabeçalho? Apenas número.",
-      "expected_contains": [
-        "3"
-      ],
-      "split": "holdout"
+      "message": "CSV:\nid,nome\n1,Ana\n2,Bia\n3,Luiz\nQuantas linhas de dados existem, sem o cabeçalho? Apenas número.",
+      "expected_contains": [],
+      "split": "validation",
+      "expected_exact": "3"
     },
     {
       "id": "json-aninhado",
       "category": "dados-extracao",
       "mode": "direct",
       "message": "JSON: {\"cliente\":{\"nome\":\"Rafa\"},\"ativo\":true}. Qual é o valor de cliente.nome? Apenas texto.",
-      "expected_contains": [
-        "Rafa"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "Rafa"
     },
     {
       "id": "identificar-nulo",
       "category": "dados-extracao",
       "mode": "direct",
       "message": "JSON: {\"telefone\":null,\"email\":\"a@b.test\"}. Qual campo tem valor nulo? Apenas nome do campo.",
-      "expected_contains": [
-        "telefone"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "telefone"
     },
     {
       "id": "deduplicar-lista",
@@ -81,30 +75,27 @@
       "category": "dados-extracao",
       "mode": "direct",
       "message": "Converta 20/10/2026 para formato ISO AAAA-MM-DD. Apenas data.",
-      "expected_contains": [
-        "2026-10-20"
-      ],
-      "split": "holdout"
+      "expected_contains": [],
+      "split": "validation",
+      "expected_exact": "2026-10-20"
     },
     {
       "id": "diferenca-estoque",
       "category": "dados-extracao",
       "mode": "direct",
       "message": "Estoque: entrada 35 unidades, saída 12, entrada 4. Qual o saldo líquido das movimentações? Apenas inteiro.",
-      "expected_contains": [
-        "27"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "27"
     },
     {
       "id": "mediana-dados",
       "category": "dados-extracao",
       "mode": "direct",
       "message": "Números 9, 2, 7, 11, 4. Qual é a mediana? Apenas número.",
-      "expected_contains": [
-        "7"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "7"
     },
     {
       "id": "nao-inventar-campo",
@@ -122,7 +113,7 @@
       "message": "Preciso remover registros repetidos de uma base CSV, mas preservar o original. Planeje sem executar.",
       "expected_contains": [],
       "review_criteria": "Backup/cópia, definição de duplicata, validação de contagens.",
-      "split": "holdout"
+      "split": "validation"
     }
   ]
 }

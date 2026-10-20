@@ -33,11 +33,36 @@ def validate_suite(data):
         ids.add(cid)
         remote_lab.LabRequest.model_validate(case)
         expected = case.get("expected_contains", [])
+        exact = case.get("expected_exact")
         if not isinstance(expected, list) or len(expected) > 10 or any(
-            not isinstance(x, str) or len(x) > 200 for x in expected
+            not isinstance(x, str) or not x or len(x) > 200 for x in expected
         ):
             raise ValueError("Critérios inválidos.")
+        if exact is not None and (not isinstance(exact, str) or not exact.strip()
+                                  or len(exact) > 200 or expected):
+            raise ValueError("Resposta exata inválida ou critérios conflitantes.")
+        if case.get("split", "development") not in ("development", "validation"):
+            raise ValueError("Divisão de avaliação inválida.")
+        criterion = case.get("review_criteria", "")
+        if not isinstance(criterion, str) or len(criterion) > 500:
+            raise ValueError("Critério de revisão inválido.")
     return data
+
+
+def grade_case(case, result):
+    """Apenas verificações determinísticas; casos subjetivos continuam sem nota."""
+    exact = case.get("expected_exact")
+    tokens = case.get("expected_contains", [])
+    if exact is None and not tokens:
+        return None
+    if result.get("status") not in ("answered", "decision_validated"):
+        return False
+    reply = result.get("reply", "")
+    if not isinstance(reply, str):
+        return False
+    if exact is not None:
+        return reply.strip().casefold() == exact.strip().casefold()
+    return all(token.casefold() in reply.casefold() for token in tokens)
 
 
 def suites():
@@ -99,19 +124,25 @@ def _run(suite, run_id):
                         output = {"status":  "inference_failed", "reply":  "", "error_type":  type(error).__name__}
                 finally:
                     remote_lab._INFERENCE.release()
-            expected = case.get("expected_contains", [])
-            reply = output.get("reply", "")
-            passed = all(token.casefold() in reply.casefold() for token in expected) if expected else None
-            results.append({"id":  case["id"], "category":  case.get("category", "geral"),
-                            "mode":  payload.mode, "question":  payload.message, "result":  output,
-                            "elapsed_seconds":  round(time.monotonic() - began, 3),
-                            "automatic_pass":  passed})
-        report = {"run_id":  run_id, "suite_id":  suite["id"], "started_at":  started,
-                  "finished_at":  datetime.now(timezone.utc).isoformat(),
-                  "total":  len(results), "automatic_passes":  sum(x["automatic_pass"] is True for x in results),
-                  "automatic_failures":  sum(x["automatic_pass"] is False for x in results),
-                  "ungraded":  sum(x["automatic_pass"] is None for x in results),
-                  "cases":  results}
+            passed = grade_case(case, output)
+            results.append({"id": case["id"], "category": case.get("category", "geral"),
+                            "split": case.get("split", "development"), "mode": payload.mode,
+                            "question": payload.message, "history": [item.model_dump() for item in payload.history],
+                            "expected_contains": case.get("expected_contains", []),
+                            "expected_exact": case.get("expected_exact"),
+                            "review_criteria": case.get("review_criteria", ""), "result": output,
+                            "elapsed_seconds": round(time.monotonic() - began, 3),
+                            "automatic_pass": passed})
+        report = {"run_id": run_id, "suite_id": suite["id"],
+                  "methodology_version": suite.get("methodology_version", "legacy"),
+                  "started_at": started, "finished_at": datetime.now(timezone.utc).isoformat(),
+                  "total": len(results),
+                  "automatic_passes": sum(x["automatic_pass"] is True for x in results),
+                  "automatic_failures": sum(x["automatic_pass"] is False for x in results),
+                  "ungraded": sum(x["automatic_pass"] is None for x in results),
+                  "inference_failures": sum(x["result"].get("status")
+                                            not in ("answered", "decision_validated") for x in results),
+                  "cases": results}
         (DATA / (run_id + ".json")).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         # Publicar somente métricas, sem perguntas, respostas ou histórico privados.
         summary = {key: report[key] for key in ("run_id", "suite_id", "started_at", "finished_at",

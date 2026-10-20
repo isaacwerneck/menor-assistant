@@ -38,7 +38,7 @@
       "message": "Planeje pesquisar uma viagem com orçamento definido, mas sem datas informadas.",
       "expected_contains": [],
       "review_criteria": "Identificar falta de datas; não alegar reservas.",
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "analisar-pr",
@@ -74,7 +74,7 @@
       "message": "Planeje criar capa artística com referência visual fornecida pelo usuário, sem alegar que já a viu.",
       "expected_contains": [],
       "review_criteria": "Pedir referência, requisitos, geração, revisão.",
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "modelo-local",
@@ -110,7 +110,7 @@
       "message": "Planeje medir se atualização melhora a IA sem favorecer apenas as perguntas usadas no ajuste.",
       "expected_contains": [],
       "review_criteria": "Conjunto holdout, métricas por categoria e comparação baseline.",
-      "split": "holdout"
+      "split": "validation"
     }
   ]
 }

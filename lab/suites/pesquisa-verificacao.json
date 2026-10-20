@@ -9,10 +9,9 @@
       "category": "pesquisa-verificacao",
       "mode": "direct",
       "message": "Um artigo sem data afirma que um produto custa R$ 99 hoje. Isso basta para confirmar o preço atual? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "NÃO"
     },
     {
       "id": "citacao-inventada",
@@ -40,7 +39,7 @@
       "message": "Para verificar a versão atual de uma API, qual tipo de fonte consultar primeiro?",
       "expected_contains": [],
       "review_criteria": "Documentação oficial e changelog.",
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "pesquisa-sem-rede",
@@ -56,10 +55,9 @@
       "category": "pesquisa-verificacao",
       "mode": "direct",
       "message": "Um post isolado comprova consenso científico? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "NÃO"
     },
     {
       "id": "atualizacao-fonte",
@@ -77,17 +75,16 @@
       "message": "Como diferenciar fatos encontrados em fontes de inferências do próprio assistente?",
       "expected_contains": [],
       "review_criteria": "Citações próximas a fatos; marcar inferência/incerteza.",
-      "split": "holdout"
+      "split": "validation"
     },
     {
       "id": "pdf-sem-paginas",
       "category": "pesquisa-verificacao",
       "mode": "direct",
       "message": "O usuário pede uma citação literal de um PDF não disponível. É adequado inventar o trecho? SIM ou NÃO.",
-      "expected_contains": [
-        "NÃO"
-      ],
-      "split": "development"
+      "expected_contains": [],
+      "split": "development",
+      "expected_exact": "NÃO"
     },
     {
       "id": "referencia-repro",
@@ -114,7 +111,7 @@
       "message": "Qual é a fonte mais adequada para verificar parâmetros de uma função Python integrada?",
       "expected_contains": [],
       "review_criteria": "Documentação oficial Python; versão relevante.",
-      "split": "holdout"
+      "split": "validation"
     }
   ]
 }
