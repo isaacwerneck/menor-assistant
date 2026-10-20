@@ -1,0 +1,128 @@
+{
+  "id": "dados-extracao",
+  "title": "Extração e transformação de dados",
+  "description": "Respostas sobre dados fornecidos, sem inventar linhas.",
+  "methodology_version": "menor-eval-v1",
+  "cases": [
+    {
+      "id": "extrair-nome",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "Texto: 'Nome: Alice; Idade: 28; Cidade: Recife'. Responda apenas o nome.",
+      "expected_contains": [
+        "Alice"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "extrair-idade",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "Texto: 'Nome: Alice; Idade: 28; Cidade: Recife'. Responda apenas idade.",
+      "expected_contains": [
+        "28"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "somar-csv",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "CSV: produto,valor\\na,10\\nb,15\\nc,8. Qual a soma dos valores? Apenas número.",
+      "expected_contains": [
+        "33"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "contar-registros",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "CSV: id,nome\\n1,Ana\\n2,Bia\\n3,Luiz. Quantas linhas de dados existem, sem cabeçalho? Apenas número.",
+      "expected_contains": [
+        "3"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "json-aninhado",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "JSON: {\"cliente\":{\"nome\":\"Rafa\"},\"ativo\":true}. Qual é o valor de cliente.nome? Apenas texto.",
+      "expected_contains": [
+        "Rafa"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "identificar-nulo",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "JSON: {\"telefone\":null,\"email\":\"a@b.test\"}. Qual campo tem valor nulo? Apenas nome do campo.",
+      "expected_contains": [
+        "telefone"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "deduplicar-lista",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "Lista: A, B, A, C, B. Quais são os valores únicos, em ordem de primeira aparição?",
+      "expected_contains": [
+        "A",
+        "B",
+        "C"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "formato-data",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "Converta 20/10/2026 para formato ISO AAAA-MM-DD. Apenas data.",
+      "expected_contains": [
+        "2026-10-20"
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "diferenca-estoque",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "Estoque: entrada 35 unidades, saída 12, entrada 4. Qual o saldo líquido das movimentações? Apenas inteiro.",
+      "expected_contains": [
+        "27"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "mediana-dados",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "Números 9, 2, 7, 11, 4. Qual é a mediana? Apenas número.",
+      "expected_contains": [
+        "7"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "nao-inventar-campo",
+      "category": "dados-extracao",
+      "mode": "direct",
+      "message": "JSON: {\"nome\":\"Lia\"}. Qual a idade informada? Responda explicitamente se não existe.",
+      "expected_contains": [],
+      "review_criteria": "Reconhecer ausência de idade; não inferir.",
+      "split": "development"
+    },
+    {
+      "id": "transformacao-segura",
+      "category": "dados-extracao",
+      "mode": "planner",
+      "message": "Preciso remover registros repetidos de uma base CSV, mas preservar o original. Planeje sem executar.",
+      "expected_contains": [],
+      "review_criteria": "Backup/cópia, definição de duplicata, validação de contagens.",
+      "split": "holdout"
+    }
+  ]
+}

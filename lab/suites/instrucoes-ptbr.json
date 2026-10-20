@@ -1,0 +1,127 @@
+{
+  "id": "instrucoes-ptbr",
+  "title": "Instruções e restrições em português brasileiro",
+  "description": "Fidelidade ao pedido, formato, prioridades e restrições.",
+  "methodology_version": "menor-eval-v1",
+  "cases": [
+    {
+      "id": "apenas-sim",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Responda somente com SIM: 2 é um número par?",
+      "expected_contains": [
+        "SIM"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "sem-desculpas",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Responda apenas com a palavra concluído, minúscula, sem ponto.",
+      "expected_contains": [
+        "concluído"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "duas-linhas",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Crie exatamente duas linhas: na primeira escreva azul; na segunda escreva verde. Sem outras palavras.",
+      "expected_contains": [
+        "azul",
+        "verde"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "formatacao-json",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Devolva apenas um JSON válido com duas propriedades: status igual a ok e tentativas igual a 2.",
+      "expected_contains": [
+        "\"status\"",
+        "\"tentativas\""
+      ],
+      "split": "holdout"
+    },
+    {
+      "id": "soma-sem-explicar",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Quanto é 125 + 278? Responda só com o número.",
+      "expected_contains": [
+        "403"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "nao-inventar-data",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Escreva um aviso curto para reunião sem inventar data nem horário.",
+      "expected_contains": [],
+      "review_criteria": "Não inserir dia, data nem horário fictício.",
+      "split": "development"
+    },
+    {
+      "id": "prioridade-restricao",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Faça um resumo do texto 'O Menor roda em Ubuntu' em até 6 palavras e não mencione Windows.",
+      "expected_contains": [
+        "Ubuntu"
+      ],
+      "review_criteria": "Máximo seis palavras, sem Windows.",
+      "split": "development"
+    },
+    {
+      "id": "lista-ordenada",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Mostre exatamente 3 passos para limpar uma mesa, sem usar produtos químicos.",
+      "expected_contains": [],
+      "review_criteria": "Exatamente três passos; nenhum produto químico.",
+      "split": "holdout"
+    },
+    {
+      "id": "explicacao-linguagem-simples",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Explique o que é uma API para uma pessoa sem experiência técnica, em até 40 palavras.",
+      "expected_contains": [],
+      "review_criteria": "Clareza, até quarenta palavras, sem jargão não explicado.",
+      "split": "development"
+    },
+    {
+      "id": "nega-pedido-contraditorio",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "O texto deve ter exatamente zero palavras e incluir a palavra olá. O que você consegue fazer?",
+      "expected_contains": [],
+      "review_criteria": "Reconhecer impossibilidade de atender condições incompatíveis.",
+      "split": "development"
+    },
+    {
+      "id": "tabela-somente",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Mostre uma tabela Markdown com duas colunas, Arquivo e Tipo, para foto.png e notas.txt.",
+      "expected_contains": [
+        "foto.png",
+        "notas.txt"
+      ],
+      "split": "development"
+    },
+    {
+      "id": "ptbr-coloquial",
+      "category": "instrucoes-ptbr",
+      "mode": "direct",
+      "message": "Responda em português brasileiro informal à pergunta: 'Dá pra rodar IA no meu PC?'. Sem fingir conhecer a configuração.",
+      "expected_contains": [],
+      "review_criteria": "Português brasileiro informal; condições de hardware apresentadas como dependentes.",
+      "split": "holdout"
+    }
+  ]
+}
