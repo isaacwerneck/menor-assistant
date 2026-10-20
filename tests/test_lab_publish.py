@@ -50,8 +50,9 @@ class PublishTests(unittest.TestCase):
         session = Mock()
         session.get.return_value = reference
         session.put.return_value = response
-        with patch.dict("os.environ", {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
-                                     "MENOR_LAB_GITHUB_TOKEN": "github_pat_SECRET"}), \
+        env = {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
+               "MENOR_LAB_GITHUB_TOKEN": "github_pat_SECRET"}
+        with patch.dict("os.environ", env), \
              patch.object(lab_publish.requests, "Session", return_value=session):
             with self.assertRaises(lab_publish.GitHubPublishRejected) as caught:
                 lab_publish.publish_report({"run_id": "20261020T022255Z-4f73ee58"})
