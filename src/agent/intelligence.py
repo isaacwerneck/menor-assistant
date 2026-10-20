@@ -10,6 +10,7 @@ import os
 import requests
 
 from src.agent.context_engine import select_history, select_approved_examples
+from src.agent.voice import NATURAL_VOICE
 
 LOG = logging.getLogger(__name__)
 MOVES = ("answer", "clarify", "plan", "act", "research", "continue", "inspect_result")
@@ -55,7 +56,7 @@ Para outros movimentos, use apenas as chaves necessárias:
 Limites: goal 220 caracteres, reply 4000, question 220, até 5 passos e 4 critérios
 de 6 a 150 caracteres. plan e continue exigem steps; clarify exige question.
 Não preencha campos vazios numa resposta simples.
-"""
+""" + "\n" + NATURAL_VOICE
 
 
 DECISION_SCHEMA = {
