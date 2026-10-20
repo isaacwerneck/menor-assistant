@@ -84,7 +84,7 @@ class OutputBudgetTests(unittest.TestCase):
         response = MagicMock()
         post.return_value = response
         req = main.ChatRequest(message="Só o número.", history=[
-            {"role":"user", "content":"Contexto prévio."},
+            {"role": "user", "content": "Contexto prévio."},
         ])
         self.assertIs(main.open_ollama(req, stream=True), response)
         payload = post.call_args.kwargs["json"]
@@ -149,20 +149,21 @@ class GraderReviewTests(unittest.TestCase):
 
     def test_incorrect_or_contradictory_answers_not_silently_credited(self):
         for text in ("Não é válido; SIM", "A resposta é 8", "Senha: 7"):
-            spec = {"grader":"boolean", "expected_exact":"NÃO"}
-            case = {"automatic_pass":False, "result":{"status":"answered","reply":text}}
+            spec = {"grader": "boolean", "expected_exact": "NÃO"}
+            case = {"automatic_pass": False, "result": {"status": "answered", "reply": text}}
             self.assertFalse(lab_eval_analysis._possible_format_mismatch(spec, case))
-        wrong = {"automatic_pass":False,"result":{"status":"answered","reply":"Seis relatórios"}}
+        wrong = {"automatic_pass": False, "result": {"status": "answered", "reply": "Seis relatórios"}}
         self.assertFalse(lab_eval_analysis._possible_format_mismatch(
-            {"expected_contains":["7"]}, wrong))
+            {"expected_contains": ["7"]}, wrong))
 
     def test_separate_incident_does_not_mutate_historical_scores(self):
-        suite = {"id":"old", "cases":[{"id":"one","mode":"direct",
-                                      "expected_contains":["relatorios"]}]}
-        report = {"run_id":"run", "suite_id":"old", "cases":[{
-            "id":"one", "automatic_pass":False, "elapsed_seconds":2,
-            "result":{"status":"answered","reply":"relatórios"},
-        }]}
+        suite = {"id": "old", "cases": [
+            {"id": "one", "mode": "direct", "expected_contains": ["relatorios"]},
+        ]}
+        report = {"run_id": "run", "suite_id": "old", "cases": [
+            {"id": "one", "automatic_pass": False, "elapsed_seconds": 2,
+             "result": {"status": "answered", "reply": "relatórios"}},
+        ]}
         result = lab_eval_analysis.summarize(report, suite)
         self.assertEqual(result["graded_failures"], 1)
         self.assertEqual(result["incidents"]["possible_format_mismatch"], 1)
@@ -176,8 +177,8 @@ class RealisticABTests(unittest.TestCase):
         self.assertEqual(first["comparison_group"], second["comparison_group"])
         for a, b in zip(first["cases"], second["cases"]):
             self.assertEqual(a["id"], b["id"])
-            self.assertEqual({k:v for k,v in a.items() if k!="profile"},
-                             {k:v for k,v in b.items() if k!="profile"})
+            self.assertEqual({k: v for k, v in a.items() if k != "profile"},
+                             {k: v for k, v in b.items() if k != "profile"})
             self.assertEqual(a["profile"], "baseline")
             self.assertEqual(b["profile"], "assistant")
 
@@ -188,13 +189,13 @@ class OfflineAuditTests(unittest.TestCase):
             directory = Path(directory)
             for n, suite in enumerate(("suite-one", "suite-two")):
                 run = f"20261020T16540{n}Z-{n:08x}"
-                data = {"run_id":run, "suite_id":suite, "cases":[
-                    {"id":"x", "question":"SECRET PROMPT", "history":[],
-                     "automatic_pass":True, "elapsed_seconds":12,
-                     "result":{"status":"answered", "reply":"SECRET ANSWER",
-                               "performance":{"prompt_eval_duration":2_000_000_000,
-                                              "eval_duration":10_000_000_000,
-                                              "generation_tokens_per_second":6.5}}},
+                data = {"run_id": run, "suite_id": suite, "cases": [
+                    {"id": "x", "question": "SECRET PROMPT", "history": [],
+                     "automatic_pass": True, "elapsed_seconds": 12,
+                     "result": {"status": "answered", "reply": "SECRET ANSWER",
+                                "performance": {"prompt_eval_duration": 2_000_000_000,
+                                                "eval_duration": 10_000_000_000,
+                                                "generation_tokens_per_second": 6.5}}},
                 ]}
                 (directory / (run + ".json")).write_text(json.dumps(data), encoding="utf-8")
             summary = lab_batch_audit.inspect(directory)
@@ -217,15 +218,15 @@ class OfflineAuditTests(unittest.TestCase):
 class ToolReceiptIntegrationTests(unittest.TestCase):
     def test_math_receipt_survives_next_turn_and_is_not_faked(self):
         with tempfile.TemporaryDirectory() as directory:
+            env = {"MENOR_DATA_DIR": directory, "MENOR_INTELLIGENCE_ENABLED": "1"}
             with (
-                patch.dict(os.environ, {"MENOR_DATA_DIR": directory,
-                                     "MENOR_INTELLIGENCE_ENABLED": "1"}),
+                patch.dict(os.environ, env),
                 patch.object(runner, "relevant_context", return_value=""),
                 patch.object(runner, "contextual_knowledge", return_value=""),
                 patch.object(runner.intelligence, "decide", side_effect=[
-                    {"move":"act", "tool":"math.calculate",
-                     "arguments":{"expression":"250*(1-12/100)"}, "reply":"Calculando."},
-                    {"move":"inspect_result", "reply":"Qual foi o resultado anterior?"},
+                    {"move": "act", "tool": "math.calculate",
+                     "arguments": {"expression": "250*(1-12/100)"}, "reply": "Calculando."},
+                    {"move": "inspect_result", "reply": "Qual foi o resultado anterior?"},
                 ]),
             ):
                 store = TaskStore()
@@ -244,6 +245,7 @@ class ToolReceiptIntegrationTests(unittest.TestCase):
                                         tasks=store)
                     repeat.assert_not_called()
                 self.assertIn("math.calculate", second["reply"])
+
 
 if __name__ == "__main__":
     unittest.main()
