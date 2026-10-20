@@ -339,7 +339,6 @@ def start(suite_id):
     return run_id
 
 
-
 def _run_queue(entries):
     """Executa sequencialmente no servidor, independente da aba do navegador.
 
