@@ -12,6 +12,7 @@ import secrets
 import requests
 
 from src.agent.diagnostics import analyze
+from src.agent.ponytail import coding_guidance
 from src.tools.audit import record
 
 OWNER_REPO = "isaacwerneck/menor-assistant"
@@ -90,6 +91,7 @@ def _propose_with_model(issue, path, original):
                 "preserve API e comportamento existente. Retorne APENAS JSON: "
                 '{"source":"conteúdo integral corrigido","reason":"razão sucinta","tests":"testes recomendados"}. '
                 "Não gere shell, novas dependências, rede, credenciais nem imports perigosos."
+                "\n" + coding_guidance()
             )},
             {"role": "user", "content": (
                 f"Problema: {issue}\nArquivo permitido: {path}\n"
