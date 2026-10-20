@@ -258,12 +258,15 @@ class ConversationContinuityTests(unittest.TestCase):
     def test_public_research_does_not_erase_goal(self, think, research):
         think.side_effect = [
             decision("Automatizar jardim", relation="start"),
-            decision("Automatizar jardim", move="research"),
+            {**decision("Automatizar jardim", move="research"), "query": "sensores de umidade documentação"},
         ]
         runner.run(self.session, "multiTurn001", "Planeja o jardim", [], tasks=TaskStore())
         answer = runner.run(self.session, "multiTurn002", "Pesquise fontes públicas", [], tasks=TaskStore())
         self.assertEqual(answer["phase"], "goal")
         self.assertIn("fontes públicas", answer["reply"])
+        research.assert_called_once_with(
+            "Pesquise fontes públicas", [], automatic=True, planned_query="sensores de umidade documentação",
+        )
         self.assertEqual(TaskStore().inspect(self.session)["goal"], "Automatizar jardim")
 
     @patch("src.agent.runner.intelligence.decide")

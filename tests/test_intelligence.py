@@ -93,6 +93,19 @@ class ReasonerContractTests(unittest.TestCase):
         self.assertNotIn("Posso continuar", rendered)
 
     @patch("src.agent.intelligence.requests.post")
+    def test_public_query_is_optional_and_only_valid_on_research(self, post):
+        item = {**verdict("research"), "query": "Python 3.12 pathlib documentation"}
+        post.return_value = model_reply(item)
+        self.assertEqual(intelligence.decide("Pesquise pathlib")["query"], item["query"])
+        for value in (42, "x", "x" * 281):
+            post.return_value = model_reply({**item, "query": value})
+            self.assertIsNone(intelligence.decide("Pesquise pathlib"))
+        post.return_value = model_reply({**item, "move": "answer"})
+        self.assertIsNone(intelligence.decide("Explique pathlib"))
+        post.return_value = model_reply(verdict("research"))
+        self.assertNotIn("query", intelligence.decide("Pesquise pathlib"))
+
+    @patch("src.agent.intelligence.requests.post")
     def test_reasoning_model_can_be_separate_from_coder(self, post):
         post.return_value = model_reply(verdict("plan"))
         with patch.dict(os.environ, {"MENOR_REASONING_MODEL": "local-instruct:7b"}):

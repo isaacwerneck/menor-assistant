@@ -179,7 +179,7 @@ def investigate(query, topic=None):
     return {"reply": "\n".join(lines), "sources": [c["source"]["url"] for c in claims], "saved": saved}
 
 
-def handle(message, history, automatic=False):
+def handle(message, history, automatic=False, *, planned_query=None):
     explicit = bool(RESEARCH.search(message))
     if not explicit and not automatic:
         return None
@@ -193,7 +193,11 @@ def handle(message, history, automatic=False):
                 "Reformule apenas com termos públicos para pesquisar.",
                 "sources": [], "saved": None}
     try:
-        decision = plan(message, [] if automatic and not explicit else history)
+        if planned_query is not None and not STUDY.search(message):
+            # Reutiliza a interpretação contextual; pesquisar não autoriza gravar estudo.
+            decision = {"action": "research", "query": web.public_query(planned_query), "study": False}
+        else:
+            decision = plan(message, [] if automatic and not explicit else history)
         if decision["action"] == "chat":
             return None
         query = decision.get("query") or message[:280]

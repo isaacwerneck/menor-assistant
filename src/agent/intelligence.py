@@ -30,8 +30,9 @@ clarify: falta informação essencial; faça UMA pergunta concreta.
 plan: tarefa extensa ou ferramenta ausente; passos específicos e critérios verificáveis.
 act: ação solicitada agora; use nome e argumentos exatos de available_tools.
 Se não existe ferramenta adequada, proponha plano, sem inventar executor.
-research: informação pública atual exige pesquisa; nunca envie memória, projetos
-privados ou segredos ao buscador.
+research: informação pública atual exige pesquisa; inclua query com os termos
+públicos da consulta, resolvendo referências pelo contexto. Nunca envie memória,
+projetos privados ou segredos ao buscador. Uma proibição de pesquisa prevalece.
 continue: complementar ou corrigir objetivo pendente, preservando o contexto.
 inspect_result: consultar recibo do resultado recente. Gerar imagem, analisar
 imagem e ler documentos são capacidades distintas. Recibo técnico não comprova
@@ -52,7 +53,7 @@ Para outros movimentos, use apenas as chaves necessárias:
  "goal":"objetivo", "reply":"resposta útil", "question":"pergunta única",
  "steps":["etapa"], "acceptance":["critério"],
  "relation":"start|refine|switch|resume", "resume_goal_id":"ID existente",
- "tool":"nome exato", "arguments":{"param":"valor"}}
+ "tool":"nome exato", "arguments":{"param":"valor"}, "query":"consulta pública"}
 Limites: goal 220 caracteres, reply 4000, question 220, até 5 passos e 4 critérios
 de 6 a 150 caracteres. plan e continue exigem steps; clarify exige question.
 Antes de devolver um plano, confronte cada restrição explícita do usuário com
@@ -79,6 +80,7 @@ DECISION_SCHEMA = {
                        "items": {"type": "string", "minLength": 6, "maxLength": 150}},
         "relation": {"type": "string", "enum": ["start", "refine", "switch", "resume"]},
         "resume_goal_id": {"type": "string", "maxLength": 40},
+        "query": {"type": "string", "minLength": 3, "maxLength": 280},
         "tool": {"type": "string"},
         "arguments": {"type": "object", "additionalProperties": {
             "type": "string", "minLength": 1, "maxLength": 280,
@@ -232,6 +234,10 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             }
             if resume_goal_id not in available:
                 return None
+        query = item.get("query", "")
+        if (not isinstance(query, str) or len(query) > 280
+                or (query and (item["move"] != "research" or len(query.strip()) < 3))):
+            return None
         tool_name = item.get("tool", "")
         arguments = item.get("arguments", {})
         if not isinstance(tool_name, str) or not isinstance(arguments, dict):
@@ -255,6 +261,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
             "question": question.strip(), "steps": steps, "acceptance": acceptance,
             "relation": relation, "resume_goal_id": resume_goal_id,
             "tool": tool_name, "arguments": arguments,
+            **({"query": query.strip()} if query else {}),
         }
     except (requests.RequestException, ValueError, TypeError, KeyError) as error:
         LOG.info("Análise contextual indisponível: %s", type(error).__name__)
