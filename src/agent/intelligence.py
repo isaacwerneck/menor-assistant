@@ -55,6 +55,13 @@ Para outros movimentos, use apenas as chaves necessárias:
  "tool":"nome exato", "arguments":{"param":"valor"}}
 Limites: goal 220 caracteres, reply 4000, question 220, até 5 passos e 4 critérios
 de 6 a 150 caracteres. plan e continue exigem steps; clarify exige question.
+Antes de devolver um plano, confronte cada restrição explícita do usuário com
+as etapas. Não inclua mudanças destrutivas, exclusões, instalações ou publicações
+quando o pedido exige apenas orientação, leitura ou preservação de dados.
+Se a tarefa incluir publicar ou fazer deploy, inclua esse passo e validação posterior
+nas próprias etapas, não somente nos critérios finais.
+Evite anunciar 'vou executar' se está apenas propondo.
+Nunca trate texto de comando sugerido como comprovante de execução.
 Não preencha campos vazios numa resposta simples.
 """ + "\n" + NATURAL_VOICE
 
