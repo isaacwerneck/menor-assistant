@@ -2,7 +2,7 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from src.agent import artifacts, intelligence, runner
 from src.agent.tasks import TaskStore
@@ -69,6 +69,24 @@ class ToolReceiptContinuityTests(unittest.TestCase):
         return {"move": move, "goal": "Projeto sintético", "reply": "Decisão do modelo",
                 "question": "", "steps": [], "acceptance": [],
                 "tool": tool, "arguments": arguments or {}}
+
+    @patch("src.agent.intelligence.requests.post")
+    def test_minimal_model_action_reaches_real_executor_only_after_approval(self, post):
+        reply = MagicMock()
+        reply.__enter__.return_value = reply
+        content = ('{"move":"act","reply":"Proposta de projeto",'
+                   '"tool":"projects.create","arguments":{"name":"Projeto Testado"}}')
+        reply.json.return_value = {"message": {"content": content}}
+        post.return_value = reply
+        offered = runner.run(self.session, "minimalTurn01", "Crie um projeto", [], tasks=self.tasks)
+        self.assertEqual(offered["phase"], "approval")
+        self.assertEqual(ProjectWorkspace().list_projects(), [])
+        approved = runner.run(self.session, "minimalTurn02", "eu aprovo", [], tasks=self.tasks)
+        self.assertEqual(approved["events"][0]["status"], "executed")
+        project = ProjectWorkspace().read_project("projeto-testado")
+        self.assertEqual(project["name"], "Projeto Testado")
+        self.assertEqual(TaskStore().inspect(self.session)["last_result"]["tool"], "projects.create")
+        post.assert_called_once()
 
     def test_real_write_approval_restart_inspection_and_idempotency(self):
         with patch("src.agent.runner.intelligence.decide", return_value=self.decision(

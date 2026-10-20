@@ -20,7 +20,51 @@ class ToolContractTests(unittest.TestCase):
     def check(self, schema, arguments):
         with patch("src.agent.intelligence.requests.post",
                    return_value=response("files.context", arguments)):
-            return decide("Consulte um arquivo", tools=[schema])
+            return decide("Consulte um arquivo", tools=[schema], feedback_examples=[], preferences="")
+
+    @patch("src.agent.intelligence.requests.post")
+    def test_minimal_action_does_not_require_an_unused_goal(self, post):
+        mocked = response("system.diagnose", {})
+        mocked.json.return_value = {"message": {"content": json.dumps({
+            "move": "act", "reply": "Consultando diagnóstico.",
+            "tool": "system.diagnose", "arguments": {},
+        })}}
+        post.return_value = mocked
+        schema = {"name": "system.diagnose", "description": "Consultar auditoria",
+                  "arguments": [], "writes": False}
+        result = decide("Consulte o diagnóstico real", tools=[schema], feedback_examples=[], preferences="")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["tool"], "system.diagnose")
+        self.assertEqual(result["goal"], "Consulte o diagnóstico real")
+        post.assert_called_once()
+
+    @patch("src.agent.intelligence.requests.post")
+    def test_minimal_research_retains_contextual_query_without_goal(self, post):
+        mocked = response("", {})
+        mocked.json.return_value = {"message": {"content": json.dumps({
+            "move": "research", "reply": "Vou consultar fontes.",
+            "query": "Python pathlib documentation",
+        })}}
+        post.return_value = mocked
+        result = decide("Consulte documentação", feedback_examples=[], preferences="")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["query"], "Python pathlib documentation")
+
+    @patch("src.agent.intelligence.requests.post")
+    def test_plans_still_require_explicit_goal_and_tool_validation_remains_strict(self, post):
+        mocked = response("shell.exec", {})
+        post.return_value = mocked
+        for item in (
+            {"move": "plan", "reply": "Um plano", "steps": ["Validar o resultado"]},
+            {"move": "act", "reply": "Executar", "tool": "shell.exec", "arguments": {}},
+            {"move": "act", "reply": "Consultar", "tool": "system.diagnose", "arguments": {"x": "extra"}},
+        ):
+            with self.subTest(item=item):
+                mocked.json.return_value = {"message": {"content": json.dumps(item)}}
+                self.assertIsNone(decide("Consulte o diagnóstico real", tools=[{
+                    "name": "system.diagnose", "description": "Consultar auditoria",
+                    "arguments": [], "writes": False,
+                }], feedback_examples=[], preferences=""))
 
     def test_valid_read_only_schema(self):
         schema = {"name": "files.context", "description": "Ler trechos",
