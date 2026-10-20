@@ -76,6 +76,24 @@ recusa nomes, chaves ou tipos de parâmetros não reconhecidos. Uma leitura pode
 produzir comprovante imediato; ferramentas de escrita apenas iniciam uma
 aprovação específica, sem executar durante o planejamento.
 
+### Decisões curtas de ação e pesquisa — 20/10/2026
+
+O schema permite decisões de ação com `move`, `reply`, `tool` e `arguments`,
+e decisões de pesquisa com `move`, `reply` e `query`. O validador exigia também
+um `goal` não usado nesses caminhos e descartava essas respostas válidas,
+podendo provocar outra inferência no fallback. Agora deriva apenas esse resumo
+interno do pedido atual, como já fazia para respostas diretas. O pedido completo
+continua sendo encaminhado ao executor; planos, continuações e esclarecimentos
+continuam exigindo objetivo explícito.
+
+O ajuste não concede autorização nem cria rotas por palavras-chave: nome da
+ferramenta, argumentos e aprovação de escrita continuam validados. Testes
+reproduziram a rejeição anterior e verificam ações/pesquisas mínimas, recusa de
+ferramenta inventada e argumentos extras. A integração usa resposta JSON simulada
+do Ollama, parser real e criação de arquivos temporários somente após aprovação.
+A redução de fallback é comprovada nesses casos; ganho em segundos no Qwen real
+ainda precisa ser medido.
+
 A execução por etapas sem ferramenta selecionada ainda existe como fallback,
 mas recebe o objetivo pendente para não transformar respostas curtas em pedidos
 independentes. Antes de executar escrita, autorização pontual continua obrigatória.

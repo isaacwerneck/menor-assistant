@@ -288,7 +288,9 @@ reconstrói o cache. A melhoria no servidor precisa ser medida após deploy.
 
 O agente interpreta objetivos com o Qwen/Ollama local e gera movimentos gerais:
 responder, esclarecer, planejar, pesquisar, continuar ou encaminhar execução.
-A execução é sempre validada pelo registro de ferramentas existente. O estado
+A execução é sempre validada pelo registro de ferramentas existente. Ações e
+pesquisas curtas não precisam gerar campos de plano desnecessários para serem
+aceitas; ferramentas e aprovações continuam sob validação do executor. O estado
 de planejamento continua na SQLite por conversa; informações do cérebro entram
 como dados contextualizados, sem conceder permissões. Recibos de consultas e
 escritas aprovadas são preservados por conversa para consulta posterior, sem
