@@ -18,6 +18,68 @@ _LOCK = threading.Lock()
 _RUNNING = False
 STATE = {"status":  "idle"}
 
+# Rotina de avaliação mais recente. IDs são estáveis e exibidos na UI para
+# o operador poder conferir exatamente qual bateria foi solicitada.
+RECOMMENDED_BATCHES = {
+    "planejamento-supervisionado": (1, "Planos e ferramentas"),
+    "programacao-debug": (2, "Programação e correção de erros"),
+    "matematica-validacao-v2": (3, "Matemática: valor e formato"),
+    "regressoes-planejamento-v3": (4, "Segurança e restrições dos planos"),
+}
+
+
+def _progress_from_summaries():
+    """Conta execuções SALVAS por bateria; não usa o histórico do navegador.
+
+    Lê apenas resumos pequenos locais. Cada relatório concluído é contado
+    uma vez; ter relatório NÃO implica acerto nem publicação no GitHub.
+    """
+    progress = {}
+    if not DATA.is_dir():
+        return progress
+    for path in DATA.glob("*.summary.json"):
+        try:
+            if path.stat().st_size > 4096:
+                continue
+            summary = json.loads(path.read_text(encoding="utf-8"))
+            suite_id = summary.get("suite_id")
+            run_id = summary.get("run_id")
+            if not isinstance(suite_id, str) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", suite_id):
+                continue
+            if not isinstance(run_id, str) or not re.fullmatch(r"[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}", run_id):
+                continue
+            if path.name != run_id + ".summary.json":
+                continue
+            if not (DATA / (run_id + ".json")).is_file():
+                continue
+            total = summary.get("total")
+            passed = summary.get("automatic_passes")
+            ungraded = summary.get("ungraded")
+            if any(type(n) is not int or not 0 <= n <= 200
+                   for n in (total, passed, ungraded)):
+                continue
+            failures = summary.get("automatic_failures")
+            if failures is None:
+                # Resumos de versões antigas nem sempre possuem esta coluna.
+                failures = total - passed - ungraded
+            if type(failures) is not int or failures < 0 or failures > 200:
+                continue
+            counts = [total, passed, failures, ungraded]
+            if passed + failures + ungraded != total:
+                continue
+            item = progress.setdefault(suite_id, {"run_count": 0, "last_report": None})
+            item["run_count"] += 1
+            latest = item["last_report"]
+            if latest is None or run_id > latest["run_id"]:
+                item["last_report"] = {
+                    "run_id": run_id, "total": counts[0],
+                    "automatic_passes": counts[1], "automatic_failures": counts[2],
+                    "ungraded": counts[3],
+                }
+        except (OSError, ValueError, TypeError, AttributeError):
+            continue
+    return progress
+
 
 def validate_suite(data):
     if not isinstance(data, dict) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", str(data.get("id", ""))):
@@ -129,12 +191,27 @@ def grade_case(case, result):
 
 
 def suites():
+    progress = _progress_from_summaries()
+    with _LOCK:
+        active = STATE.get("suite_id") if STATE.get("status") == "running" else None
     result = []
     for path in sorted(list(SUITES.glob("*.json")) + list((DATA / "suites").glob("*.json"))):
         try:
             data = validate_suite(json.loads(path.read_text(encoding="utf-8")))
-            result.append({"id":  data["id"], "title":  data.get("title", data["id"]),
-                           "description":  data.get("description", ""), "cases":  len(data["cases"])})
+            suite_id = data["id"]
+            saved = progress.get(suite_id, {"run_count": 0, "last_report": None})
+            order, label = RECOMMENDED_BATCHES.get(suite_id, (None, None))
+            state = "running" if suite_id == active else (
+                "completed" if saved["run_count"] else "pending"
+            )
+            result.append({
+                "id": suite_id, "title": data.get("title", suite_id),
+                "description": data.get("description", ""), "cases": len(data["cases"]),
+                "source": "imported" if path.parent == DATA / "suites" else "builtin",
+                "status": state, "run_count": saved["run_count"],
+                "last_report": saved["last_report"], "recommended_order": order,
+                "recommended_label": label,
+            })
         except (ValueError, OSError, TypeError):
             continue
     return result
@@ -165,7 +242,7 @@ def save_suite(raw):
     return data["id"]
 
 
-def _run(suite, run_id):
+def _run(suite, run_id, queue=None):
     global _RUNNING
     results = []
     started = datetime.now(timezone.utc).isoformat()
@@ -174,6 +251,8 @@ def _run(suite, run_id):
         for index, case in enumerate(suite["cases"]):
             with _LOCK:
                 STATE.update(done=index, total=len(suite["cases"]))
+                if queue is not None:
+                    STATE["overall_done"] = queue["completed_cases"] + index
             payload = remote_lab.LabRequest.model_validate(case)
             began = time.monotonic()
             if not remote_lab._INFERENCE.acquire(timeout=60):
@@ -224,13 +303,25 @@ def _run(suite, run_id):
             except Exception as error:
                 publish_status = "failed: " + type(error).__name__
         with _LOCK:
-            STATE.update(status="completed", report_id=run_id, done=len(results), publish_status=publish_status)
+            if queue is None:
+                STATE.update(status="completed", report_id=run_id, done=len(results),
+                             publish_status=publish_status)
+            else:
+                STATE.update(suite_status="completed", report_id=run_id,
+                             done=len(results), publish_status=publish_status,
+                             overall_done=queue["completed_cases"] + len(results))
+        return True
     except Exception as error:
         with _LOCK:
-            STATE.update(status="failed", error=type(error).__name__)
+            if queue is None:
+                STATE.update(status="failed", error=type(error).__name__)
+            else:
+                STATE.update(suite_status="failed", error=type(error).__name__)
+        return False
     finally:
-        with _LOCK:
-            _RUNNING = False
+        if queue is None:
+            with _LOCK:
+                _RUNNING = False
 
 
 def start(suite_id):
@@ -242,9 +333,97 @@ def start(suite_id):
         _RUNNING = True
         run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[: 8]
         STATE.clear()
-        STATE.update(status="running", run_id=run_id, done=0, total=len(suite["cases"]))
+        STATE.update(status="running", suite_id=suite_id, run_id=run_id,
+                     done=0, total=len(suite["cases"]))
     threading.Thread(target=_run, args=(suite, run_id), daemon=True).start()
     return run_id
+
+
+def _run_queue(entries):
+    """Executa sequencialmente no servidor, independente da aba do navegador.
+
+    A fila é em memória e não sobrevive ao reinício do processo da API.
+    Os relatórios concluídos continuam salvos no disco local.
+    """
+    global _RUNNING
+    total_cases = sum(len(suite["cases"]) for suite, _ in entries)
+    completed_cases = 0
+    finished = []
+    failures = []
+    try:
+        for position, (suite, run_id) in enumerate(entries, 1):
+            context = {"completed_cases": completed_cases}
+            with _LOCK:
+                STATE.update(
+                    status="running", suite_status="running", suite_id=suite["id"],
+                    run_id=run_id, done=0, total=len(suite["cases"]),
+                    queue_index=position, queue_total=len(entries),
+                    overall_done=completed_cases, overall_total=total_cases,
+                )
+            succeeded = _run(suite, run_id, queue=context)
+            finished.append({"suite_id": suite["id"], "run_id": run_id,
+                             "status": "completed" if succeeded else "failed"})
+            if not succeeded:
+                failures.append(suite["id"])
+            completed_cases += len(suite["cases"])
+            with _LOCK:
+                STATE.update(queue_finished=list(finished), queue_failures=list(failures),
+                             overall_done=completed_cases)
+        with _LOCK:
+            STATE.update(
+                status="completed_with_errors" if failures else "completed",
+                suite_status="idle", queue_index=len(entries),
+                queue_finished=list(finished), queue_failures=list(failures),
+                overall_done=completed_cases, overall_total=total_cases,
+            )
+    except Exception as error:
+        with _LOCK:
+            STATE.update(status="failed", error=type(error).__name__,
+                         queue_finished=list(finished), queue_failures=list(failures))
+    finally:
+        with _LOCK:
+            _RUNNING = False
+
+
+def start_queue(suite_ids):
+    """Inicia lotes independentes, um após o outro; valida tudo ANTES de iniciar."""
+    global _RUNNING
+    if not isinstance(suite_ids, list) or not 1 <= len(suite_ids) <= 24:
+        raise ValueError("Selecione entre 1 e 24 baterias.")
+    if any(not isinstance(item, str) or not re.fullmatch(
+            r"[a-z0-9][a-z0-9_-]{1,63}", item) for item in suite_ids):
+        raise ValueError("ID de bateria inválido.")
+    if len(set(suite_ids)) != len(suite_ids):
+        raise ValueError("A mesma bateria foi selecionada mais de uma vez.")
+    suites_to_run = [load_suite(suite_id) for suite_id in suite_ids]
+    total_cases = sum(len(suite["cases"]) for suite in suites_to_run)
+    if total_cases > 800:
+        raise ValueError("Limite de 800 casos por fila; divida em duas rodadas.")
+    # Alocar IDs antes de publicar o estado, sem iniciar inferência.
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    entries = [(suite, timestamp + "-" + uuid.uuid4().hex[:8])
+               for suite in suites_to_run]
+    with _LOCK:
+        if _RUNNING:
+            raise RuntimeError("Já existe uma bateria ou fila em execução.")
+        _RUNNING = True
+        STATE.clear()
+        STATE.update(
+            status="running", suite_id=entries[0][0]["id"], run_id=entries[0][1],
+            done=0, total=len(entries[0][0]["cases"]),
+            queue_index=1, queue_total=len(entries),
+            queue_suite_ids=list(suite_ids), queue_finished=[], queue_failures=[],
+            overall_done=0, overall_total=total_cases,
+        )
+    try:
+        threading.Thread(target=_run_queue, args=(entries,), daemon=True).start()
+    except Exception:
+        with _LOCK:
+            _RUNNING = False
+            STATE.update(status="failed", error="ThreadStartFailed")
+        raise
+    return {"suite_ids": list(suite_ids), "total": total_cases,
+            "run_ids": [run_id for _, run_id in entries]}
 
 
 def state():

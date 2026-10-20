@@ -8,17 +8,43 @@
 
 ## Execução autenticada
 
-Na interface privada `/lab/view`, a **Gaveta de testes** permite listar as
-baterias pré-instaladas (`lab/suites/*.json`), importar suítes privadas,
-iniciar uma execução por vez, consultar progresso e baixar relatório completo.
+Na interface privada `/lab/view`, a **Gaveta de testes** mostra
+o progresso de todas as baterias deste servidor, separando **Pendentes**,
+**Feitas**, **Recomendadas** e **Todas**. Há uma caixa de seleção em cada
+cartão, busca por nome e **ID técnico exibido ao lado do título**. O botão
+**Selecionar as 4 recomendadas** marca, na ordem correta, os lotes pedidos
+para a próxima avaliação:
+
+1. `planejamento-supervisionado` — planos e ferramentas;
+2. `programacao-debug` — programação;
+3. `matematica-validacao-v2` — matemática e formato;
+4. `regressoes-planejamento-v3` — restrições e ações verificáveis.
+
+É possível marcar outras baterias ou apenas as pendentes. **Executar baterias
+selecionadas** cria uma fila no servidor, processada **em sequência**:
+cada bateria tem um JSON completo e resumo independentes. Não é preciso
+clicar em cada teste, nem manter a aba aberta. A interface mostra índice
+da bateria, nome, progresso total e links de resultados. Em
+**Histórico de relatórios**, os registros ficam agrupados por bateria em
+seções expansíveis; botão de publicação GitHub continua individual e manual.
+
+**Contagem “Feita”:** significa que um relatório completo e seu resumo
+foram salvos neste Ubuntu; não significa aprovação ou publicação no GitHub.
+As execuções antigas continuam reconhecidas, inclusive relatórios de versões
+anteriores. Testar perguntas avulsas na área superior não conta como uma
+bateria concluída. Repetir uma bateria eleva o contador de execuções, mas não
+o de baterias diferentes concluídas.
 
 - Bateria inicial: `lab/suites/diagnostico-inicial.json`.
 - Baterias importadas: `~/menor-data/lab/suites/` (fora do Git).
 - Relatório completo: `~/menor-data/lab/<run-id>.json`, apenas para proprietário autenticado.
 - Resumo sem perguntas/respostas: `~/menor-data/lab/<run-id>.summary.json`.
-- Máximo de 200 casos por bateria; execução em thread do processo FastAPI,
-  sem fila persistente. **Reiniciar API interrompe uma bateria ativa**;
-  não iniciar outra nem benchmark simultâneo.
+- Máximo de 200 casos por bateria. Na seleção múltipla, há limite de
+  24 baterias e 800 casos por fila. Uma única fila usa thread do FastAPI:
+  **fechar a aba não interrompe**, porém **reiniciar ou atualizar o processo
+  da API interrompe a fila ativa**. Relatórios terminados permanecem salvos
+  e serão marcados como feitos. A fila em si não é persistida para retomada.
+  Não iniciar outro teste nem benchmark simultâneo no mesmo Ollama.
 - Cada caso usa `mode=direct` (Ollama cru, com `profile=baseline` por padrão
   ou `natural` para avaliação da voz) ou `mode=planner` (decisão JSON);
   nenhum dos dois executa ferramentas.
@@ -83,6 +109,7 @@ MENOR_LAB_GITHUB_TOKEN=<token restrito, armazenado somente no Ubuntu>
 
 ## Publicação MANUAL de relatório completo no GitHub
 
+Abra **Histórico de relatórios** e a seção da bateria correspondente.
 O botão **Enviar ao GitHub**, ao lado de cada relatório local salvo, faz
 `POST /lab/reports/{run_id}/publish` autenticado. Envia **o JSON completo**
 (perguntas, respostas, histórico sintético e pontuações) para a branch

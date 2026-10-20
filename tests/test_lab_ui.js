@@ -6,112 +6,233 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { test } = require("node:test");
 
-const page = fs.readFileSync(path.join(__dirname, "../src/api/templates/remote_lab.html"), "utf8");
-const match = page.match(/<script>([\s\S]*?)<\/script>/);
-assert.ok(match, "Menor Lab should include its inline script");
-const source = match[1];
+const lab = fs.readFileSync(path.join(__dirname, "../src/api/templates/remote_lab.html"), "utf8");
+const chat = fs.readFileSync(path.join(__dirname, "../src/api/templates/chat.html"), "utf8");
+const source = lab.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 
-test("Menor Lab: inline JavaScript is valid (including push handler)", () => {
-    assert.doesNotThrow(() => new vm.Script(source, { filename: "remote_lab.html" }));
-});
+const SUITES = [{"id":"planejamento-supervisionado","title":"Planejamento supervisionado","description":"Planos completos","cases":12,"run_count":0,"status":"pending","recommended_order":1,"recommended_label":"Planos e ferramentas","last_report":null},{"id":"programacao-debug","title":"Programação","description":"Bugs e revisões","cases":12,"run_count":0,"status":"pending","recommended_order":2,"recommended_label":"Programação e correção","last_report":null},{"id":"matematica-validacao-v2","title":"Aritmética v2","description":"Valores numéricos","cases":12,"run_count":1,"status":"completed","recommended_order":3,"recommended_label":"Matemática: valor e formato","last_report":{"run_id":"20261020T005944Z-c232a9e6","total":12,"automatic_passes":5,"automatic_failures":2,"ungraded":5}},{"id":"regressoes-planejamento-v3","title":"Segurança dos planos","description":"Restrições do usuário","cases":24,"run_count":0,"status":"pending","recommended_order":4,"recommended_label":"Segurança dos planos","last_report":null},{"id":"conversacao-robustez","title":"Conversa informal","description":"Coerência de conversa","cases":12,"run_count":2,"status":"completed","recommended_order":null,"recommended_label":null,"last_report":{"run_id":"20261020T131632Z-d0a1d5d8","total":12,"automatic_passes":6,"automatic_failures":2,"ungraded":4}}];
+const REPORT = {
+    suite_id: "matematica-validacao-v2", run_id: "20261020T005944Z-c232a9e6",
+    total: 12, automatic_passes: 5, automatic_failures: 2, ungraded: 5,
+};
 
-function browser(compareResult = {}) {
-    const elements = new Map();
-    const requests = [];
-    const report = {
-        run_id: "20261020T005944Z-c232a9e6",
-        total: 5, automatic_passes: 2, ungraded: 3,
+function makeElement(tag = "") {
+    return {
+        tag, textContent: "", value: "", style: {}, children: [], disabled: false,
+        hidden: false, checked: false, attrs: {}, listeners: {}, className: "",
+        append(...items) { this.children.push(...items); },
+        replaceChildren(...items) { this.children = [...items]; },
+        setAttribute(name, value) { this.attrs[name] = value; },
+        addEventListener(name, callback) { this.listeners[name] = callback; },
     };
-    function element() {
-        return {
-            textContent: "", value: "", style: {}, children: [], disabled: false,
-            listeners: {},
-            append(child) { this.children.push(child); },
-            replaceChildren() { this.children = []; },
-            setAttribute() {},
-            addEventListener(name, callback) { this.listeners[name] = callback; },
-        };
-    }
-    for (const [, id] of page.matchAll(/\bid="([^"]+)"/g)) elements.set(id, element());
+}
+function browser(overrides = {}) {
+    const elements = new Map();
+    for (const [, id] of lab.matchAll(/\bid="([^"]+)"/g))
+        elements.set(id, makeElement(id));
+    const requests = [];
+    const confirmations = [];
+    const app = {
+        suites: (overrides.suites || SUITES).map(item => ({...item})),
+        reports: overrides.reports || [REPORT],
+        status: overrides.status || {status:"idle"},
+        compare: overrides.compare || {},
+        denied: overrides.denied || false,
+        timeouts: [],
+    };
     const context = vm.createContext({
         document: {
             getElementById(id) { return elements.get(id); },
-            createElement() { return element(); },
+            createElement(tag) { return makeElement(tag); },
         },
-        confirm: () => true,
-        setTimeout() {},
+        confirm(message) { confirmations.push(message); return !app.denied; },
+        setTimeout(callback, ms) { const ref = {callback, ms}; app.timeouts.push(ref); return ref; },
+        clearTimeout(ref) {
+            const pos = app.timeouts.indexOf(ref);
+            if (pos >= 0) app.timeouts.splice(pos, 1);
+        },
+        FormData: class { append() {} },
         fetch: async (url, opts) => {
-            requests.push({ url, opts });
-            if (url === "/lab/compare") return { ok: true, json: async () => compareResult };
-            if (url === "/lab/batches") {
-                return { ok: true, json: async () => ({ items: [
-                    { id: "diagnostico-inicial", title: "Diagnóstico inicial", cases: 5 },
-                ] }) };
+            requests.push({url, opts});
+            if (url === "/lab/compare")
+                return {ok:true, json:async () => app.compare};
+            if (url === "/lab/batches")
+                return {ok:true, json:async () => ({items:app.suites})};
+            if (url === "/lab/reports")
+                return {ok:true, json:async () => ({items:app.reports})};
+            if (url === "/lab/batches/status")
+                return {ok:true, json:async () => app.status};
+            if (url === "/lab/batches/queue") {
+                const ids = JSON.parse(opts.body).suite_ids;
+                app.status = {
+                    status:"running", suite_id:ids[0], done:0,
+                    total:app.suites.find(s => s.id === ids[0]).cases,
+                    queue_index:1, queue_total:ids.length,
+                    overall_done:0, overall_total:ids.reduce(
+                        (sum,id) => sum + app.suites.find(s => s.id === id).cases, 0),
+                    queue_finished:[], queue_failures:[],
+                };
+                return {ok:true, json:async () => ({suite_ids:ids})};
             }
-            if (url === "/lab/reports") {
-                return { ok: true, json: async () => ({ items: [report] }) };
-            }
-            if (url === "/lab/reports/" + report.run_id + "/publish") {
-                return { ok: true, json: async () => ({
-                    url: "https://github.com/example/private-repo/blob/lab-reports/report.json",
-                }) };
-            }
+            if (url.endsWith("/publish"))
+                return {ok:true, json:async () => ({url:"https://github.com/example/report"})};
+            if (url === "/lab/batches/import")
+                return {ok:true, json:async () => ({id:"imported-batch"})};
             throw new Error("Unexpected endpoint: " + url);
         },
     });
     vm.runInContext(source, context);
-    return { elements, requests, report };
+    const ready = () => new Promise(resolve => setImmediate(resolve));
+    const list = () => elements.get("suiteList").children;
+    const idText = node => node.children[0].children[1].children[2].textContent.replace(/^ID: /, "");
+    const cards = () => list().map(node => ({node, id:idText(node), checkbox:node.children[0].children[0]}));
+    const click = (id) => elements.get(id).listeners.click();
+    const input = (id, value) => {
+        elements.get(id).value = value;
+        elements.get(id).listeners.input();
+    };
+    return {elements, requests, confirmations, app, ready, list, cards, click, input, context};
 }
 
-test("Menor Lab: loads saved reports and offers explicit manual GitHub push", async () => {
-    const { elements, requests } = browser();
-    await new Promise(resolve => setImmediate(resolve));
-    const list = elements.get("batchReports");
-    assert.equal(list.children.length, 1);
-    const paragraph = list.children[0];
-    assert.equal(paragraph.children.length, 2);
-    const [download, push] = paragraph.children;
-    assert.match(download.href, /\/lab\/reports\/.+\/download/);
-    assert.equal(push.textContent, "Enviar ao GitHub");
-    assert.equal(requests.filter(x => x.url.endsWith("/publish")).length, 0);
-    await push.listeners.click();
-    assert.equal(requests.filter(x => x.url.endsWith("/publish")).length, 1);
-    assert.equal(requests.at(-1).opts.method, "POST");
-    assert.equal(requests.at(-1).opts.credentials, "same-origin");
-    assert.equal(push.textContent, "Enviado");
-    assert.match(elements.get("batchStatus").textContent, /Relatório publicado/);
+test("Lab: script parses and chat has desktop and mobile navigation to the lab", () => {
+    assert.ok(source);
+    assert.doesNotThrow(() => new vm.Script(source, {filename:"remote_lab.html"}));
+    assert.equal((chat.match(/href="\/lab\/view"/g) || []).length, 3);
+    assert.match(chat, /Laboratório · Testes/);
+    assert.match(chat, /Lab · Testes/);
 });
 
-test("Menor Lab: shows safe diagnostics and generation metrics without exposing raw text", async () => {
-    const { elements } = browser({
-        reply: "Não consegui validar", status: "no_valid_decision", elapsed_seconds: 29,
-        diagnostics: { outcome: "invalid_decision", output_limited: true, raw_error: "PRIVATE", validation_issue: "goal" },
-        performance: { eval_count: 480, generation_tokens_per_second: 7.23 },
-        reply_truncated: true,
-    });
-    await new Promise(resolve => setImmediate(resolve));
-    elements.get("question").value = "Planeje um exemplo";
-    await elements.get("runPlanner").listeners.click();
-    const meta = elements.get("plannerMeta").textContent;
-    assert.match(meta, /Contrato rejeitado/);
-    assert.match(meta, /Objetivo ausente ou inválido/);
-    assert.match(meta, /Limite de geração atingido/);
-    assert.match(meta, /Trecho exibido limitado/);
-    assert.match(meta, /480 tokens gerados/);
-    assert.match(meta, /7.23 tokens\/s/);
+test("Lab: shows reliable totals, done and pending from saved reports", async () => {
+    const ui = browser();
+    await ui.ready();
+    assert.equal(ui.elements.get("suiteTotal").textContent, "5");
+    assert.equal(ui.elements.get("suiteDone").textContent, "2");
+    assert.equal(ui.elements.get("suitePending").textContent, "3");
+    assert.equal(ui.cards().length, 3);
+    assert.ok(ui.cards().every(item => /Pendente/.test(
+        item.node.children[1].children[0].children[0].textContent)));
+    const item = ui.cards()[0];
+    assert.match(item.node.children[0].children[1].children[2].textContent, /ID: /);
+    assert.equal(ui.elements.get("batchRun").disabled, true);
+});
+
+test("Lab: filters completed, recommended, all and searches IDs without losing selection", async () => {
+    const ui = browser();
+    await ui.ready();
+    await ui.click("filterDone");
+    assert.equal(ui.cards().length, 2);
+    assert.ok(ui.cards().every(item => item.checkbox.checked === false));
+    await ui.click("filterRecommended");
+    assert.equal(ui.cards().length, 4);
+    const desired = ui.cards().find(item => item.id === "matematica-validacao-v2");
+    desired.checkbox.checked = true; desired.checkbox.listeners.change();
+    ui.input("suiteSearch", "programacao");
+    assert.equal(ui.cards().length, 1);
+    ui.input("suiteSearch", "");
+    const retained = ui.cards().find(item => item.id === "matematica-validacao-v2");
+    assert.equal(retained.checkbox.checked, true);
+    assert.match(ui.elements.get("selectionCount").textContent, /1 bateria/);
+    assert.equal(ui.elements.get("filterRecommended").attrs["aria-pressed"], "true");
+    await ui.click("filterAll");
+    assert.equal(ui.cards().length, 5);
+});
+
+test("Lab: one click queues multiple checked suites in recommended order", async () => {
+    const ui = browser();
+    await ui.ready();
+    await ui.click("selectRecommended");
+    assert.match(ui.elements.get("selectionCount").textContent, /4 bateria/);
+    assert.match(ui.elements.get("selectionCount").textContent, /60 caso/);
+    await ui.click("batchRun");
+    const posts = ui.requests.filter(x => x.url === "/lab/batches/queue");
+    assert.equal(posts.length, 1);
+    const payload = JSON.parse(posts[0].opts.body);
+    assert.deepEqual(payload.suite_ids, [
+        "planejamento-supervisionado", "programacao-debug",
+        "matematica-validacao-v2", "regressoes-planejamento-v3",
+    ]);
+    assert.equal(posts[0].opts.credentials, "same-origin");
+    assert.equal(posts[0].opts.method, "POST");
+    assert.match(ui.confirmations[0], /60 perguntas/);
+    assert.equal(ui.elements.get("batchRun").disabled, true);
+    assert.equal(ui.elements.get("queuePanel").hidden, false);
+    assert.match(ui.elements.get("queueTitle").textContent, /1 de 4/);
+});
+
+test("Lab: queue state survives page reopening while service is active", async () => {
+    const ui = browser({status: {
+        status:"running", suite_id:"programacao-debug",
+        queue_index:2, queue_total:4, overall_done:16, overall_total:60,
+        queue_finished: [{suite_id:"planejamento-supervisionado", status:"completed"}],
+    }});
+    await ui.ready();
+    assert.equal(ui.elements.get("queuePanel").hidden, false);
+    assert.match(ui.elements.get("queueTitle").textContent, /2 de 4/);
+    assert.match(ui.elements.get("queueCurrent").textContent, /Programação/);
+    assert.equal(ui.elements.get("queueProgress").value, 16);
+    assert.equal(ui.elements.get("queueProgress").max, 60);
+    assert.equal(ui.elements.get("batchRun").disabled, true);
+});
+
+test("Lab: groups history instead of listing every report, with manual publish", async () => {
+    const ui = browser({reports:[
+        REPORT, {...REPORT, run_id:"20261020T131632Z-d0a1d5d8"},
+        {...REPORT, suite_id:"conversacao-robustez", run_id:"20261020T131502Z-b58ba2c6"},
+    ]});
+    await ui.ready();
+    assert.equal(ui.elements.get("reportsHistory").tag, "reportsHistory");
+    assert.match(ui.elements.get("historySummary").textContent, /3/);
+    const groups = ui.elements.get("batchReports").children;
+    assert.equal(groups.length, 2);
+    assert.match(groups[0].children[0].textContent, /2 execução/);
+    assert.equal(ui.requests.filter(x => x.url.endsWith("/publish")).length, 0);
+    const record = groups[0].children[1];
+    assert.match(record.children[0].textContent, /00:59 UTC/);
+    const actions = record.children[1].children;
+    assert.match(actions[0].href, /download/);
+    await actions[1].listeners.click();
+    assert.equal(ui.requests.filter(x => x.url.endsWith("/publish")).length, 1);
+    assert.equal(actions[1].textContent, "Enviado");
+});
+
+test("Lab: manual comparison continues reporting bounded diagnostic metadata", async () => {
+    const ui = browser({compare:{
+        reply:"Não consegui validar", status:"no_valid_decision", elapsed_seconds:29,
+        diagnostics:{outcome:"invalid_decision", output_limited:true,
+                     raw_error:"PRIVATE", validation_issue:"goal"},
+        performance:{eval_count:480, generation_tokens_per_second:7.23},
+        reply_truncated:true,
+    }});
+    await ui.ready();
+    ui.elements.get("question").value = "Planeje um exemplo";
+    await ui.click("runPlanner");
+    const meta = ui.elements.get("plannerMeta").textContent;
+    for (const expected of [
+        "Contrato rejeitado", "Objetivo ausente ou inválido",
+        "Limite de geração atingido", "Trecho exibido limitado",
+        "480 tokens gerados", "7.23 tokens/s",
+    ]) assert.ok(meta.includes(expected));
     assert.doesNotMatch(meta, /PRIVATE/);
-    assert.equal(elements.get("runPlanner").disabled, false);
+    assert.equal(ui.elements.get("runPlanner").disabled, false);
 });
 
-test("Menor Lab: older responses and malformed metrics remain readable", async () => {
-    const { elements } = browser({
-        reply: "Resposta antiga", status: "answered", elapsed_seconds: 2,
-        diagnostics: { outcome: "PRIVATE", validation_issue: "PRIVATE" },
-        performance: { eval_count: "PRIVATE", generation_tokens_per_second: Infinity },
-    });
-    await new Promise(resolve => setImmediate(resolve));
-    elements.get("question").value = "Explique um exemplo";
-    await elements.get("runDirect").listeners.click();
-    assert.equal(elements.get("directResult").textContent, "Resposta antiga");
-    assert.doesNotMatch(elements.get("directMeta").textContent, /PRIVATE|Infinity/);
+test("Lab: stale or private diagnostics never appear in the UI", async () => {
+    const ui = browser({compare:{
+        reply:"Resposta antiga", status:"answered", elapsed_seconds:2,
+        diagnostics:{outcome:"PRIVATE", validation_issue:"PRIVATE"},
+        performance:{eval_count:"PRIVATE", generation_tokens_per_second:Infinity},
+    }});
+    await ui.ready();
+    ui.elements.get("question").value = "Explique um exemplo";
+    await ui.click("runDirect");
+    assert.equal(ui.elements.get("directResult").textContent, "Resposta antiga");
+    assert.doesNotMatch(ui.elements.get("directMeta").textContent, /PRIVATE|Infinity/);
+});
+
+test("Lab: declining queue confirmation starts nothing", async () => {
+    const ui = browser({denied:true});
+    await ui.ready();
+    await ui.click("selectRecommended");
+    await ui.click("batchRun");
+    assert.equal(ui.requests.filter(x => x.url === "/lab/batches/queue").length, 0);
 });
