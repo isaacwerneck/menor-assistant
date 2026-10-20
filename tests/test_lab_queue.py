@@ -1,7 +1,6 @@
 """Fila do Lab: ordem sequencial, relatórios independentes e contagem durável."""
 import json
 import tempfile
-import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
