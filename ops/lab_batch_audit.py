@@ -14,6 +14,7 @@ from pathlib import Path
 
 
 _COMPLETE = {"answered", "decision_validated"}
+_KNOWN_STATES = _COMPLETE | {"inference_failed", "busy", "no_valid_decision"}
 _MAX_BYTES = 8 * 1024 * 1024
 _RUN_ID = re.compile(r"\d{8}T\d{6}Z-[a-f0-9]{8}")
 
@@ -93,8 +94,7 @@ def inspect(directory, limit=100):
             status = result.get("status", "unknown")
             if not isinstance(status, str):
                 status = "unknown"
-            status = status if status in _COMPLETE | {"inference_failed", "busy",
-                                                       "no_valid_decision"} else "unknown"
+            status = status if status in _KNOWN_STATES else "unknown"
             statuses[status] += 1
             if status not in _COMPLETE:
                 technical += 1
