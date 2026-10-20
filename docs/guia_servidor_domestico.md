@@ -1,5 +1,11 @@
 # Guia do Servidor Doméstico (Home Server)
 
+> **Estado atual vs. ideias do guia:** diagramas Docker/Nginx/Whisper/TTS/Jarvis
+> abaixo são arquiteturas de exemplo, **não implantação comprovada** do Menor.
+> O serviço real observado usa **Ubuntu + systemd user + FastAPI + Ollama**,
+> conforme [operação](handoff/05_OPERACAO_E_SEGURANCA.md).
+> Hardware e velocidade reais: [diagnóstico 20/10](handoff/02_HARDWARE_E_LATENCIA.md).
+
 Como transformar o notebook em uma central de serviços para IA, bancos de dados, APIs e jogos.
 
 ---

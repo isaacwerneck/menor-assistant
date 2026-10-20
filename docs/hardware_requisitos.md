@@ -1,5 +1,19 @@
 # Requisitos de Hardware & Escolha de Modelo
 
+> **Medição real de 20/10/2026:** [inventário e benchmark CPU/GPU](handoff/02_HARDWARE_E_LATENCIA.md).
+> i7-1185G7 (8 threads), 31,06 GiB RAM, 23,87 GiB disponíveis, Iris Xe
+> reconhecida, Ollama 0.40.6, `qwen2.5-coder:7b` com 0 GiB de VRAM
+> reportada/100% CPU. Três probes concluídos: **10,24 tokens/s** de mediana,
+> **4,791 s** por resposta curta. `vulkaninfo` não estava instalado na
+> medição; aceleração GPU **não validada**. As estimativas de RAM/velocidade
+> de modelos abaixo não são benchmarks deste equipamento.
+
+> **Benchmark real, 20/10/2026:** `qwen2.5-coder:7b` no Ollama 0.40.6,
+> i7-1185G7 com 8 threads, 31,06 GiB de RAM e Intel Iris Xe.
+> `ollama ps` mostrou **100% CPU**, `size_vram=0`, mediana
+> **10,24 tokens/s** em 3 sondas; Vulkan/uso da GPU **não validado**.
+> Consulte [dados, causas e próximos testes](handoff/02_HARDWARE_E_LATENCIA.md).
+
 ## Hardware Confirmado
 - **Processador**: Intel Core i7-1185G7 (4 núcleos / 8 threads com suporte a instruções AVX-512).
 - **Memória RAM**: 32 GB DDR4.

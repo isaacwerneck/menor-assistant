@@ -1,5 +1,8 @@
 # Guia de Escolha de Distro & Setup Linux
 
+**Nota de contexto (20/10/2026):** guia de **instalação inicial**, não instrução para reinstalar o Ubuntu do proprietário. O notebook `nakedrift` já opera com Ubuntu, Ollama e FastAPI. Inventário medido e próximos testes em [hardware e latência](handoff/02_HARDWARE_E_LATENCIA.md). 
+
+
 ## 🐧 Escolha da Distribuição Linux
 
 | Distribuição | Interface Gráfica | Consumo de RAM em Idle | Recomendação |

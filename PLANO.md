@@ -1,5 +1,8 @@
 # PLANO — Ecossistema Menor Assistant
 
+**Atualização de status — 20/10/2026:** o arquivo é referência de visão e decisões históricas. Para saber o que já entrou na `main`, os erros medidos e a próxima execução, consulte [handoff atual para Codex](docs/handoff/00_COMECE_AQUI_CODEX.md), [progresso estimado](docs/handoff/01_OBJETIVO_E_PROGRESSO.md) e [backlog](docs/handoff/06_BACKLOG_PRIORIZADO.md). Etapas históricas marcadas como planejadas não significam necessariamente ausência de código; código integrado também não comprova capacidade validada. 
+
+
 > **Direção consolidada em 19/10/2026:** [Plano integrado A–E](docs/plano_integrado_a_e.md).
 > O Menor interpreta por modelo e contexto, não por palavras isoladas; aprendizado
 > é supervisionado e nenhuma inferência concede permissão. A lista histórica

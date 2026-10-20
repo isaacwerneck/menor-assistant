@@ -1,5 +1,8 @@
 # Menor remoto: Cloudflare Tunnel + Netlify + laboratório real
 
+**Nota operacional posterior (20/10/2026):** o proprietário efetivamente utilizou um túnel **temporário** `trycloudflare.com` para acessar `/lab/view` com autenticação. Isso não valida Cloudflare Access, DNS, disponibilidade permanente ou proxy Netlify. O plano abaixo descreve sobretudo a arquitetura de produção **proposta**, não tudo já implantado. Ver [operação atual e segurança](handoff/05_OPERACAO_E_SEGURANCA.md). 
+
+
 **Objetivo:** conversar com o Menor fora de casa e permitir testes
 interativos no navegador do ChatGPT Work, mantendo o Qwen, o FastAPI,
 o armazenamento privado e o processamento **no Ubuntu do proprietário**.

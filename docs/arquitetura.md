@@ -1,5 +1,10 @@
 # Arquitetura do Sistema
 
+> **Diagrama de visão futura, não topologia integral comprovada em produção.**
+> Componentes como Whisper/TTS, WebSocket e motor de ferramentas genérico
+> dependem de implantação e aceite próprios. Para a arquitetura implementada
+> e frentes A–E veja [handoff técnico](handoff/03_FRENTES_A_B_C_D_E.md).
+
 ```mermaid
 graph TD
     UserPhone[Celular] -->|WebSocket / HTTP| API[Servidor FastAPI - Notebook]
