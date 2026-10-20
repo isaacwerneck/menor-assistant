@@ -16,6 +16,7 @@ from src.agent.delegation import generate_image as delegate_image
 from src.agent.model_catalog import comparison
 from src.memory.store import BrainStore
 from src.tools import images, web
+from src.tools.calculator import calculate
 from src.tools.file_analysis.agent_bridge import invoke as invoke_file_bridge
 from src.tools.file_analysis.contracts import FILE_ID
 from src.projects.manager import create_project
@@ -54,6 +55,10 @@ TOOLS = {
     ),
     "system.diagnose": Tool(
         "system.diagnose", "Resume falhas das ferramentas em auditoria local.", "read", False, (),
+    ),
+    "math.calculate": Tool(
+        "math.calculate", "Calcula expressão + - * / e parênteses; verifique a fórmula do pedido.",
+        "read", False, ("expression",),
     ),
     "images.generate": Tool(
         "images.generate", "Gera imagem via subagente local e informa limites de revisão.",
@@ -167,6 +172,8 @@ def perform(name, arguments, dry_run=True):
         }
     elif name == "system.diagnose":
         output = analyze()
+    elif name == "math.calculate":
+        output = calculate(arguments["expression"])
     elif name == "projects.list":
         output = ProjectWorkspace().list_projects()
     elif name == "projects.read":
