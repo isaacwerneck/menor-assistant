@@ -27,6 +27,9 @@ class QueueTests(unittest.TestCase):
         self.data_patch = patch.object(lab_batches, "DATA", self.store)
         self.data_patch.start()
         self.addCleanup(self.data_patch.stop)
+        snapshot = patch.object(lab_batches, "_checkout_snapshot", return_value={"status": "unavailable"})
+        snapshot.start()
+        self.addCleanup(snapshot.stop)
         with lab_batches._LOCK:
             self.old_running = lab_batches._RUNNING
             self.old_state = dict(lab_batches.STATE)
@@ -79,6 +82,7 @@ class QueueTests(unittest.TestCase):
             report = json.loads(lab_batches.report_path(run_id).read_text())
             self.assertEqual(report["automatic_failures"], 0)
             self.assertEqual(report["total"], len(report["cases"]))
+            self.assertIsNone(report["code_provenance"]["revision_changed"])
         progress = {x["id"]: x for x in lab_batches.suites()}
         self.assertEqual(progress["primeira-bateria"]["status"], "completed")
         self.assertEqual(progress["segunda-bateria"]["status"], "completed")

@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import subprocess
 import threading
 import time
 import unicodedata
@@ -17,6 +18,33 @@ DATA = Path(os.environ.get("MENOR_LAB_DATA_DIR", str(Path.home() / "menor-data" 
 _LOCK = threading.Lock()
 _RUNNING = False
 STATE = {"status":  "idle"}
+
+
+def _checkout_snapshot():
+    """Observa somente SHA e alterações rastreadas, sem exportar paths ou erros."""
+    root = Path(__file__).resolve().parents[2]
+    try:
+        revision = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel", "HEAD"], cwd=root,
+            capture_output=True, text=True, timeout=2, check=False,
+        )
+        lines = revision.stdout.strip().splitlines()
+        if (revision.returncode != 0 or len(lines) != 2 or Path(lines[0]).resolve() != root
+                or not re.fullmatch(r"[0-9a-f]{40}", lines[1])):
+            return {"status": "unavailable"}
+        dirty = subprocess.run(
+            ["git", "diff-index", "--quiet", "HEAD", "--"], cwd=root,
+            capture_output=True, timeout=2, check=False,
+        )
+        if dirty.returncode not in (0, 1):
+            return {"status": "unavailable"}
+        return {"status": "observed", "revision": lines[1], "tracked_changes": dirty.returncode == 1}
+    except (OSError, UnicodeError, subprocess.TimeoutExpired):
+        return {"status": "unavailable"}
+
+
+# Identifica o checkout ao importar este módulo, sem alegar atestação de build.
+_MODULE_IMPORT_CHECKOUT = _checkout_snapshot()
 
 # Rotina de avaliação mais recente. IDs são estáveis e exibidos na UI para
 # o operador poder conferir exatamente qual bateria foi solicitada.
@@ -246,6 +274,7 @@ def _run(suite, run_id, queue=None):
     global _RUNNING
     results = []
     started = datetime.now(timezone.utc).isoformat()
+    checkout_start = _checkout_snapshot()
     try:
         DATA.mkdir(parents=True, exist_ok=True)
         for index, case in enumerate(suite["cases"]):
@@ -277,7 +306,16 @@ def _run(suite, run_id, queue=None):
                             "elapsed_seconds": round(time.monotonic() - began, 3),
                             "automatic_pass": passed,
                             "format_compliant": numeric_format_compliance(case, output) if passed is True else None})
+        checkpoints = {"module_import": _MODULE_IMPORT_CHECKOUT, "run_start": checkout_start,
+                       "run_finish": _checkout_snapshot()}
+        revisions = [item.get("revision") for item in checkpoints.values()]
         report = {"run_id": run_id, "suite_id": suite["id"],
+                  "code_provenance": {
+                      "checkpoints": checkpoints,
+                      "revision_changed": len(set(revisions)) > 1 if all(revisions) else None,
+                      "tracked_changes": any(item["tracked_changes"] for item in checkpoints.values())
+                      if all(revisions) else None,
+                  },
                   "comparison_group": suite.get("comparison_group"),
                   "methodology_version": suite.get("methodology_version", "legacy"),
                   "started_at": started, "finished_at": datetime.now(timezone.utc).isoformat(),
