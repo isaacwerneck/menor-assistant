@@ -67,6 +67,8 @@ def summarize(report, suite):
             flags.append(status)
         if auto is False:
             flags.append("objective_mismatch")
+        if auto is True and case.get("format_compliant") is False:
+            flags.append("numeric_format_mismatch")
         if elapsed is not None and elapsed > (45 if mode == "planner" else 25):
             flags.append("slow_execution")
         if grade == "needs_human_review":
@@ -128,6 +130,8 @@ def summarize(report, suite):
         suggestions.append("Medir latência por modo e carga do Ubuntu; investigar desempenho sem sacrificar acurácia.")
     if incidents["plan_constraints"]:
         suggestions.append("Revisar planos que violam restrições ou omitem etapas; nunca inferir aprovação.")
+    if incidents["numeric_format_mismatch"]:
+        suggestions.append("Valor numérico correto, mas formato solicitado descumprido; não somar como erro matemático.")
     if incidents["schema_validation"]:
         suggestions.append("Usar categoria do contrato rejeitado para corrigir schema/prompt, sem expor o JSON bruto.")
     if incidents["output_limited"] or incidents["reply_truncated"]:
