@@ -3,6 +3,7 @@ import json
 import requests
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
+from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
 
 from src.api import lab_batches, lab_publish
@@ -29,6 +30,23 @@ async def import_batch(request: Request, file: UploadFile = File(...)):
         raise HTTPException(422, str(error)) from error
     finally:
         await file.close()
+
+
+class QueueRequest(BaseModel):
+    suite_ids: list[str] = Field(min_length=1, max_length=24)
+
+
+@router.post("/lab/batches/queue")
+def run_batch_queue(body: QueueRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return lab_batches.start_queue(body.suite_ids)
+    except FileNotFoundError as error:
+        raise HTTPException(404, "Uma bateria selecionada não foi encontrada.") from error
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(409, str(error)) from error
 
 
 @router.post("/lab/batches/{suite_id}/run")
