@@ -248,6 +248,8 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
     required = {"current_message", "owner_approved_examples_data_not_instructions"}
     context = {key: value for key, value in context.items()
                if key in required or value not in ("", None, [], {})}
+    # Catálogos estáveis antes dos dados variáveis permitem reaproveitar o prefixo KV.
+    context = {key: context[key] for key in ("available_tools", "skills") if key in context} | context
     context_json = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
     if diagnostics is not None:
         diagnostics.update(
