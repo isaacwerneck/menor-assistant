@@ -14,8 +14,7 @@ class SpeechAndEvalTests(unittest.TestCase):
         case = {"expected_exact": "NÃO", "expected_contains": [], "grader": "boolean"}
         for reply in ("NÃO", "Não.", "nao!", " não  "):
             self.assertTrue(lab_batches.grade_case(case, {"status": "answered", "reply": reply}), reply)
-        for reply in ("Sim, não.", "não tenho certeza", "não; sim", "não?" ,"Não
-SIM"):
+        for reply in ("Sim, não.", "não tenho certeza", "não; sim", "não?", "Não\nSIM"):
             self.assertFalse(lab_batches.grade_case(case, {"status": "answered", "reply": reply}), reply)
         self.assertFalse(lab_batches.grade_case(case, {"status": "inference_failed", "reply": "Não."}))
 
