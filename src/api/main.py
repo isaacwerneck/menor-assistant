@@ -41,6 +41,7 @@ from src.api.workspace import router as workspace_router
 from src.api.system_workspace import router as system_workspace_router
 from src.api.private_diagnostics import router as private_diagnostics_router
 from src.api.remote_lab import router as remote_lab_router
+from src.api.remote_lab_api import router as remote_lab_api_router
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ app.include_router(workspace_router)
 app.include_router(system_workspace_router)
 app.include_router(private_diagnostics_router)
 app.include_router(remote_lab_router)
+app.include_router(remote_lab_api_router)
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
