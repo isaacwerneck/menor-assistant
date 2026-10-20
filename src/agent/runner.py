@@ -526,8 +526,8 @@ def _understand(state, message, history, project=None, metrics=None):
                 "Qual objetivo você quer retomar?", **state,
             )
         next_state["plan_review_status"] = review_status
-        reply = (intelligence.render_plan(decision) if move != "clarify"
-                 else decision["reply"] + "\n" + decision["question"])
+        reply = (intelligence.render_plan(decision).replace("\nPlano proposto:\n", "\nVamos por partes:\n", 1)
+                 if move != "clarify" else decision["reply"] + "\n" + decision["question"])
         return next_state, {
             "handled": True, "reply": reply, "phase": "goal",
             "goal_id": next_state["goal_id"],

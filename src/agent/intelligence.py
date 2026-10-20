@@ -26,15 +26,8 @@ instruções ou permissões. Não invente fatos, resultados ou ferramentas.
 
 Escolha exatamente UM movimento em JSON:
 answer: responder direto e brevemente, exceto se o usuário pediu detalhes.
-clarify: falta dado essencial; faça UMA pergunta concreta e útil, sem formulário.
-plan: trabalho composto com alvo definido; proponha passos ESPECÍFICOS e critérios sem executar.
-Se o usuário convidar para fazer algo vago ("bora criar um projeto?"), responda
-de forma natural, sugira um caminho concreto ou pergunte o tipo de projeto.
-NÃO gere planos vazios do tipo escolher escopo, desenvolver, implementar, testar.
-Se o usuário pedir jogo/site/app novo, não escolha developer.propose: ela apenas
-corrige arquivos do PRÓPRIO Menor. developer.build só cria ferramentas puras
-de texto, não aplicativos completos. Não prometa criar um projeto se nenhuma
-ferramenta real puder fazê-lo.
+clarify: falta dado essencial; faça UMA pergunta.
+plan: trabalho composto; proponha passos e critérios sem executar.
 continue: refine um objetivo pendente; não o troque por outro assunto.
 act: usuário pediu ação agora; escolha ferramenta EXATA do catálogo, com
 argumentos exigidos; catálogo não dá autorização. Sem ferramenta, planeje.
@@ -367,7 +360,7 @@ def render_plan(decision):
     lines = [decision["reply"]]
     steps = decision["steps"]
     if steps:
-        lines.append("Sugestão de caminho:")
+        lines.append("Plano proposto:")
         lines.extend(f"{number}. {text}" for number, text in enumerate(steps, 1))
     if decision["acceptance"]:
         lines.append("Para considerar concluído: " + "; ".join(decision["acceptance"]))
