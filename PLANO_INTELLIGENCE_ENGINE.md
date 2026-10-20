@@ -1,5 +1,7 @@
 # MENOR INTELLIGENCE ENGINE — Arquitetura e roadmap
 
+> **Atualização de estado — 20/10/2026:** este plano inclui etapas e PRs históricos. Para o estado atual da frente A, evidência de testes e lacunas de autonomia consulte [handoff para Codex](docs/handoff/00_COMECE_AQUI_CODEX.md) e [frentes A–E](docs/handoff/03_FRENTES_A_B_C_D_E.md). Módulo presente no código não equivale a tarefa real validada no Ubuntu.
+
 > **Direção consolidada em 19/10/2026:** [Plano integrado A–E](docs/plano_integrado_a_e.md).
 > O Menor interpreta por modelo e contexto, não por palavras isoladas; aprendizado
 > é supervisionado e nenhuma inferência concede permissão. A lista histórica
