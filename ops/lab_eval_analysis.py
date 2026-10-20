@@ -12,6 +12,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SUITES = ROOT / "lab" / "suites"
 FAILING_STATES = {"inference_failed", "busy", "no_valid_decision"}
+KNOWN_VALIDATION_ISSUES = {
+    "move", "goal", "text_type", "reply_or_question", "steps_or_acceptance",
+    "steps_required", "question_required", "relation", "resume_goal_id",
+    "unknown_goal", "query", "tool_arguments_type", "tool", "tool_schema",
+    "arguments", "tool_required",
+}
+
+
+def _duration_seconds(value):
+    if type(value) is int and 0 <= value <= 10 ** 15:
+        return round(value / 1_000_000_000, 3)
+    return None
 
 
 def _load_suite(suite_id, suite_dir):
@@ -29,12 +41,17 @@ def summarize(report, suite):
     records = []
     buckets = defaultdict(Counter)
     incidents = Counter()
+    prefill_seconds = []
+    generation_seconds = []
     for case in report.get("cases", []):
         cid = case.get("id")
         if cid not in reference:
             raise ValueError("Caso de relatório ausente da bateria: " + str(cid))
         spec = reference[cid]
-        status = case.get("result", {}).get("status", "unknown")
+        result = case.get("result", {})
+        if not isinstance(result, dict):
+            result = {}
+        status = result.get("status", "unknown")
         mode = case.get("mode", spec["mode"])
         elapsed = case.get("elapsed_seconds")
         elapsed = elapsed if type(elapsed) in (int, float) and elapsed >= 0 else None
@@ -54,7 +71,32 @@ def summarize(report, suite):
             flags.append("slow_execution")
         if grade == "needs_human_review":
             flags.append("qualitative_review")
-        for flag in flags:
+        if result.get("output_limited") is True:
+            flags.append("output_limited")
+        if result.get("reply_truncated") is True:
+            flags.append("reply_truncated")
+        if isinstance(result.get("plan_warnings"), list) and result["plan_warnings"]:
+            flags.append("plan_constraints")
+        diagnostics = result.get("diagnostics")
+        if not isinstance(diagnostics, dict):
+            diagnostics = {}
+        issue = diagnostics.get("validation_issue")
+        if status == "no_valid_decision" and issue in KNOWN_VALIDATION_ISSUES:
+            flags.append("schema_validation")
+        performance = result.get("performance")
+        if not isinstance(performance, dict):
+            performance = {}
+        prefill = _duration_seconds(performance.get("prompt_eval_duration"))
+        generation = _duration_seconds(performance.get("eval_duration"))
+        if prefill is not None:
+            prefill_seconds.append(prefill)
+        if generation is not None:
+            generation_seconds.append(generation)
+        if prefill is not None and prefill > 8:
+            flags.append("slow_prefill")
+        if generation is not None and generation > 20:
+            flags.append("slow_generation")
+        for flag in set(flags):
             incidents[flag] += 1
         category = spec.get("category", suite["id"])
         split = spec.get("split", "unspecified")
@@ -64,6 +106,8 @@ def summarize(report, suite):
             "id": cid, "mode": mode, "split": split, "category": category,
             "status": status, "grade": grade, "elapsed_seconds": elapsed,
             "flags": flags, "human_review_required": bool(spec.get("review_criteria")),
+            "validation_issue": issue if issue in KNOWN_VALIDATION_ISSUES else None,
+            "prefill_seconds": prefill, "generation_seconds": generation,
         })
     graded = sum(item["grade"] in ("passed", "failed") for item in records)
     passed = sum(item["grade"] == "passed" for item in records)
@@ -82,12 +126,26 @@ def summarize(report, suite):
         suggestions.append("Avaliar rubricas manualmente antes de afirmar sucesso; não tratar sem nota como falha.")
     if incidents["slow_execution"]:
         suggestions.append("Medir latência por modo e carga do Ubuntu; investigar desempenho sem sacrificar acurácia.")
+    if incidents["plan_constraints"]:
+        suggestions.append("Revisar planos que violam restrições ou omitem etapas; nunca inferir aprovação.")
+    if incidents["schema_validation"]:
+        suggestions.append("Usar categoria do contrato rejeitado para corrigir schema/prompt, sem expor o JSON bruto.")
+    if incidents["output_limited"] or incidents["reply_truncated"]:
+        suggestions.append("Examinar saídas cortadas e orçamento de geração, sem aumentar tokens sem medição.")
+    if incidents["slow_prefill"]:
+        suggestions.append("Perfilar prompt e ferramentas: prefill caro pode dominar antes do primeiro token.")
+    if incidents["slow_generation"]:
+        suggestions.append("Medir tokens/s e comprimento da resposta antes de trocar modelo ou hardware.")
     return {
         "run_id": report.get("run_id"), "suite_id": suite["id"],
         "total": len(records), "graded_count": graded, "graded_passes": passed,
         "graded_failures": graded - passed, "ungraded_count": len(records) - graded,
         "accuracy_on_graded": round(passed / graded, 4) if graded else None,
         "median_seconds": round(statistics.median(latencies), 3) if latencies else None,
+        "median_prefill_seconds": (round(statistics.median(prefill_seconds), 3)
+                                   if prefill_seconds else None),
+        "median_generation_seconds": (round(statistics.median(generation_seconds), 3)
+                                      if generation_seconds else None),
         "incidents": dict(incidents),
         "group_counts": {key: dict(value) for key, value in sorted(buckets.items())},
         "cases": records, "recommendations": suggestions,
