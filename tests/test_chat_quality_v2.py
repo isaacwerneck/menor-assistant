@@ -101,7 +101,7 @@ class PlanQualityTests(unittest.TestCase):
             prompt, ["Fazer layout", "Testar interface", "Fazer deploy"]))
 
     def test_planner_schema_does_not_certify_quality(self):
-        result = {"move": "plan", "reply": "Plano sugerido.",
+        result = {"move": "plan", "reply": "Plano sugerido.", "question": "",
                   "steps": ["Identificar fotos", "Mover duplicados"],
                   "acceptance": ["Fotos identificadas"]}
         with patch.object(intelligence, "decide", return_value=result):
