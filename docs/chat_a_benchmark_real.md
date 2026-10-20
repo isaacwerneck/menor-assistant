@@ -156,3 +156,42 @@ Depois de confirmar a revisão carregada no servidor:
 Este incremento corrige perdas e desvios reproduzíveis da orquestração.
 Ganho de latência e qualidade no notebook após deploy exige nova medição;
 CI verde sozinho não comprova esse ganho.
+
+## Segunda rodada — pesquisa com contexto limitado
+
+Referência inicial: main em `f4c3a70`, PR #74 incorporado. O laboratório remoto
+continuou respondendo 404 nesta rodada; não atribuir resultados ao código novo
+sem conferir o processo carregado.
+
+Observações adicionais no chat real:
+- Pergunta inédita “17 menos 9, somente número”: respondeu exatamente “8”.
+- Documento nunca anexado: respondeu em uma frase que não tem acesso ao conteúdo.
+- Esses resultados não incluem duração exata; não provam ganho de desempenho.
+
+Problemas reproduzidos com fontes sintéticas e correções:
+- O leitor cortava os primeiros 12.000 caracteres antes de procurar informação;
+  texto pertinente no fim de uma documentação longa desaparecia. A leitura com
+  consulta agora seleciona trechos literais do texto obtido antes desse corte.
+- Até 36.000 caracteres de páginas podiam ser enviados à síntese. Agora há limite
+  de 2.400 por fonte e três fontes, inclusive no fallback de navegador.
+- Três primeiros resultados ilegíveis encerravam a tentativa mesmo se o quarto
+  fosse acessível. Agora examina até cinco candidatos para obter três legíveis.
+- A classificação tinha teto de 900 tokens como a síntese. Recebe schema menor
+  e teto de 180; a síntese conserva seu orçamento independente.
+- A palavra “estude” negada podia disparar registro. Agora também exige uma
+  decisão booleana de estudo; o modelo ainda pode interpretar intenção mal.
+- Busca, leitura e síntese inválida tinham mensagem quase indistinguível. Agora
+  retornam etapas de falha específicas, sem divulgar exceções e sem salvar estudo.
+- Marcadores de omissão são separados dos trechos citáveis; não contam como fonte.
+
+Validação web real no computador de desenvolvimento, sem Ollama:
+a leitura HTTPS da documentação oficial de Python com seleção de trechos e a
+busca pública passaram. O HTML do DuckDuckGo falhou e o fallback Bing RSS
+retornou resultados. Foram dois testes opt-in em cerca de um segundo nessa
+execução; isso não mede o Ubuntu nem qualidade da resposta do modelo.
+Testes de regressão cobrem orçamento, texto no fim da página, fontes falhas,
+navegador, decisão de não salvar, formatos de classificação e erros por etapa.
+
+Limites: seleção lexical não garante relevância, autoridade ou implicação
+semântica da citação. Não há nova biblioteca, provedor ou modelo. Os controles
+HTTPS/DNS e a recusa de fontes privadas continuam no leitor existente.

@@ -12,6 +12,8 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qs, quote, urljoin, urlsplit
 from xml.etree import ElementTree
 
+from src.agent.context_engine import select_passages
+
 LOGGER = logging.getLogger(__name__)
 MAX_BYTES = 1024 * 1024
 MAX_TEXT = 12000
@@ -166,7 +168,7 @@ class PageText(HTMLParser):
         return "\n".join(" ".join(line.split()) for line in "".join(self.parts).splitlines() if line.strip())
 
 
-def read(url):
+def read(url, *, query=None):
     try:
         final, content, media = _download(url)
         parser = PageText()
@@ -174,7 +176,8 @@ def read(url):
         text = content if media == "text/plain" else parser.text()
         if not text.strip():
             raise WebUnavailable("A página não forneceu texto legível.")
-        return {"url": final, "text": text[:MAX_TEXT], "truncated": len(text) > MAX_TEXT,
+        selected = select_passages(text, query) if query is not None else text[:MAX_TEXT]
+        return {"url": final, "text": selected, "truncated": len(text) > len(selected),
                 "accessed_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     except (OSError, http.client.HTTPException, LookupError) as error:
         raise WebUnavailable("Não consegui acessar a página pública.") from error
