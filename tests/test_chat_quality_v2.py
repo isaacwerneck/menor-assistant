@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, Mock, patch
 
 from ops import ollama_hardware
-from src.agent import intelligence, voice
+from src.agent import intelligence, voice, plan_constraints
 from src.api import lab_batches, remote_lab
 
 
@@ -83,6 +83,33 @@ class SpeechAndEvalTests(unittest.TestCase):
         prompt = post.call_args.kwargs["json"]["messages"][0]["content"]
         self.assertIn("recibo", prompt)
         self.assertIn("brasileiro", prompt)
+
+
+class PlanQualityTests(unittest.TestCase):
+    def test_explicit_user_constraints_are_checked_without_model_call(self):
+        prompt = "Identifique arquivos repetidos sem apagar, substituir ou mover nenhum."
+        safe = ["Listar arquivos", "Comparar hashes", "Relatar duplicados"]
+        not_safe = ["Listar arquivos", "Mover duplicados para outra pasta"]
+        self.assertEqual(plan_constraints.warnings(prompt, safe), [])
+        self.assertTrue(plan_constraints.warnings(prompt, not_safe))
+
+    def test_explicit_deploy_is_required_as_stage(self):
+        prompt = "Planeje um site com testes e deploy."
+        self.assertTrue(plan_constraints.required_stage_warnings(
+            prompt, ["Fazer layout", "Testar interface"]))
+        self.assertFalse(plan_constraints.required_stage_warnings(
+            prompt, ["Fazer layout", "Testar interface", "Fazer deploy"]))
+
+    def test_planner_schema_does_not_certify_quality(self):
+        result = {"move": "plan", "reply": "Plano sugerido.",
+                  "steps": ["Identificar fotos", "Mover duplicados"],
+                  "acceptance": ["Fotos identificadas"]}
+        with patch.object(intelligence, "decide", return_value=result):
+            answer = remote_lab._planner(remote_lab.LabRequest(
+                mode="planner", message="Identifique fotos sem mover nada."
+            ))
+        self.assertFalse(answer["plan_quality_verified"])
+        self.assertTrue(answer["plan_warnings"])
 
 
 class HardwareTests(unittest.TestCase):
