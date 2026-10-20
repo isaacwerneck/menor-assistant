@@ -131,7 +131,7 @@ def summarize(report, suite):
     if incidents["plan_constraints"]:
         suggestions.append("Revisar planos que violam restrições ou omitem etapas; nunca inferir aprovação.")
     if incidents["numeric_format_mismatch"]:
-        suggestions.append("Valor numérico correto, mas formato solicitado descumprido; não somar como erro matemático.")
+        suggestions.append("Valor numérico correto, mas formato descumprido; não é erro matemático.")
     if incidents["schema_validation"]:
         suggestions.append("Usar categoria do contrato rejeitado para corrigir schema/prompt, sem expor o JSON bruto.")
     if incidents["output_limited"] or incidents["reply_truncated"]:
