@@ -24,6 +24,26 @@ iniciar uma execução por vez, consultar progresso e baixar relatório completo
   nenhum dos dois executa ferramentas.
 - `decision_validated` demonstra contrato/JSON válido, **não qualidade do plano**.
 
+### Diagnóstico de inferência sem nova chamada ao modelo
+
+O modo `planner` inclui `diagnostics.outcome`: `validated`, `timeout`,
+`request_failed`, `invalid_json`, `invalid_response` ou `invalid_decision`
+(estrutura/contrato rejeitado). `performance` preserva somente contagens e tempos
+numéricos do Ollama, inclusive quando o texto JSON não pôde ser decodificado.
+Timeout sem resposta não tem métricas inventadas.
+
+`output_limited=true` indica `done_reason=length` reportado pelo Ollama;
+`reply_truncated=true` indica o corte do trecho exibido no relatório. São
+condições diferentes. A ausência de limite reportado não prova resposta completa.
+O status continua compatível com relatórios anteriores; os sinalizadores devem
+ser considerados na revisão humana.
+
+O diagnóstico do planejador inclui hashes SHA-256 do prompt de sistema e schema,
+limite de saída, temperatura e timeout efetivamente enviados. Esses hashes não
+incluem a pergunta, histórico ou preferências e não substituem SHA do deploy,
+digest do modelo, hardware e medição repetida. Nenhum texto bruto de exceção,
+raciocínio ou credencial é copiado para o diagnóstico. Não há retry adicional.
+
 ### Avaliação automática, sem falsas notas
 
 - `expected_contains`: todas as substrings devem ocorrer (teste sintático,
@@ -95,7 +115,12 @@ o JSON manualmente se ele já estiver acessível na branch.
   de comando (modelo) e `Não.` versus `NÃO` (avaliador antigo, corrigido no v2).
 - `segundo-lote-base-v2` vs `segundo-lote-naturalidade-v2`:
   24 cenários iguais sob perfis A/B para medir naturalidade, contexto, segurança,
-  latência e planos. Ainda precisam ser executados no Qwen real após deploy.
+  latência e planos. Ambos foram executados no Qwen real na rodada Codex de
+  20/10: baseline `20261020T040826Z-f0556cec` e natural
+  `20261020T113158Z-217c3e5e`. Ambos os relatórios foram consultados: 5 acertos
+  em 6 casos automáticos e 18 sem nota em cada lote; 2 falhas técnicas no baseline
+  e 3 no natural. Medianas dos casos diretos: 12,072 s e 11,915 s. Uma rodada,
+  executada em horários distantes, não comprova melhoria nem regressão causal.
 - Medição independente do Qwen em CPU: **10,24 tokens/s** de mediana. Não
   usar apenas tempo bruto sem olhar quantidade de tokens de resposta.
 
