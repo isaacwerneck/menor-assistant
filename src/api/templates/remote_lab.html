@@ -48,6 +48,12 @@ user: Gosto de música eletrônica."></textarea>
 </div>
 <section class="panel" aria-label="Resultado do modelo direto"><h2>Modelo direto</h2><pre id="directResult">Nenhum teste executado.</pre><p class="meta" id="directMeta"></p></section>
 <section class="panel" aria-label="Resultado do raciocinador"><h2>Raciocinador JSON</h2><pre id="plannerResult">Nenhum teste executado.</pre><p class="meta" id="plannerMeta"></p></section>
+<section class="panel" aria-label="Baterias automáticas"><h2>Gaveta de testes</h2>
+<p>Selecione uma bateria pronta ou importe um JSON. Os relatórios completos ficam privados no Ubuntu.</p>
+<label for="batchSelect">Bateria disponível</label><select id="batchSelect" style="width:100%;padding:12px;background:#11111d;color:inherit;border:1px solid #53446f;border-radius:10px"></select>
+<div class="actions"><button id="batchRun" class="primary" type="button">Executar bateria</button><button id="batchRefresh" type="button">Atualizar gaveta</button></div>
+<label for="batchFile">Importar bateria JSON</label><input id="batchFile" type="file" accept=".json,application/json"><button id="batchImport" type="button">Importar arquivo</button>
+<p id="batchStatus" role="status" aria-live="polite">Nenhuma bateria iniciada.</p><h3>Relatórios salvos</h3><div id="batchReports">Carregando…</div></section>
 <footer>Modo laboratório: inferência sem ferramentas, histórico efêmero, limite de requisições. O chat real continua disponível em /. Para avaliar a IA completa, teste também a conversa principal.</footer>
 </main>
 <script>
@@ -112,6 +118,42 @@ $("clear").addEventListener("click", () => {
     }
     $("status").textContent = "Resultados limpos; nada foi salvo no servidor.";
 });
+
+async function batchRefresh(){
+ try{
+ const [b,r]=await Promise.all([fetch("/lab/batches",{credentials:"same-origin"}),fetch("/lab/reports",{credentials:"same-origin"})]);
+ if(!b.ok||!r.ok)throw new Error("Sessão expirada ou servidor indisponível.");
+ const suites=(await b.json()).items, reports=(await r.json()).items;
+ const select=$("batchSelect");select.replaceChildren();
+ for(const item of suites){const opt=document.createElement("option");opt.value=item.id;opt.textContent=item.title+" ("+item.cases+" casos)";select.append(opt);}
+ const target=$("batchReports");target.replaceChildren();
+ for(const item of reports){const p=document.createElement("p"),a=document.createElement("a");
+ a.href="/lab/reports/"+encodeURIComponent(item.run_id)+"/download";a.textContent=item.run_id+" · "+item.automatic_passes+"/"+item.total+" acertos automáticos · "+item.ungraded+" sem nota";a.setAttribute("download","");p.append(a);target.append(p);}
+ if(!reports.length)target.textContent="Nenhum relatório salvo.";
+ }catch(e){$("batchStatus").textContent=e.message;}
+}
+$("batchRefresh").addEventListener("click",batchRefresh);
+$("batchImport").addEventListener("click",async()=>{
+ const file=$("batchFile").files[0];if(!file){$("batchStatus").textContent="Selecione um JSON.";return;}
+ const data=new FormData();data.append("file",file);
+ try{const r=await fetch("/lab/batches/import",{method:"POST",credentials:"same-origin",body:data});
+ if(!r.ok)throw new Error("Importação recusada (HTTP "+r.status+").");
+ $("batchStatus").textContent="Bateria importada.";await batchRefresh();
+ }catch(e){$("batchStatus").textContent=e.message;}
+});
+$("batchRun").addEventListener("click",async()=>{
+ const id=$("batchSelect").value;if(!id)return;
+ $("batchRun").disabled=true;
+ try{const r=await fetch("/lab/batches/"+encodeURIComponent(id)+"/run",{method:"POST",credentials:"same-origin"});
+ if(!r.ok)throw new Error("Não foi possível iniciar (HTTP "+r.status+").");
+ $("batchStatus").textContent="Bateria iniciada. Acompanhe o progresso.";
+ const poll=async()=>{const st=await fetch("/lab/batches/status",{credentials:"same-origin"}).then(x=>x.json());
+ $("batchStatus").textContent="Status: "+st.status+" · "+(st.done||0)+"/"+(st.total||0)+" · publicação: "+(st.publish_status||"pendente");
+ if(st.status==="running")setTimeout(poll,2500);else{$("batchRun").disabled=false;await batchRefresh();}
+ };await poll();
+ }catch(e){$("batchStatus").textContent=e.message;$("batchRun").disabled=false;}
+});
+batchRefresh();
 })();
 </script>
 </body>
