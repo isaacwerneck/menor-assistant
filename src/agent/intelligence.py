@@ -128,6 +128,12 @@ def _bounded_evidence(value, budget=2400):
     return compact or {"evidence": "metadata_unavailable"}
 
 
+def _invalid_decision(diagnostics, issue):
+    if diagnostics is not None:
+        diagnostics["validation_issue"] = issue
+    return None
+
+
 def _inference_failure(error):
     for kind, outcome in ((requests.Timeout, "timeout"), (json.JSONDecodeError, "invalid_json"),
                           (requests.RequestException, "request_failed")):
@@ -235,58 +241,59 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
                                    output_limited=reason == "length")
             item = json.loads(data["message"]["content"])
         if not isinstance(item, dict) or item.get("move") not in MOVES:
-            return None
+            return _invalid_decision(diagnostics, "move")
         goal, reply, question = (item.get(key, "") for key in ("goal", "reply", "question"))
         if any(not isinstance(x, str) for x in (goal, reply, question)):
-            return None
+            return _invalid_decision(diagnostics, "text_type")
         # Só movimentos que persistem um plano precisam declarar outro objetivo.
         if item["move"] not in ("plan", "continue", "clarify") and not goal.strip():
             goal = message[:220]
-        if not (0 < len(goal.strip()) <= 220 and 0 < len(reply.strip()) <= 4000
-                and len(question) <= 220):
-            return None
+        if not 0 < len(goal.strip()) <= 220:
+            return _invalid_decision(diagnostics, "goal")
+        if not (0 < len(reply.strip()) <= 4000 and len(question) <= 220):
+            return _invalid_decision(diagnostics, "reply_or_question")
         steps, acceptance = item.get("steps", []), item.get("acceptance", [])
         if not _strings(steps, 5) or not _strings(acceptance, 4):
-            return None
+            return _invalid_decision(diagnostics, "steps_or_acceptance")
         if item["move"] in ("plan", "continue") and not steps:
-            return None
+            return _invalid_decision(diagnostics, "steps_required")
         if item["move"] == "clarify" and not question.strip():
-            return None
+            return _invalid_decision(diagnostics, "question_required")
         relation = item.get("relation")
         if relation is not None and relation not in ("start", "refine", "switch", "resume"):
-            return None
+            return _invalid_decision(diagnostics, "relation")
         resume_goal_id = item.get("resume_goal_id", "")
         if not isinstance(resume_goal_id, str) or len(resume_goal_id) > 40:
-            return None
+            return _invalid_decision(diagnostics, "resume_goal_id")
         if relation == "resume":
             available = {
                 x["id"] for x in (paused_goals or [])
                 if isinstance(x, dict) and isinstance(x.get("id"), str)
             }
             if resume_goal_id not in available:
-                return None
+                return _invalid_decision(diagnostics, "unknown_goal")
         query = item.get("query", "")
         if (not isinstance(query, str) or len(query) > 280
                 or (query and (item["move"] != "research" or len(query.strip()) < 3))):
-            return None
+            return _invalid_decision(diagnostics, "query")
         tool_name = item.get("tool", "")
         arguments = item.get("arguments", {})
         if not isinstance(tool_name, str) or not isinstance(arguments, dict):
-            return None
+            return _invalid_decision(diagnostics, "tool_arguments_type")
         if tool_name:
             known = next((t for t in (tools or []) if t.get("name") == tool_name), None)
             if item["move"] != "act" or known is None or type(known.get("writes")) is not bool:
-                return None
+                return _invalid_decision(diagnostics, "tool")
             if (not isinstance(known.get("arguments"), list)
                     or any(not isinstance(arg, str) for arg in known["arguments"])):
-                return None
+                return _invalid_decision(diagnostics, "tool_schema")
             if (len(known["arguments"]) != len(set(known["arguments"]))
                     or set(arguments) != set(known["arguments"])
                     or any(not isinstance(value, str) or not 1 <= len(value.strip()) <= 280
                            for value in arguments.values())):
-                return None
+                return _invalid_decision(diagnostics, "arguments")
         elif arguments:
-            return None
+            return _invalid_decision(diagnostics, "tool_required")
         if diagnostics is not None:
             diagnostics["outcome"] = "validated"
         return {

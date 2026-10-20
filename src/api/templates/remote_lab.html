@@ -82,6 +82,17 @@ function diagnosticText(result) {
     ]);
     const parts = [];
     if (labels.has(diagnostics.outcome)) parts.push(labels.get(diagnostics.outcome));
+    const issues = new Map([
+        ["move", "Movimento inválido"], ["text_type", "Tipo de texto inválido"],
+        ["goal", "Objetivo ausente ou inválido"], ["reply_or_question", "Resposta ou pergunta inválida"],
+        ["steps_or_acceptance", "Etapas ou critérios inválidos"], ["steps_required", "Etapas ausentes"],
+        ["question_required", "Pergunta ausente"], ["relation", "Relação de objetivo inválida"],
+        ["resume_goal_id", "Referência inválida"], ["unknown_goal", "Objetivo inexistente"],
+        ["query", "Consulta inválida"], ["tool_arguments_type", "Tipo de ferramenta ou argumentos inválido"],
+        ["tool", "Ferramenta inválida"], ["tool_schema", "Contrato de ferramenta inválido"],
+        ["arguments", "Argumentos inválidos"], ["tool_required", "Ferramenta ausente"],
+    ]);
+    if (issues.has(diagnostics.validation_issue)) parts.push(issues.get(diagnostics.validation_issue));
     if (result.output_limited === true || diagnostics.output_limited === true) parts.push("Limite de geração atingido");
     if (result.reply_truncated === true) parts.push("Trecho exibido limitado");
     const metrics = result.performance || diagnostics.performance || {};

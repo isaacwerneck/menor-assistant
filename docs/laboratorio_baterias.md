@@ -28,7 +28,12 @@ iniciar uma execução por vez, consultar progresso e baixar relatório completo
 
 O modo `planner` inclui `diagnostics.outcome`: `validated`, `timeout`,
 `request_failed`, `invalid_json`, `invalid_response` ou `invalid_decision`
-(estrutura/contrato rejeitado). `performance` preserva somente contagens e tempos
+(estrutura/contrato rejeitado). Nesse último caso, `validation_issue` informa
+somente a categoria do campo rejeitado: objetivo, texto, etapas/critérios,
+referência de objetivo, consulta ou contrato/argumentos de ferramenta. O cartão
+mostra o rótulo correspondente sem copiar o valor rejeitado. As regras de
+validação permanecem iguais; o diagnóstico não corrige nem aprova a decisão.
+`performance` preserva somente contagens e tempos
 numéricos do Ollama, inclusive quando o texto JSON não pôde ser decodificado.
 Timeout sem resposta não tem métricas inventadas.
 

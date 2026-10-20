@@ -89,6 +89,26 @@ testes no chat completo. O diagnóstico novo acrescenta motivos de falha,
 contagens/tempos e hashes do prompt/schema ao planejador, sem repetir inferências;
 ver [contrato atual do Lab](../laboratorio_baterias.md).
 
+### Reprodução individual após as correções
+
+Um novo teste de planejamento de migração/backup/rollback retornou
+`no_valid_decision` em **23,052 s**, com **177 tokens gerados a 7,72 tokens/s**.
+O diagnóstico indicou **contrato rejeitado**, distinguindo esse caso de timeout,
+JSON inválido ou limite de geração. A versão seguinte acrescenta categoria do
+campo rejeitado, sem exportar conteúdo bruto, para localizar a causa exata.
+
+No chat completo, um pedido explícito de leitura por `system.diagnose` passou
+de 67 s e terminou em texto dizendo não confirmar a ferramenta, sem recibo.
+A página de sistema listou `system.diagnose` como registrada. Isso é falha de
+encaminhamento/compreensão observada, não prova de ausência da ferramenta.
+Houve um 502 transitório durante a janela de atualização; a página voltou a
+responder e informou API, Ollama, serviço, disco e memória com estado saudável.
+Não atribuir o 502 ou toda a demora a uma causa sem logs do servidor.
+
+Os testes de contrato também reproduziram um bug independente: ações e pesquisas
+mínimas, permitidas pelo schema, eram rejeitadas por falta de `goal` redundante.
+O PR #91 corrige esse caminho; ainda requer nova consulta real após deploy.
+
 ## Como executar a segunda rodada após o deploy
 
 1. Confirmar `main` no checkout Ubuntu e versão/estado dos serviços. Não iniciar trabalho destrutivo.

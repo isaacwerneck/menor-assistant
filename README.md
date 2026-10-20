@@ -22,7 +22,7 @@ variável de ambiente `MENOR_PUBLIC_ORIGIN=https://menor.seudominio.com`
 e a configuração manual do túnel e do DNS; nenhuma instalação é automática.
 O laboratório autenticado `/lab/view` compara Qwen direto com o
 raciocinador JSON, sem executar ferramentas nem salvar históricos. Os relatórios
-distinguem timeout, JSON/contrato inválido e limite de saída, com métricas
+distinguem timeout, JSON/contrato inválido, categoria do campo rejeitado e limite de saída, com métricas
 numéricas de inferência, também visíveis nos cartões dos testes individuais;
 veja o [contrato do laboratório](docs/laboratorio_baterias.md).
 
