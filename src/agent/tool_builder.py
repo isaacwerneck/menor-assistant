@@ -10,6 +10,7 @@ import requests
 
 from src.agent.self_edit import ImprovementUnavailable, _github, _validate_patch
 from src.agent.code_sandbox import verify
+from src.agent.ponytail import coding_guidance
 
 CATALOG = "src/tools/generated/catalog.json"
 DOC = "docs/arquitetura_codigo.md"
@@ -39,6 +40,7 @@ def _generate(name, goal):
                     "Se o objetivo exigir efeitos externos, não invente implementação; retorne source vazio. "
                     f"O teste importa run de src.tools.generated.{name} e cobre um caso e um limite. "
                     "Não inclua dados pessoais, histórico de conversas ou informações privadas na proposta."
+                    "\n" + coding_guidance()
                 )},
                 {"role": "user", "content": json.dumps({
                     "goal": goal,
