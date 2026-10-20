@@ -61,6 +61,17 @@ def _negative_use_of_verb(text, match):
     before = re.split(r"[.;:\n]", before)[-1]
     if re.search(r"\b(?:nem|nao|nunca|sem|evitar|evite|proibido|proibida)\s+$", before):
         return True
+    if re.search(r"\b(?:nao|sem|nunca)\s+(?:fazer|executar|realizar|incluir)\s+$", before):
+        return True
+    # 'não executar backup nem rollback' negates both milestones, not just the first.
+    denied_stages = (
+        r"\b(?:nao|sem|nunca)\s+(?:(?:fazer|executar|realizar)\s+)?"
+        r"(?:backup|rollback|deploy|testes?|autorizacao)"
+        r"(?:\s+(?:e|ou|nem)\s+(?:backup|rollback|deploy|testes?|autorizacao))*"
+    )
+    if any(item.start() <= match.start() < item.end()
+           for item in re.finditer(denied_stages, text)):
+        return True
     # Preserve negation in short enumerations: 'não apagar, substituir ou mover'.
     for negative in re.finditer(_NEGATIONS, before):
         tail = before[negative.end():]
