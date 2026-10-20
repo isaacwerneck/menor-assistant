@@ -71,9 +71,12 @@ class PublishTests(unittest.TestCase):
             "type": "file", "encoding": "base64", "content": base64.b64encode(data).decode()}
         session = Mock()
         session.get.side_effect = [Mock(status_code=200), existing]
-        with patch.dict("os.environ", {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
-                                    "MENOR_LAB_GITHUB_TOKEN": "TEST_FAKE_TOKEN"}), \
-             patch.object(lab_publish.requests, "Session", return_value=session):
+        env = {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
+               "MENOR_LAB_GITHUB_TOKEN": "TEST_FAKE_TOKEN"}
+        with (
+            patch.dict("os.environ", env),
+            patch.object(lab_publish.requests, "Session", return_value=session),
+        ):
             url = lab_publish.publish_report(report)
         self.assertIn(run_id, url)
         self.assertIn("/lab-reports/", url)
@@ -87,9 +90,12 @@ class PublishTests(unittest.TestCase):
         created = Mock(status_code=201)
         created.json.return_value = {"content": {"html_url": "https://example.test/new-report"}}
         session.put.return_value = created
-        with patch.dict("os.environ", {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
-                                    "MENOR_LAB_GITHUB_TOKEN": "TEST_FAKE_TOKEN"}), \
-             patch.object(lab_publish.requests, "Session", return_value=session):
+        env = {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
+               "MENOR_LAB_GITHUB_TOKEN": "TEST_FAKE_TOKEN"}
+        with (
+            patch.dict("os.environ", env),
+            patch.object(lab_publish.requests, "Session", return_value=session),
+        ):
             url = lab_publish.publish_report(report)
         self.assertEqual(url, "https://example.test/new-report")
         self.assertEqual(session.put.call_count, 1)
@@ -102,9 +108,12 @@ class PublishTests(unittest.TestCase):
         existing = Mock(status_code=200)
         existing.json.return_value = {"type": "file", "encoding": "base64", "content": another}
         session.get.side_effect = [Mock(status_code=200), existing]
-        with patch.dict("os.environ", {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
-                                    "MENOR_LAB_GITHUB_TOKEN": "TEST_FAKE_TOKEN"}), \
-             patch.object(lab_publish.requests, "Session", return_value=session):
+        env = {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
+               "MENOR_LAB_GITHUB_TOKEN": "TEST_FAKE_TOKEN"}
+        with (
+            patch.dict("os.environ", env),
+            patch.object(lab_publish.requests, "Session", return_value=session),
+        ):
             with self.assertRaises(lab_publish.GitHubReportConflict):
                 lab_publish.publish_report({"run_id": "20261020T022255Z-4f73ee58"})
         session.put.assert_not_called()
@@ -120,9 +129,12 @@ class PublishTests(unittest.TestCase):
         response = Mock(status_code=422)
         response.json.return_value = {"message": 'Invalid request: "sha" was not supplied.'}
         session.put.return_value = response
-        with patch.dict("os.environ", {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
-                                    "MENOR_LAB_GITHUB_TOKEN": "TEST_FAKE_TOKEN"}), \
-             patch.object(lab_publish.requests, "Session", return_value=session):
+        env = {"MENOR_LAB_REPORTS_ALLOW_FULL_PUSH": "1",
+               "MENOR_LAB_GITHUB_TOKEN": "TEST_FAKE_TOKEN"}
+        with (
+            patch.dict("os.environ", env),
+            patch.object(lab_publish.requests, "Session", return_value=session),
+        ):
             url = lab_publish.publish_report(report)
         self.assertIn("20261020T022255Z-4f73ee58", url)
         self.assertEqual(session.put.call_count, 1)
