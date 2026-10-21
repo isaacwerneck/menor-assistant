@@ -1,6 +1,7 @@
 """Chat E: painéis privados de status sem terminal ou efeitos operacionais."""
 from pathlib import Path
 import os
+import re
 import threading
 
 import requests
@@ -56,6 +57,24 @@ def _gpu_busy():
         except (OSError, ValueError):
             continue
     return None
+
+
+@router.get("/workspace/system/processes")
+def memory_processes(request: Request):
+    """Maiores RSS reportados por /proc, sem comandos, argumentos, usuário ou PID."""
+    auth.require_owner(request)
+    try:
+        snapshot = monitor.process_snapshot()
+    except (OSError, ValueError, PermissionError):
+        return {"available": False, "items": [], "source": "local_procfs"}
+    ranked = sorted(snapshot.values(), key=lambda item: item[2], reverse=True)[:8]
+    items = []
+    for name, _, rss in ranked:
+        # Somente nomes breves de executáveis: nunca argv, cwd ou variáveis.
+        safe_name = re.sub(r"[^a-zA-Z0-9._+-]", "_", name)[:24] or "processo"
+        items.append({"name": safe_name, "rss_mib": round(rss / monitor.MIB, 1)})
+    return {"available": True, "items": items, "source": "local_procfs",
+            "limits": "RSS contém memória compartilhada: valores não são aditivos."}
 
 
 @router.get("/workspace/system/live")

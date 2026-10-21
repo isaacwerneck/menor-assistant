@@ -392,6 +392,19 @@ function diagnosticText(result) {
     if (typeof speed === "number" && Number.isFinite(speed) && speed >= 0 && speed <= 100000) {
         parts.push(speed.toFixed(2) + " tokens/s");
     }
+    for (const [name, title] of [["prompt_processing_ms", "prefill"],
+                                 ["token_generation_ms", "geração"],
+                                 ["model_load_ms", "carregamento"]]) {
+        const value = metrics[name];
+        if (typeof value === "number" && Number.isFinite(value) &&
+            value >= 0 && value <= 1e7) parts.push(title + ": " + value.toFixed(0) + " ms");
+    }
+    if (typeof metrics.prompt_cached_fraction === "number" &&
+        Number.isFinite(metrics.prompt_cached_fraction) &&
+        metrics.prompt_cached_fraction >= 0 && metrics.prompt_cached_fraction <= 1) {
+        parts.push((100 * metrics.prompt_cached_fraction).toFixed(0) +
+            "% do prompt sinalizado como cacheado");
+    }
     return parts.join(" · ");
 }
 async function run(mode) {

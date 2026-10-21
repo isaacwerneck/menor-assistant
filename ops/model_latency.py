@@ -44,6 +44,16 @@ def model_identifier(value):
     return value
 
 
+def configured_num_thread():
+    """Override de CPU opt-in; inválido não altera silenciosamente a inferência."""
+    raw = os.environ.get("MENOR_OLLAMA_NUM_THREAD", "").strip()
+    if not raw:
+        return None
+    if not raw.isascii() or not raw.isdecimal() or int(raw) not in (1, 2, 4, 6, 8):
+        raise ValueError("MENOR_OLLAMA_NUM_THREAD exige 1, 2, 4, 6 ou 8.")
+    return int(raw)
+
+
 def numeric_summary(response):
     result = {}
     for key in ("total_duration", "load_duration", "prompt_eval_duration",
@@ -66,6 +76,14 @@ def numeric_summary(response):
     if result.get("prompt_eval_duration", 0) > 0 and "prompt_eval_count" in result:
         result["prompt_tokens_per_second"] = round(
             result["prompt_eval_count"] * 1e9 / result["prompt_eval_duration"], 2)
+    total_prompt = result.get("prompt_eval_count")
+    cached = result.get("prompt_eval_cached_count")
+    if total_prompt is not None and cached is not None and cached <= total_prompt:
+        result["estimated_uncached_prompt_tokens"] = total_prompt - cached
+        result["prompt_cached_fraction"] = round(cached / total_prompt, 3) if total_prompt else None
+        if result.get("prompt_eval_duration", 0) > 0:
+            result["estimated_uncached_prompt_tokens_per_second"] = round(
+                (total_prompt - cached) * 1e9 / result["prompt_eval_duration"], 2)
     components = ("load_duration", "prompt_eval_duration", "eval_duration")
     if "total_duration" in result and all(key in result for key in components):
         known = sum(result[key] for key in components)
@@ -74,9 +92,11 @@ def numeric_summary(response):
     return result
 
 
-def measure_one(post, endpoint, model, prompt, *, num_thread=None):
+def measure_one(post, endpoint, model, prompt, *, num_thread=None, num_predict=80):
     start = time.monotonic()
-    options = {"temperature": 0.1, "num_predict": 80}
+    if type(num_predict) is not int or num_predict not in (16, 80, 96):
+        raise ValueError("Orçamento de saída inválido.")
+    options = {"temperature": 0.1, "num_predict": num_predict}
     if num_thread is not None:
         if type(num_thread) is not int or num_thread not in (1, 2, 4, 6, 8):
             raise ValueError("Número de threads fora do experimento aprovado.")
@@ -158,20 +178,68 @@ def thread_sweep(*, samples=2, post=None, url=None, model=None):
             "limits": "Não mede workloads longos, interferência térmica, GPU nem efeito de concorrência."}
 
 
+def diagnostic_matrix(*, samples=2, post=None, url=None, model=None):
+    """Diagnóstico opt-in de prefill/cache versus geração com dados públicos fixos.
+
+    Repete quatro combinações de prompt e orçamento, alternando a ordem;
+    não modifica cache, contextos persistentes, drivers ou configuração global.
+    """
+    if type(samples) is not int or not 1 <= samples <= 3:
+        raise ValueError("Samples deve estar entre 1 e 3.")
+    endpoint = local_endpoint(url or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
+    selected = model_identifier(model or os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
+    caller = post if post is not None else requests.post
+    context = ("O cenário público de teste tem três serviços independentes. "
+               "O serviço A recebe registros; o serviço B valida dados; "
+               "o serviço C salva relatórios sem alterar originais. ") * 12
+    combinations = (("short", 16), ("short", 96), ("long", 16), ("long", 96))
+    results = {name + "-" + str(limit): [] for name, limit in combinations}
+    for attempt in range(samples):
+        order = combinations if attempt % 2 == 0 else tuple(reversed(combinations))
+        for kind, cap in order:
+            prompt = PUBLIC_PROBES[0] if kind == "short" else (
+                context + " Resuma os três serviços e seus cuidados em tópicos.")
+            row = measure_one(caller, endpoint, selected, prompt, num_predict=cap)
+            results[kind + "-" + str(cap)].append(row)
+    data = []
+    for (kind, cap), key in zip(combinations, results):
+        observations = results[key]
+        item = {"prompt": kind, "output_limit": cap,
+                "samples": len(observations), "timings": observations}
+        for field, label in (("prompt_processing_ms", "median_prompt_ms"),
+                             ("token_generation_ms", "median_generation_ms"),
+                             ("generation_tokens_per_second", "median_generation_tps"),
+                             ("prompt_cached_fraction", "median_cached_fraction"),
+                             ("eval_count", "median_generated_tokens")):
+            values = [row["metrics"][field] for row in observations
+                      if isinstance(row["metrics"].get(field), (int, float))]
+            item[label] = round(statistics.median(values), 3) if values else None
+        data.append(item)
+    return {"model": selected, "status": "measured", "samples": samples,
+            "probes": data, "privacy": "fixed_public_prompts_only",
+            "limits": "Warm-only: não descarrega modelos. Comparar tokens reais, cache, carga e temperatura; "
+                      "orçamento não equivale a quantidade gerada."}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Benchmark local e voluntário do Ollama")
     parser.add_argument("--live", action="store_true",
                         help="Autoriza uma a três inferências de prompts públicos no Ollama local.")
     parser.add_argument("--samples", type=int, default=2, help="Número de inferências (1 a 3).")
     parser.add_argument("--model", default=None, help="Modelo já instalado para a medição.")
+    parser.add_argument("--diagnose", action="store_true",
+                        help="Com --live, compara prompts curtos/longos e geração; 4 a 12 inferências.")
     parser.add_argument("--thread-sweep", action="store_true",
                         help="Com --live, testa 1/2/4/6/8 threads em sequência; gera mais carga.")
     args = parser.parse_args(argv)
     if not args.live:
         print("Somente com --live: nada foi executado no modelo.")
         return 0
+    if args.diagnose and args.thread_sweep:
+        parser.error("Escolha somente --diagnose ou --thread-sweep.")
     try:
-        result = (thread_sweep(samples=args.samples, model=args.model)
+        result = (diagnostic_matrix(samples=args.samples, model=args.model)
+                  if args.diagnose else thread_sweep(samples=args.samples, model=args.model)
                   if args.thread_sweep else benchmark(samples=args.samples, model=args.model))
     except (ValueError, requests.RequestException, OSError) as error:
         print("Benchmark indisponível: " + type(error).__name__, file=sys.stderr)

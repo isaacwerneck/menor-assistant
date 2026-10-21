@@ -402,3 +402,20 @@ test("Lab: without GitHub verification nothing enters unsent bulk queue", async 
     assert.equal(ui.elements.get("publishSelected").disabled, true);
     assert.equal(ui.requests.filter(x => x.url === "/lab/reports/publish-batch").length, 0);
 });
+
+test("E12: performance UI separates prefill, generation, loading and cache", async () => {
+    const ui = browser({compare:{
+        status:"answered", reply:"Teste", model:"local:7b", elapsed_seconds:3,
+        performance:{prompt_processing_ms:1100, token_generation_ms:1700,
+                     model_load_ms:2, prompt_cached_fraction:0.9,
+                     generation_tokens_per_second:9.41, eval_count:16},
+    }});
+    await ui.ready();
+    ui.elements.get("question").value = "Resposta de teste";
+    await ui.click("runDirect");
+    const shown = ui.elements.get("directMeta").textContent;
+    for (const item of ["prefill: 1100 ms", "geração: 1700 ms",
+                        "carregamento: 2 ms", "90% do prompt"]) {
+        assert.ok(shown.includes(item), item);
+    }
+});

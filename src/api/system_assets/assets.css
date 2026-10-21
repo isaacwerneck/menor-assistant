@@ -102,3 +102,9 @@ button:disabled{cursor:not-allowed;opacity:.52}
 .advanced-group>summary{cursor:pointer;min-height:44px;font-weight:650}
 .advanced-group>.section{margin-top:20px}
 @media(max-width:760px){.metric-grid{grid-template-columns:1fr}.metric-card{padding:15px}}
+
+/* A memória residente dos processos não representa soma da RAM ocupada. */
+.process-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px}
+.process-list .record{padding:13px}
+.process-list .record h3{font-size:.9rem;margin-bottom:6px}
+.process-list .record .state{margin-bottom:0}
