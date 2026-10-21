@@ -7,6 +7,10 @@ bidirecional plena, autonomia longa e agente programador end-to-end ainda não
 foram comprovados. As implementações existentes não equivalem a capacidade
 completa em produção.
 
+O [plano de referência do Menor](PLANO_MENOR_ASSISTANT.md) reúne a proposta
+recebida, sua revisão técnica e o checklist acompanhado por evidências.
+Está em avaliação; os itens de implementação não estão marcados como concluídos.
+
 **Migrando o projeto para Codex?** Comece em
 [`AGENTS.md`](AGENTS.md) e no
 [`handoff de 20/10/2026`](docs/handoff/00_COMECE_AQUI_CODEX.md).
