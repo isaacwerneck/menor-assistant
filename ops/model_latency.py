@@ -47,13 +47,31 @@ def model_identifier(value):
 def numeric_summary(response):
     result = {}
     for key in ("total_duration", "load_duration", "prompt_eval_duration",
-                "eval_duration", "prompt_eval_count", "eval_count"):
+                "eval_duration", "prompt_eval_count", "prompt_eval_cached_count",
+                "eval_count"):
         value = response.get(key)
         if type(value) is int and 0 <= value <= 10 ** 15:
             result[key] = value
+    for field, source in (
+        ("ollama_total_ms", "total_duration"),
+        ("model_load_ms", "load_duration"),
+        ("prompt_processing_ms", "prompt_eval_duration"),
+        ("token_generation_ms", "eval_duration"),
+    ):
+        if source in result:
+            result[field] = round(result[source] / 1e6, 2)
     if result.get("eval_duration", 0) > 0 and result.get("eval_count", 0) >= 0:
         result["generation_tokens_per_second"] = round(
             result["eval_count"] * 1e9 / result["eval_duration"], 2)
+    if result.get("prompt_eval_duration", 0) > 0 and result.get("prompt_eval_count", 0) >= 0:
+        result["prompt_tokens_per_second"] = round(
+            result["prompt_eval_count"] * 1e9 / result["prompt_eval_duration"], 2)
+    if "total_duration" in result:
+        known = sum(result.get(k, 0) for k in (
+            "load_duration", "prompt_eval_duration", "eval_duration"
+        ))
+        if known <= result["total_duration"]:
+            result["other_model_ms"] = round((result["total_duration"] - known) / 1e6, 2)
     return result
 
 

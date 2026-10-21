@@ -396,18 +396,21 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
     return plan_review.annotate(decision, status), status
 
 
-def _collaborate(state, message, history):
-    """Mantém briefing de programação; nunca transforma conversa em execução."""
+def _collaborate(state, message, history, metrics=None):
+    """Conserva escolhas posteriores sem tomar decisão de executar."""
     previous = state.get("goal", "") if state.get("phase") == "collaboration" else ""
-    goal = message[:420] if conversation.is_collaboration_request(message) and (
-        not previous or len(message) > len(previous)) else previous
-    if not goal:
-        goal = message[:420]
-    answer = conversation.reply(message, history, goal=goal) or conversation.safe_fallback(goal)
-    # Um objetivo já registrado conserva ID, etapas e recibos anteriores.
+    goal = previous or message[:420]
+    requirements = list(state.get("requirements", []))[-3:]
+    if previous and message.strip() and message.strip() != previous.strip():
+        # Guarda fatos escolhidos após o pedido inicial, até 3 mudanças recentes.
+        requirements = (requirements + [message.strip()[:220]])[-3:]
+    briefing = goal + ("\nDecisões e pedidos seguintes: " + " | ".join(requirements)
+                       if requirements else "")
+    answer = conversation.reply(message, history, goal=briefing, diagnostics=metrics)
+    answer = answer or conversation.safe_fallback(briefing, message)
     if state.get("phase") == "goal":
         return _answer(answer, **state)
-    return _answer(answer, "collaboration", goal=goal)
+    return _answer(answer, "collaboration", goal=goal, requirements=requirements)
 
 
 def _understand(state, message, history, project=None, metrics=None):
@@ -642,7 +645,7 @@ def _advance(state, message, history, project=None, metrics=None):
         return _answer("Certo, deixamos esse projeto de lado. Sobre o que você quer conversar?")
     if (conversation.is_collaboration_request(message)
             or conversation.follows_project(state, message)):
-        return _collaborate(state, message, history)
+        return _collaborate(state, message, history, metrics=metrics)
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
         intelligent = _understand(state, message, history, project=project, metrics=metrics)
         if intelligent is not None:
@@ -733,6 +736,10 @@ def _run_locked(session, turn, message, history, project, tasks):
         )
     if metrics:
         metrics["agent_wall_ms"] = round((time.monotonic() - started) * 1000, 2)
+        if "chat_wall_ms" in metrics:
+            metrics["other_wall_ms"] = round(
+                max(0, metrics["agent_wall_ms"] - metrics["chat_wall_ms"]), 2,
+            )
         # Publicação autenticada: somente tempos, quantidades e estados técnicos.
         result["agent_metrics"] = metrics
     tasks.finish(session, turn, current, result)
