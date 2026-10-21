@@ -188,7 +188,9 @@ class ResearchTests(unittest.TestCase):
         with patch.object(runner, "perform", return_value={"status": "planned"}) as execute:
             state, response = runner._tool_loop("Crie um conversor", [])
         self.assertEqual(state["phase"], "approval")
-        self.assertIn("developer.build", response["reply"])
+        self.assertIn("ferramenta de texto", response["reply"])
+        self.assertEqual(response["approval"]["title"], "Propor ferramenta de texto")
+        self.assertNotIn("developer.build", response["reply"])
         execute.assert_called_once_with("developer.build", model.return_value["arguments"], dry_run=True)
 
     @unittest.skipUnless(os.environ.get("MENOR_LIVE_WEB") == "1", "Leitura real exige opção explícita.")

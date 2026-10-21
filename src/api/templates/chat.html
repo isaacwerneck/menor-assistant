@@ -745,6 +745,35 @@
             .topbar .export-top { display: none; }
             .input-wrapper .file-attach-btn { width: 44px; padding: 3px; font-size: .63rem; }
         }
+        /* E8 — confirmação clara, sem expor nomes internos ou JSON técnico. */
+        .approval-card { margin-top: 10px; padding: 16px; border: 1px solid rgba(178,162,245,.25);
+            background: rgba(35,31,54,.78); border-radius: 14px; display: grid; gap: 9px;
+            line-height: 1.5; max-width: 570px; }
+        .approval-card strong { color: var(--text-primary); font-size: .96rem; letter-spacing: -.01em; }
+        .approval-card p { color: var(--text-secondary); font-size: .87rem; line-height: 1.55; margin: 0; }
+        .approval-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+        .approval-card-actions button { min-height: 44px; min-width: 86px; border-radius: 10px;
+            border: 1px solid rgba(184,173,226,.25); background: var(--bg-secondary);
+            color: var(--text-primary); padding: 10px 13px; font: inherit; font-size: .84rem;
+            cursor: pointer; }
+        .approval-card-actions button:first-child { background: var(--accent);
+            color: #1a1526; border-color: transparent; font-weight: 650; }
+        .approval-card-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .approval-card-actions button:disabled { opacity: .45; cursor: default; }
+        @media(max-width:768px) {
+            .input-wrapper:focus-within { outline: none; border-color: rgba(178,162,245,.8);
+                box-shadow: 0 0 0 1px rgba(178,162,245,.22); }
+            .input-wrapper { padding: 5px 7px; gap: 4px; border-radius: 16px; box-shadow: none; }
+            .input-wrapper .file-attach-btn { width: 44px; min-width: 44px; padding: 0;
+                font-size: 0; line-height: 1; }
+            .input-wrapper .file-attach-btn::before { content: '▤'; font-size: 1.25rem; }
+            .input-wrapper textarea { padding: 8px 2px; line-height: 1.35; }
+            .composer-meta { min-height: 24px; padding: 4px 7px 2px; }
+            .composer-meta .connection-indicator { font-size: .69rem; }
+            .mobile-nav { min-height: 49px; padding: 2px 4px max(3px,env(safe-area-inset-bottom)); }
+            .mobile-nav button, .mobile-nav a { font-size: .68rem; }
+            .approval-card { padding: 13px; }
+        }
         @media(hover:none) { .conv-item .conv-delete { opacity: 1; } }
     </style>
 </head>
@@ -1413,7 +1442,7 @@
                 status.className = 'input-footer connection-indicator '
                     + (health.ollama_status === 'online' ? 'is-online' : 'is-warning');
                 status.textContent = health.ollama_status === 'online'
-                    ? 'Ollama conectado · As conversas ficam neste navegador.'
+                    ? 'Ollama conectado'
                     : 'Ollama indisponível. Verifique o serviço no servidor.';
             } catch (error) {
                 status.className = 'input-footer connection-indicator is-warning';
@@ -1497,7 +1526,8 @@
             showMessages();
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
-            conv.messages.forEach(m => appendMessage(m.role, m.content, false, m.image, m.artifact));
+            conv.messages.forEach((m, i) => appendMessage(m.role, m.content, false, m.image, m.artifact,
+                m.approval, i === conv.messages.length - 1));
             scrollToBottom();
         }
 
@@ -1581,7 +1611,43 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!isGenerating) sendMsg(); }
         }
 
-        function appendMessage(role, text, animate = false, imageUrl = '', artifact = null) {
+        function approvalCard(content, approval, active = false) {
+            if (!approval || typeof approval.title !== 'string'
+                    || typeof approval.description !== 'string'
+                    || approval.title.length > 110 || approval.description.length > 600) return false;
+            const card = document.createElement('div');
+            card.className = 'approval-card';
+            const title = document.createElement('strong');
+            title.textContent = approval.title;
+            const detail = document.createElement('p');
+            detail.textContent = approval.description;
+            card.appendChild(title);
+            card.appendChild(detail);
+            if (active) {
+                const actions = document.createElement('div');
+                actions.className = 'approval-card-actions';
+                for (const [label, message] of [
+                    ['Aprovar', 'eu aprovo'], ['Explicar', 'explica melhor essa ação'],
+                    ['Cancelar', 'não autorizo'],
+                ]) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.textContent = label;
+                    button.onclick = () => {
+                        if (isGenerating || !getActiveConv()) return;
+                        document.getElementById('userInput').value = message;
+                        sendMsg();
+                    };
+                    actions.appendChild(button);
+                }
+                card.appendChild(actions);
+            }
+            content.appendChild(card);
+            return true;
+        }
+
+        function appendMessage(role, text, animate = false, imageUrl = '', artifact = null,
+                               approval = null, activeApproval = false) {
             const container = document.getElementById('messagesContainer');
             const row = document.createElement('div');
             row.className = `message-row ${role}`;
@@ -1592,6 +1658,10 @@
             const content = document.createElement('div');
             content.className = 'message-content' + (animate ? ' cursor' : '');
             content.textContent = text;
+            if (role === 'bot' && approval) {
+                content.textContent = '';
+                if (!approvalCard(content, approval, activeApproval)) content.textContent = text;
+            }
             if (imageUrl && /^\/images\/files\/[a-f0-9]{32}$/.test(imageUrl)) {
                 const image = document.createElement('img');
                 image.className = 'message-image';
@@ -1741,15 +1811,14 @@
             delete conv.pendingMemory;
             save();
             const events = Array.isArray(result.events) ? result.events
-                .filter(item => item && typeof item.tool === 'string'
-                    && typeof item.status === 'string')
-                .slice(0, 12).map(item => {
-                    const marker = item.status === 'executed' ? '✓'
-                        : item.status === 'planned' ? '…' : '!';
-                    return marker + ' ' + item.tool.slice(0, 80) + ' · ' + item.status.slice(0, 40);
-                }).join('\n') : '';
-            imageReply(conv, content, result.reply + (events ? '\n\n' + events : ''),
-                result.image || '', result.artifact || null);
+                .filter(item => item && ['executed', 'planned', 'failed'].includes(item.status))
+                .slice(0, 12).map(item => item.status === 'executed'
+                    ? 'Operação concluída e registrada.'
+                    : item.status === 'planned' ? 'Ação apenas planejada, não executada.'
+                        : 'Uma operação não foi concluída.').join('\n') : '';
+            const notice = result.reply + (events ? '\n\n' + events : '');
+            imageReply(conv, content, notice, result.image || '', result.artifact || null,
+                result.phase === 'approval' ? result.approval : null);
             return true;
         }
 
@@ -1876,9 +1945,13 @@
             return data;
         }
 
-        function imageReply(conv, content, message, imageUrl = '', artifact = null) {
+        function imageReply(conv, content, message, imageUrl = '', artifact = null, approval = null) {
             assertLiveTurn(conv);
             content.textContent = message;
+            if (approval) {
+                content.textContent = '';
+                if (!approvalCard(content, approval, true)) content.textContent = message;
+            }
             if (imageUrl && /^\/images\/files\/[a-f0-9]{32}$/.test(imageUrl)) {
                 const image = document.createElement('img');
                 image.className = 'message-image';
@@ -1891,7 +1964,8 @@
             }
             conv.messages.push({ role: 'bot', content: message,
                 ...(imageUrl ? { image: imageUrl } : {}),
-                ...(artifact ? { artifact } : {}) });
+                ...(artifact ? { artifact } : {}),
+                ...(approval ? { approval } : {}) });
             save();
             scrollToBottom();
         }
@@ -2207,7 +2281,8 @@
             if (!activeConvId) { createConversation(msg); }
             showMessages();
             document.getElementById('messagesContainer').replaceChildren();
-            getActiveConv().messages.forEach(m => appendMessage(m.role, m.content, false, m.image, m.artifact));
+            getActiveConv().messages.forEach((m, i, all) =>
+                appendMessage(m.role, m.content, false, m.image, m.artifact, m.approval, i === all.length - 1));
 
             const conv = getActiveConv();
             const history = buildHistory(conv.messages, msg);

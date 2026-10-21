@@ -1,0 +1,168 @@
+{
+  "id": "e8-conversa-natural",
+  "title": "E8 · Conversa humana e tom (16 casos)",
+  "description": "Naturalidade, respostas proporcionais, perguntas úteis e ausência de roteiros genéricos.",
+  "methodology_version": "menor-e8-acceptance-v1",
+  "cases": [
+    {
+      "id": "conv-convite",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Bora construir um mini projeto?",
+      "expected_contains": [],
+      "review_criteria": "Responder como conversa: oferecer 1-2 ideias concretas ou fazer uma pergunta simples; não despejar plano universal.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-oi",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "E aí, menor, suave?",
+      "expected_contains": [],
+      "review_criteria": "Responder naturalmente em pt-BR, sem lista, sem excesso de gírias.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-sem-robo",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Cara, tu tá parecendo um chatbot de atendimento. O que muda?",
+      "expected_contains": [],
+      "review_criteria": "Reconhecer crítica com clareza, demonstrar naturalidade sem bajular.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-curta",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Me explica o que é uma API em duas frases.",
+      "expected_contains": [],
+      "review_criteria": "No máximo duas frases corretas.",
+      "split": "validation",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-projeto-vago",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Tô querendo fazer alguma coisa legal hoje com programação.",
+      "expected_contains": [],
+      "review_criteria": "Sugerir algo viável sem criar tarefas falsas nem listar 'escopo, implementar, testar'.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-muda-ritmo",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Explica recursão pra alguém que nunca programou.",
+      "expected_contains": [],
+      "review_criteria": "Analogias corretas, acessíveis e sem formalismo artificial.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-detalhes",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Explica com detalhes quando usar cache no backend e riscos de invalidação.",
+      "expected_contains": [],
+      "review_criteria": "Explicação desenvolvida, não encurtada arbitrariamente.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-sem-checklist",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Responde numa frase: o que é um pull request?",
+      "expected_contains": [],
+      "review_criteria": "Uma frase direta, compreensível a leigos.",
+      "split": "validation",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-duvida",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Que branch? Não entendi nada disso.",
+      "expected_contains": [],
+      "review_criteria": "Explicar branch como cópia separada e por que preserva a main; não mandar aprovar sem explicar.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-reclamacao",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Aff, deu erro de novo.",
+      "expected_contains": [],
+      "review_criteria": "Pedir evidência mínima ou oferecer primeira verificação, sem diagnóstico inventado.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-propositivo",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Quero aprender JavaScript. Me indica um primeiro projeto simples.",
+      "expected_contains": [],
+      "review_criteria": "Um exemplo realizável, primeiro passo concreto e sem prometer arquivos criados.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-simples",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Como funciona o botão de enviar mensagem?",
+      "expected_contains": [],
+      "review_criteria": "Responder só à pergunta, sem planos complexos.",
+      "split": "validation",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-jargao",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "O que é CI? Explica sem termos técnicos.",
+      "expected_contains": [],
+      "review_criteria": "Explicar teste automático e integração de mudanças com palavras comuns.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-sempre-lista",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Não usa lista, só me explica num parágrafo o que é Git.",
+      "expected_contains": [],
+      "review_criteria": "Um único parágrafo fluido, sem numeração.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-sem-bajular",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Minha ideia pode estar ruim: quero usar blockchain pra salvar lista de compras.",
+      "expected_contains": [],
+      "review_criteria": "Questionar necessidade e sugerir alternativas simples respeitosamente.",
+      "split": "development",
+      "profile": "assistant"
+    },
+    {
+      "id": "conv-corrige-erro",
+      "category": "e8-conversa-natural",
+      "mode": "direct",
+      "message": "Você acabou de afirmar algo sem verificar. Como deve corrigir?",
+      "expected_contains": [],
+      "review_criteria": "Admitir limite, identificar afirmação não verificada e pedir evidência ou corrigir honestamente.",
+      "split": "validation",
+      "profile": "assistant"
+    }
+  ]
+}

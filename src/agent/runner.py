@@ -18,11 +18,12 @@ from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _norm
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
 from src.agent.tasks import TaskStore
-from src.agent import research, intelligence, plan_review
+from src.agent import research, intelligence, plan_review, conversation
 from src.agent.plan_constraints import warnings as constraint_warnings, required_stage_warnings
 from src.agent.context_engine import assemble_memory
 from src.projects.workspace import ProjectWorkspace
 from src.agent.approval import decision as approval_decision
+from src.agent.self_edit import is_new_project_request, ImprovementUnavailable
 from src.memory.search import contextual_knowledge
 from src.memory.semantic import relevant_context
 from src.tools import images
@@ -34,8 +35,39 @@ YES = re.compile(r"^(sim+|simm+|pode|bora|vamos|claro|isso|fechou|confirmo)[.!]?
 NO = re.compile(r"^(nao|deixa|cancela|cancelar|nao precisa)[.!]?$")
 
 
+def _approval_details(tool):
+    """Descrição do escopo real, sem parâmetros internos ou promessas de execução."""
+    details = {
+        "developer.propose": (
+            "Propor correção no Menor",
+            "Prepara uma alteração do próprio Menor em branch separada e PR rascunho. "
+            "Não cria aplicativos nem altera a versão principal diretamente.",
+        ),
+        "developer.build": (
+            "Propor ferramenta de texto",
+            "Cria uma proposta de ferramenta simples de texto, testa em ambiente isolado "
+            "e abre um PR rascunho. Não cria jogos ou aplicativos completos.",
+        ),
+        "projects.create": ("Criar projeto", "Cria o registro de um projeto no Menor."),
+        "projects.add_task": ("Adicionar tarefa", "Registra uma tarefa no projeto selecionado."),
+        "projects.code.create": (
+            "Gerar arquivo de código",
+            "Cria um arquivo novo na pasta privada de um projeto existente, sem sobrescrever. "
+            "O código ainda não foi executado ou testado e precisará de revisão.",
+        ),
+        "brain.remember": ("Salvar na memória", "Registra a informação no cérebro local do Menor."),
+        "images.generate": ("Gerar imagem", "Inicia o gerador configurado para criar um arquivo de imagem."),
+        "images.edit": ("Editar imagem", "Envia uma imagem existente para edição."),
+    }
+    return details.get(tool, ("Confirmar ação", "Uma operação com efeito real aguarda sua autorização."))
+
+
 def _answer(reply, phase="idle", **state):
-    return {"phase": phase, **state}, {"handled": True, "reply": reply, "phase": phase}
+    response = {"handled": True, "reply": reply, "phase": phase}
+    if phase == "approval" and state.get("tool") in TOOLS:
+        title, description = _approval_details(state["tool"])
+        response["approval"] = {"title": title, "description": description}
+    return {"phase": phase, **state}, response
 
 
 def _begin_mission(message, history):
@@ -195,6 +227,39 @@ def _tool_result(name, receipt):
             "content_verified": False}
 
 
+def _human_tool_result(receipt):
+    """Relato legível ancorado no comprovante do executor, sem despejar JSON."""
+    name, output = receipt["tool"], receipt["result"]
+    if name in ("developer.propose", "developer.build") and isinstance(output, dict):
+        url = output.get("url")
+        if output.get("status") == "pr_created" and isinstance(url, str):
+            return "Abri uma proposta de revisão: " + url + ". Ainda depende de testes e merge."
+    if name == "math.calculate" and isinstance(output, dict):
+        number = output.get("value")
+        if output.get("expression_verified") is True and isinstance(number, str):
+            return ("Resultado calculado: " + number
+                    + ". Confira se a expressão corresponde ao que você pediu.")
+    if name == "projects.list" and isinstance(output, list):
+        names = [p["name"] for p in output[:12] if isinstance(p, dict)
+                 and isinstance(p.get("name"), str)]
+        return ("Projetos encontrados: " + ", ".join(names)) if names else "Nenhum projeto encontrado."
+    if name == "projects.create":
+        return "Criei o registro do projeto no Menor."
+    if name == "projects.add_task":
+        return "Registrei a tarefa no projeto."
+    if name == "projects.code.create" and isinstance(output, dict):
+        return (
+            "Criei " + str(output.get("path", "um arquivo"))[:180]
+            + " no espaço privado do projeto. Ainda NÃO executei nem testei esse código. "
+            "Ele precisa ser revisado antes de ser usado."
+        )
+    if name == "brain.remember":
+        return "Salvei a anotação na memória local."
+    if name == "images.generate":
+        return "A ferramenta de imagem concluiu a operação; vou apresentar o arquivo disponível."
+    return "A operação foi executada. O resultado está registrado, mas seu conteúdo ainda não foi verificado."
+
+
 def _observed_answer(reply, observations, phase="idle"):
     current, response = _answer(reply, phase)
     if observations:
@@ -212,8 +277,8 @@ def _tool_loop(message, history):
             if not observations:
                 return _answer("Plano do modelo, sem ação executada:\n" + step.get("reply", ""))
             return _observed_answer(
-                "Operações executadas: " + ", ".join(item["tool"] for item in observations)
-                + ". O conteúdo retornado não foi verificado independentemente.\n" + step.get("reply", ""),
+                "Concluí as operações de leitura. O resultado ainda precisa de verificação independente.\n"
+                + step.get("reply", ""),
                 observations,
             )
         name, arguments = step.get("tool"), step.get("arguments")
@@ -227,14 +292,17 @@ def _tool_loop(message, history):
             )
         seen.add(signature)
         if TOOLS[name].writes:
-            current, response = _observed_answer(
-                "Plano: " + (step.get("reply") or TOOLS[name].description)
-                + "\nFerramenta: " + name + "\nParâmetros: "
-                + json.dumps(arguments, ensure_ascii=False)
-                + "\nPosso executar essa ação? Responda sim ou não.",
-                observations, "approval",
+            if name == "developer.propose" and is_new_project_request(arguments["issue"]):
+                return _answer(
+                    "Essa ferramenta só corrige código do próprio Menor; não consegue montar "
+                    "um jogo ou aplicativo novo. Posso ajudar a estruturar o projeto, "
+                    "mas não vou abrir uma correção fictícia.",
+                )
+            title, description = _approval_details(name)
+            current, response = _answer(
+                title + ". " + description + " Quer que eu siga?", "approval",
+                tool=name, arguments=arguments,
             )
-            current.update(tool=name, arguments=arguments)
             return current, response
         receipt = perform(name, arguments, dry_run=False)
         if receipt.get("status") != "executed":
@@ -256,13 +324,19 @@ def _selected_tool(name, arguments):
     """Executa apenas ferramentas conhecidas, com pré-validação e aprovação."""
     if name not in TOOLS:
         raise ValueError("Ferramenta fora do catálogo.")
+    if (name == "developer.propose" and isinstance(arguments, dict)
+            and is_new_project_request(arguments.get("issue", ""))):
+        return _answer(
+            "Eu não consigo criar esse aplicativo usando a ferramenta de correção do Menor. "
+            "Ela só prepara mudanças no próprio assistente. "
+            "Posso te ajudar a montar o projeto e definir a implementação, "
+            "sem fingir que já criei arquivos.",
+        )
     perform(name, arguments, dry_run=True)
     if TOOLS[name].writes:
+        title, description = _approval_details(name)
         return _answer(
-            "Ação planejada: " + TOOLS[name].description
-            + "\nFerramenta: " + name + "\nParâmetros: "
-            + json.dumps(arguments, ensure_ascii=False)
-            + "\nPosso executar? A decisão será registrada antes da execução.",
+            title + ". " + description + " Quer que eu siga?",
             "approval", tool=name, arguments=arguments,
         )
     receipt = perform(name, arguments, dry_run=False)
@@ -275,9 +349,8 @@ def _selected_tool(name, arguments):
         answer["events"] = [{"tool": name, "status": "failed"}]
         return current, answer
     proof = _tool_result(name, receipt)
-    result = json.dumps(receipt["result"], ensure_ascii=False)[:6000]
     current, answer = _answer(
-        "Resultado retornado pela ferramenta " + name + ":\n" + result,
+        _human_tool_result(receipt),
         last_result=proof,
     )
     answer["events"] = [{"tool": name, "status": receipt["status"]}]
@@ -321,6 +394,20 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
                     return {**revised, "_plan_warnings": problems[:4]}, "constraint_warning"
             return plan_review.annotate(revised, "revised_unverified"), "revised_unverified"
     return plan_review.annotate(decision, status), status
+
+
+def _collaborate(state, message, history):
+    """Mantém briefing de programação; nunca transforma conversa em execução."""
+    previous = state.get("goal", "") if state.get("phase") == "collaboration" else ""
+    goal = message[:420] if conversation.is_collaboration_request(message) and (
+        not previous or len(message) > len(previous)) else previous
+    if not goal:
+        goal = message[:420]
+    answer = conversation.reply(message, history, goal=goal) or conversation.safe_fallback(goal)
+    # Um objetivo já registrado conserva ID, etapas e recibos anteriores.
+    if state.get("phase") == "goal":
+        return _answer(answer, **state)
+    return _answer(answer, "collaboration", goal=goal)
 
 
 def _understand(state, message, history, project=None, metrics=None):
@@ -384,9 +471,13 @@ def _understand(state, message, history, project=None, metrics=None):
                     metrics[field] = value
     if decision is None:
         if pending:
+            answer = conversation.reply(message, history, goal=pending["goal"])
+            if answer:
+                return _answer(answer, **state)
             return _answer(
                 "Não consegui interpretar a continuação do plano agora. "
-                "Pode explicar de outro jeito? Nenhuma ação foi executada.", **state,
+                "O objetivo anterior continua salvo; nenhuma ação foi executada. "
+                "Pode tentar novamente?", **state,
             )
         return None
     decision, review_status = _critique_plan(
@@ -412,10 +503,15 @@ def _understand(state, message, history, project=None, metrics=None):
         if decision.get("tool"):
             try:
                 next_state, receipt = _selected_tool(decision["tool"], decision["arguments"])
-            except (ValueError, OSError, RuntimeError) as error:
+            except (ValueError, OSError, RuntimeError, LookupError) as error:
                 LOGGER.info("Ferramenta selecionada indisponível: %s", type(error).__name__)
-                reply = ("Não consegui validar os parâmetros ou a disponibilidade "
-                         "dessa ferramenta. Podemos revisar o plano sem executar nada.")
+                answer = conversation.reply(message, history,
+                                            goal=pending["goal"] if pending else "")
+                reply = answer or (
+                    "Não consegui usar a ferramenta escolhida e não executei a ação. "
+                    "Ainda posso ajudar a desenvolver a solução aqui na conversa. "
+                    "Qual parte você quer trabalhar primeiro?"
+                )
                 return _answer(reply, **state) if pending else _answer(reply)
         else:
             next_state, receipt = _tool_loop(request, history)
@@ -464,8 +560,8 @@ def _understand(state, message, history, project=None, metrics=None):
                 "Qual objetivo você quer retomar?", **state,
             )
         next_state["plan_review_status"] = review_status
-        reply = (intelligence.render_plan(decision) if move != "clarify"
-                 else decision["reply"] + "\n" + decision["question"])
+        reply = (intelligence.render_plan(decision).replace("\nPlano proposto:\n", "\nVamos por partes:\n", 1)
+                 if move != "clarify" else decision["reply"] + "\n" + decision["question"])
         return next_state, {
             "handled": True, "reply": reply, "phase": "goal",
             "goal_id": next_state["goal_id"],
@@ -475,6 +571,10 @@ def _understand(state, message, history, project=None, metrics=None):
         # Dúvidas incidentais não destroem o plano ativo.
         return _answer(decision["reply"], **state)
     reply = decision["reply"]
+    if conversation._thin(reply, message):
+        improved = conversation.reply(message, history, goal=pending["goal"] if pending else "")
+        if improved:
+            reply = improved
     last = state.get("last_result")
     if (last and last.get("kind") == "image"
             and re.search(r"(?:n[aã]o|nao).{0,90}(?:gerar|criar).{0,25}imagen", reply, re.I | re.S)):
@@ -495,15 +595,30 @@ def _advance(state, message, history, project=None, metrics=None):
                 )
             return _answer("Ação cancelada, sem executar a ferramenta.")
         if choice != "approve":
-            return _answer(
-                "Esta ação específica está pendente de autorização. "
-                "Diga 'eu aprovo' ou 'não autorizo'; fazer perguntas não a executa.", **state,
+            title, description = _approval_details(state["tool"])
+            explanation = (
+                "Branch é uma cópia separada do código; o PR é o pedido de revisão "
+                "antes de juntar a mudança à versão principal. " + description
+                if state["tool"] in ("developer.propose", "developer.build")
+                else title + ": " + description
             )
-        receipt = perform(state["tool"], state["arguments"], dry_run=False)
+            return _answer(
+                explanation + " A ação continua pendente, sem executar nada. "
+                "Você pode aprovar, pedir detalhes ou cancelar.",
+                **state,
+            )
+        try:
+            receipt = perform(state["tool"], state["arguments"], dry_run=False)
+        except ImprovementUnavailable as error:
+            LOGGER.warning("Proposta supervisionada indisponível: %s", type(error).__name__)
+            return _answer(
+                "Não consegui concluir a proposta automática: " + str(error)
+                + " Não há um PR confirmado; confira o GitHub antes de tentar novamente.",
+                "blocked",
+            )
         proof = _tool_result(state["tool"], receipt)
         current, result = _answer(
-            "Execução confirmada: " + receipt["tool"] + ".\n"
-            + json.dumps(receipt["result"], ensure_ascii=False)[:6000],
+            "Execução confirmada. " + _human_tool_result(receipt),
         )
         goal = state.get("return_goal")
         if isinstance(goal, dict) and goal.get("goal_id"):
@@ -523,6 +638,11 @@ def _advance(state, message, history, project=None, metrics=None):
         return current, result
     if state["phase"] == "mission":
         return _mission_turn(state, message)
+    if state["phase"] == "collaboration" and conversation.CHANGE_TOPIC.search(message):
+        return _answer("Certo, deixamos esse projeto de lado. Sobre o que você quer conversar?")
+    if (conversation.is_collaboration_request(message)
+            or conversation.follows_project(state, message)):
+        return _collaborate(state, message, history)
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
         intelligent = _understand(state, message, history, project=project, metrics=metrics)
         if intelligent is not None:
@@ -596,9 +716,20 @@ def _run_locked(session, turn, message, history, project, tasks):
     except (requests.RequestException, OSError, ValueError, LookupError, RuntimeError, KeyError, TypeError) as error:
         error_type = type(error).__name__
         LOGGER.warning("Execução do agente interrompida: %s", error_type)
+        reason = {
+            "ValueError": "os dados ou parâmetros não passaram na validação",
+            "LookupError": "o recurso solicitado não foi encontrado",
+            "OSError": "um arquivo ou serviço local está indisponível",
+            "RuntimeError": "o ambiente de execução não estava pronto",
+            "KeyError": "a ferramenta retornou um resultado incompleto",
+            "TypeError": "a ferramenta retornou um formato inesperado",
+            "Timeout": "o serviço demorou demais para responder",
+            "ConnectionError": "não consegui falar com o serviço local",
+        }.get(error_type, "um erro inesperado interrompeu o processo")
         current, result = _answer(
-            "A execução falhou e foi interrompida. Nenhuma nova ação será repetida automaticamente. "
-            "Consulte o estado antes de tentar novamente.", "failed",
+            "Não consegui concluir a ação porque " + reason + ". "
+            "Não tenho confirmação de todos os efeitos; confira o estado da tarefa "
+            "antes de tentar outra vez. Não vou repeti-la automaticamente.", "failed",
         )
     if metrics:
         metrics["agent_wall_ms"] = round((time.monotonic() - started) * 1000, 2)

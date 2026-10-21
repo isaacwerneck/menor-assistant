@@ -235,7 +235,8 @@ class ToolReceiptIntegrationTests(unittest.TestCase):
                                    "Qual preço após 12% de desconto de 250?", [],
                                    tasks=store)
                 self.assertEqual(first["events"][0]["status"], "executed")
-                self.assertIn('"value": "220"', first["reply"])
+                self.assertIn("Resultado calculado: 220", first["reply"])
+                self.assertNotIn('"value"', first["reply"])
                 state = store.inspect(session)
                 self.assertEqual(state["last_result"]["tool"], "math.calculate")
                 self.assertFalse(state["last_result"]["content_verified"])

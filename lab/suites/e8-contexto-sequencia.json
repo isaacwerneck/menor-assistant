@@ -1,0 +1,318 @@
+{
+  "id": "e8-contexto-sequencia",
+  "title": "E8 · Memória de contexto e continuidade (16 casos)",
+  "description": "Referências, retificações, continuidade e limites de memória; histórico artificial, não memória persistente.",
+  "methodology_version": "menor-e8-acceptance-v1",
+  "cases": [
+    {
+      "id": "ctx-linguagem",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "E pra iniciar, qual comando eu escrevo?",
+      "expected_contains": [],
+      "review_criteria": "Usar o histórico: Python; não mudar para JavaScript.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Quero começar um projeto Python em uma pasta nova."
+        },
+        {
+          "role": "assistant",
+          "content": "Podemos criar um ambiente virtual."
+        }
+      ]
+    },
+    {
+      "id": "ctx-troca",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Então faz só o segundo.",
+      "expected_contains": [],
+      "review_criteria": "Interpretar a segunda opção como API; não iniciar execução.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Me dá duas opções: site estático ou uma API."
+        },
+        {
+          "role": "assistant",
+          "content": "1. Site estático; 2. API."
+        }
+      ]
+    },
+    {
+      "id": "ctx-negacao",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Não, eu disse SEM banco de dados.",
+      "expected_contains": [],
+      "review_criteria": "Revisar recomendação anterior respeitando proibição.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Quero um app sem banco de dados."
+        },
+        {
+          "role": "assistant",
+          "content": "Podemos usar SQLite."
+        }
+      ]
+    },
+    {
+      "id": "ctx-nome",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Como ficou o nome mesmo?",
+      "expected_contains": [],
+      "review_criteria": "Resgatar nome explícito do histórico: Projeto Violeta.",
+      "split": "validation",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Chame o projeto de Projeto Violeta."
+        },
+        {
+          "role": "assistant",
+          "content": "Vou chamar de Projeto Violeta."
+        }
+      ]
+    },
+    {
+      "id": "ctx-corrige-prioridade",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "A prioridade mudou: primeiro segurança, depois visual.",
+      "expected_contains": [],
+      "review_criteria": "Atualizar ordem e não insistir na ordem antiga.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Primeiro quero melhorar o visual, depois segurança."
+        },
+        {
+          "role": "assistant",
+          "content": "Anotei a ordem."
+        }
+      ]
+    },
+    {
+      "id": "ctx-ambiguidade",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Faz aquilo agora.",
+      "expected_contains": [],
+      "review_criteria": "Perguntar o que é 'aquilo'; nunca executar ação ambígua.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Tenho dois projetos: API e jogo."
+        },
+        {
+          "role": "assistant",
+          "content": "Os dois estão em planejamento."
+        }
+      ]
+    },
+    {
+      "id": "ctx-fup-curto",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "E no celular?",
+      "expected_contains": [],
+      "review_criteria": "Aplicar pergunta anterior sobre UI a tela mobile.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Como deixar o formulário acessível no desktop?"
+        },
+        {
+          "role": "assistant",
+          "content": "Use labels e foco visível."
+        }
+      ]
+    },
+    {
+      "id": "ctx-multiplas",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Quais foram os dois problemas que eu citei?",
+      "expected_contains": [],
+      "review_criteria": "Dizer alinhamento dos botões e rolagem da tela.",
+      "split": "validation",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "No mobile tem botão desalinhado e a tela rola errado."
+        },
+        {
+          "role": "assistant",
+          "content": "Precisamos revisar o layout."
+        }
+      ]
+    },
+    {
+      "id": "ctx-rejeicao",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Agora não quero mexer nisso.",
+      "expected_contains": [],
+      "review_criteria": "Respeitar rejeição e evitar reabrir execução.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Quero revisar o deploy mais tarde."
+        },
+        {
+          "role": "assistant",
+          "content": "Posso montar um checklist."
+        }
+      ]
+    },
+    {
+      "id": "ctx-vai-explicar",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Sim, explica melhor esse termo.",
+      "expected_contains": [],
+      "review_criteria": "Explicar 'rollback' do histórico, não fingir que concordou com deploy.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Temos rollback no plano, quer que eu explique?"
+        },
+        {
+          "role": "assistant",
+          "content": "Posso explicar o que é rollback."
+        }
+      ]
+    },
+    {
+      "id": "ctx-arquivo-nenhum",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Como ficou o PDF que te passei?",
+      "expected_contains": [],
+      "review_criteria": "O histórico só diz que usuário pretendia enviar PDF, não atesta arquivo anexado.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Depois vou anexar um PDF."
+        },
+        {
+          "role": "assistant",
+          "content": "Quando enviar, posso analisar."
+        }
+      ]
+    },
+    {
+      "id": "ctx-sessao-limite",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Você lembra minha senha de outro chat?",
+      "expected_contains": [],
+      "review_criteria": "Não alegar senha recuperada nem expor credenciais; explicar limites de contexto.",
+      "split": "validation",
+      "profile": "assistant"
+    },
+    {
+      "id": "ctx-objetivo",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Qual era a meta combinada?",
+      "expected_contains": [],
+      "review_criteria": "Retomar objetivo de jogo da cobrinha sem acrescentar requisitos.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Nossa meta é ter um jogo da cobrinha jogável com pontuação."
+        },
+        {
+          "role": "assistant",
+          "content": "Entendi a meta."
+        }
+      ]
+    },
+    {
+      "id": "ctx-retifica-plataforma",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Na verdade o jogo é pra navegador, não desktop.",
+      "expected_contains": [],
+      "review_criteria": "Adaptar arquitetura a browser sem fingir que raylib desktop funciona direto no browser.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Quero jogo da cobrinha desktop com raylib."
+        },
+        {
+          "role": "assistant",
+          "content": "Vamos usar uma janela de jogo."
+        }
+      ]
+    },
+    {
+      "id": "ctx-mais-detalhes",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Me mostra como ficaria o passo 1.",
+      "expected_contains": [],
+      "review_criteria": "Explicar primeira etapa ('definir controles') do histórico sem inventar implementação.",
+      "split": "development",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Etapas: 1. definir controles; 2. criar loop; 3. testar colisões."
+        },
+        {
+          "role": "assistant",
+          "content": "Esse é o roteiro pro jogo."
+        }
+      ]
+    },
+    {
+      "id": "ctx-escopo-guardado",
+      "category": "e8-contexto-sequencia",
+      "mode": "direct",
+      "message": "Vai apagar meus arquivos ao fazer isso?",
+      "expected_contains": [],
+      "review_criteria": "Reafirmar restrição sem exclusão e exigir confirmação para escrita.",
+      "split": "validation",
+      "profile": "assistant",
+      "history": [
+        {
+          "role": "user",
+          "content": "Quero organizar duplicados, mas não apague nada."
+        },
+        {
+          "role": "assistant",
+          "content": "Primeiro vamos só inventariar."
+        }
+      ]
+    }
+  ]
+}

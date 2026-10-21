@@ -152,7 +152,7 @@ class UniversalAgentTests(unittest.TestCase):
         decide.side_effect = [verdict("plan"), verdict("continue")]
         first = runner.run(self.session, "universalTurn01", "Quero automatizar uma horta", [], tasks=self.tasks)
         self.assertEqual(first["phase"], "goal")
-        self.assertIn("Plano proposto", first["reply"])
+        self.assertIn("Vamos por partes", first["reply"])
         pending = self.tasks.inspect(self.session)
         self.assertEqual(pending["goal"], verdict()["goal"])
         second = runner.run(self.session, "universalTurn02", "Precisa funcionar sem internet", [], tasks=self.tasks)
