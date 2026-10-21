@@ -114,11 +114,10 @@ def _schema_for_tools(tools):
     if tools is None or tools:
         return DECISION_SCHEMA
     narrowed = copy.deepcopy(DECISION_SCHEMA)
-    for choice in narrowed["oneOf"]:
-        moves = choice["properties"]["move"]["enum"]
-        choice["properties"]["move"]["enum"] = [move for move in moves if move != "act"]
-        choice["properties"].pop("tool", None)
-        choice["properties"].pop("arguments", None)
+    narrowed["oneOf"] = [
+        choice for choice in narrowed["oneOf"]
+        if "act" not in choice["properties"]["move"]["enum"]
+    ]
     return narrowed
 
 
