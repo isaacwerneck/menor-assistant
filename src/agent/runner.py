@@ -50,6 +50,11 @@ def _approval_details(tool):
         ),
         "projects.create": ("Criar projeto", "Cria o registro de um projeto no Menor."),
         "projects.add_task": ("Adicionar tarefa", "Registra uma tarefa no projeto selecionado."),
+        "projects.code.create": (
+            "Gerar arquivo de código",
+            "Cria um arquivo novo na pasta privada de um projeto existente, sem sobrescrever. "
+            "O código ainda não foi executado ou testado e precisará de revisão.",
+        ),
         "brain.remember": ("Salvar na memória", "Registra a informação no cérebro local do Menor."),
         "images.generate": ("Gerar imagem", "Inicia o gerador configurado para criar um arquivo de imagem."),
         "images.edit": ("Editar imagem", "Envia uma imagem existente para edição."),
@@ -242,6 +247,12 @@ def _human_tool_result(receipt):
         return "Criei o registro do projeto no Menor."
     if name == "projects.add_task":
         return "Registrei a tarefa no projeto."
+    if name == "projects.code.create" and isinstance(output, dict):
+        return (
+            "Criei " + str(output.get("path", "um arquivo"))[:180]
+            + " no espaço privado do projeto. Ainda NÃO executei nem testei esse código. "
+            "Ele precisa ser revisado antes de ser usado."
+        )
     if name == "brain.remember":
         return "Salvei a anotação na memória local."
     if name == "images.generate":
@@ -492,7 +503,7 @@ def _understand(state, message, history, project=None, metrics=None):
         if decision.get("tool"):
             try:
                 next_state, receipt = _selected_tool(decision["tool"], decision["arguments"])
-            except (ValueError, OSError, RuntimeError) as error:
+            except (ValueError, OSError, RuntimeError, LookupError) as error:
                 LOGGER.info("Ferramenta selecionada indisponível: %s", type(error).__name__)
                 answer = conversation.reply(message, history,
                                             goal=pending["goal"] if pending else "")
