@@ -18,7 +18,7 @@ from src.agent.image_intent import IMAGE_TERMS, image_intent, tool_intent, _norm
 from src.agent.missions import MissionStore
 from src.agent.skills import capability_status
 from src.agent.tasks import TaskStore
-from src.agent import research, intelligence, plan_review
+from src.agent import research, intelligence, plan_review, conversation
 from src.agent.plan_constraints import warnings as constraint_warnings, required_stage_warnings
 from src.agent.context_engine import assemble_memory
 from src.projects.workspace import ProjectWorkspace
@@ -385,6 +385,20 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
     return plan_review.annotate(decision, status), status
 
 
+def _collaborate(state, message, history):
+    """Mantém briefing de programação; nunca transforma conversa em execução."""
+    previous = state.get("goal", "") if state.get("phase") == "collaboration" else ""
+    goal = message[:420] if conversation.is_collaboration_request(message) and (
+        not previous or len(message) > len(previous)) else previous
+    if not goal:
+        goal = message[:420]
+    answer = conversation.reply(message, history, goal=goal) or conversation.safe_fallback(goal)
+    # Um objetivo já registrado conserva ID, etapas e recibos anteriores.
+    if state.get("phase") == "goal":
+        return _answer(answer, **state)
+    return _answer(answer, "collaboration", goal=goal)
+
+
 def _understand(state, message, history, project=None, metrics=None):
     """Raciocínio contextual para qualquer assunto, sem executar ações do texto do LLM."""
     if state["phase"] == "goal" and approval_decision(message) == "reject":
@@ -446,9 +460,12 @@ def _understand(state, message, history, project=None, metrics=None):
                     metrics[field] = value
     if decision is None:
         if pending:
+            answer = conversation.reply(message, history, goal=pending["goal"])
+            if answer:
+                return _answer(answer, **state)
             return _answer(
-                "Não consegui interpretar a continuação do plano agora. "
-                "Pode explicar de outro jeito? Nenhuma ação foi executada.", **state,
+                "Não consegui gerar a próxima resposta agora. O objetivo anterior continua salvo; "
+                "nenhuma ação foi executada. Pode tentar novamente?", **state,
             )
         return None
     decision, review_status = _critique_plan(
@@ -476,8 +493,13 @@ def _understand(state, message, history, project=None, metrics=None):
                 next_state, receipt = _selected_tool(decision["tool"], decision["arguments"])
             except (ValueError, OSError, RuntimeError) as error:
                 LOGGER.info("Ferramenta selecionada indisponível: %s", type(error).__name__)
-                reply = ("Não consegui validar os parâmetros ou a disponibilidade "
-                         "dessa ferramenta. Podemos revisar o plano sem executar nada.")
+                answer = conversation.reply(message, history,
+                                            goal=pending["goal"] if pending else "")
+                reply = answer or (
+                    "Não consegui usar a ferramenta escolhida e não executei a ação. "
+                    "Ainda posso ajudar a desenvolver a solução aqui na conversa. "
+                    "Qual parte você quer trabalhar primeiro?"
+                )
                 return _answer(reply, **state) if pending else _answer(reply)
         else:
             next_state, receipt = _tool_loop(request, history)
@@ -537,6 +559,10 @@ def _understand(state, message, history, project=None, metrics=None):
         # Dúvidas incidentais não destroem o plano ativo.
         return _answer(decision["reply"], **state)
     reply = decision["reply"]
+    if conversation._thin(reply, message):
+        improved = conversation.reply(message, history, goal=pending["goal"] if pending else "")
+        if improved:
+            reply = improved
     last = state.get("last_result")
     if (last and last.get("kind") == "image"
             and re.search(r"(?:n[aã]o|nao).{0,90}(?:gerar|criar).{0,25}imagen", reply, re.I | re.S)):
@@ -600,6 +626,11 @@ def _advance(state, message, history, project=None, metrics=None):
         return current, result
     if state["phase"] == "mission":
         return _mission_turn(state, message)
+    if state["phase"] == "collaboration" and conversation.CHANGE_TOPIC.search(message):
+        return _answer("Certo, deixamos esse projeto de lado. Sobre o que você quer conversar?")
+    if (conversation.is_collaboration_request(message)
+            or conversation.follows_project(state, message)):
+        return _collaborate(state, message, history)
     if os.environ.get("MENOR_INTELLIGENCE_ENABLED", "1") == "1":
         intelligent = _understand(state, message, history, project=project, metrics=metrics)
         if intelligent is not None:
