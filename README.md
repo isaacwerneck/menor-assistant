@@ -32,6 +32,11 @@ distinguem timeout, JSON/contrato inválido, categoria do campo rejeitado e limi
 numéricas de inferência, também visíveis nos cartões dos testes individuais;
 veja o [contrato do laboratório](docs/laboratorio_baterias.md).
 
+Relatórios completos novos registram o checkout Git observado na importação do
+laboratório e no início/fim da bateria, com indicação de revisão diferente ou
+alterações rastreadas. Versão desconhecida fica explícita; esse registro não
+atesta todo o código carregado nem altera a pontuação ou publicação automática.
+
 O Netlify oferece somente uma **página estática de entrada** neste estágio.
 Não coloque `/chat/stream` atrás de proxy Netlify: o timeout da camada
 de proxy não é apropriado para inferências de 40+ segundos. Configuração,

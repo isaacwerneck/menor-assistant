@@ -78,6 +78,26 @@ incluem a pergunta, histórico ou preferências e não substituem SHA do deploy,
 digest do modelo, hardware e medição repetida. Nenhum texto bruto de exceção,
 raciocínio ou credencial é copiado para o diagnóstico. Não há retry adicional.
 
+### Revisão Git observada nos relatórios completos
+
+Relatórios novos incluem `code_provenance.checkpoints`: checkout observado na
+importação do módulo do laboratório (`module_import`), no início (`run_start`) e
+no fim (`run_finish`) de cada bateria. Cada observação válida contém somente SHA
+Git e o indicador `tracked_changes`. Comandos fixos têm timeout de 2 s; não há
+consulta Git por pergunta, inferência extra ou exportação de caminhos/erros.
+
+`revision_changed=true` indica diferença entre as revisões observadas;
+`tracked_changes=true` indica alteração rastreada em algum desses pontos.
+Se alguma observação não estiver disponível, os indicadores agregados são `null`,
+sem adivinhar versão ou bloquear a bateria. Os resumos e suas publicações
+automáticas continuam contendo somente os campos estatísticos anteriores.
+
+Esses pontos **não atestam o código carregado inteiro**, não verificam arquivos
+não rastreados nem detectam uma troca revertida entre observações. Não identificam
+digest/pesos do modelo, carga, cache ou hardware e não tornam dois ensaios
+automaticamente comparáveis. O campo é opcional para leitores de relatórios
+antigos; não é possível reconstruir retroativamente a versão de uma execução.
+
 ### Avaliação automática, sem falsas notas
 
 - `expected_contains`: todas as substrings devem ocorrer (teste sintático,
