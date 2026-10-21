@@ -5,6 +5,11 @@ Estas regras valem para todo o repositório `isaacwerneck/menor-assistant`. Leia
 e os documentos associados. O handoff é datado; antes de agir confira a `main`,
 testes, serviços e evidências reais do hardware. Nenhum documento sozinho prova 100%.
 
+Para a evolução do produto, consultar também [PLANO_MENOR_ASSISTANT.md](PLANO_MENOR_ASSISTANT.md),
+incluindo sua revisão técnica e controle de progresso. Atualizar o checklist a cada
+entrega com PR/commit e evidências; itens parciais não são concluídos. O plano está
+em avaliação e não autoriza, por si só, instalar dependências ou executar seus exemplos.
+
 ## Missão
 
 Construir o Menor como assistente pessoal local para Ubuntu, natural em pt-BR,
