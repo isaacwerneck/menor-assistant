@@ -21,6 +21,7 @@ class AdaptiveBudgetTests(unittest.TestCase):
     def test_detailed_requests_are_not_cut_to_one_word(self):
         self.assertGreaterEqual(output_budget("Explique com detalhes um projeto completo"), 256)
         self.assertGreaterEqual(output_budget("Escreva código completo", chat=True), 384)
+        self.assertEqual(output_budget("Explique detalhadamente a arquitetura com exemplos.", chat=True), 512)
 
     def test_plain_chat_is_not_forced_into_short_format(self):
         self.assertGreaterEqual(output_budget("Como organizar meus arquivos?"), 128)

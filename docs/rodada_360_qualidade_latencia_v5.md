@@ -113,6 +113,8 @@ foram preservadas: o schema sem ferramentas mantém os movimentos de resposta,
 a auditoria conserva sua triagem sanitizada e os testes respeitam as suítes E8 e
 os recibos legíveis. O incremento restante acrescenta testes e este registro;
 não representa uma segunda melhoria de desempenho sobre o mesmo código.
+O pedido explícito "detalhadamente" também recebe o orçamento de resposta
+detalhada; a omissão dessa forma gramatical foi reproduzida pelos testes.
 
 Estas alterações são principalmente de **orçamento, roteiro e instrumento
 de avaliação**, não fine-tuning nem otimização de kernels. A CPU ainda
