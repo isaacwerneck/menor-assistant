@@ -828,6 +828,8 @@
                     aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
                 <button type="button" class="toggle-sidebar-btn memory-top" onclick="openBrain()"
                     aria-label="Abrir conhecimentos salvos" title="Conhecimentos salvos">Memória</button>
+                <button type="button" class="toggle-sidebar-btn export-top" onclick="exportChatTimings()"
+                    aria-label="Exportar tempos técnicos da conversa em JSON" title="Tempos técnicos (JSON)">⏱</button>
                 <button type="button" class="toggle-sidebar-btn export-top" onclick="exportChat()"
                     aria-label="Exportar conversa em Markdown" title="Exportar conversa">↓</button>
                 <div class="topbar-model" id="modelName" title="Modelo ativo informado pela API">Carregando…</div>
@@ -1472,6 +1474,61 @@
             return history;
         }
 
+        function safeTiming(metrics) {
+            if (!metrics || typeof metrics !== 'object') return null;
+            const safe = {};
+            for (const field of [
+                'agent_wall_ms', 'chat_wall_ms', 'other_wall_ms', 'reasoner_wall_ms',
+                'context_retrieval_ms', 'prompt_assembly_ms', 'chat_prompt_chars',
+                'chat_output_budget_tokens', 'chat_attempts', 'prompt_tokens', 'generated_tokens',
+            ]) {
+                const number = metrics[field];
+                if (typeof number === 'number' && Number.isFinite(number) && number >= 0) {
+                    safe[field] = number;
+                }
+            }
+            if (metrics.chat_ollama && typeof metrics.chat_ollama === 'object') {
+                const ollama = {};
+                for (const field of [
+                    'ollama_total_ms', 'model_load_ms', 'prompt_processing_ms',
+                    'token_generation_ms', 'other_model_ms', 'prompt_eval_count',
+                    'prompt_eval_cached_count', 'eval_count',
+                    'generation_tokens_per_second', 'prompt_tokens_per_second',
+                ]) {
+                    const number = metrics.chat_ollama[field];
+                    if (typeof number === 'number' && Number.isFinite(number) && number >= 0) {
+                        ollama[field] = number;
+                    }
+                }
+                if (Object.keys(ollama).length) safe.ollama = ollama;
+            }
+            if (['stop', 'length'].includes(metrics.chat_done_reason)) {
+                safe.done_reason = metrics.chat_done_reason;
+            }
+            if (['thin_answer', 'repeated_resolved_choice', 'unverified_execution'].includes(
+                metrics.chat_quality_guard
+            )) safe.quality_guard = metrics.chat_quality_guard;
+            return Object.keys(safe).length ? safe : null;
+        }
+
+        function exportChatTimings() {
+            const conv = getActiveConv();
+            if (!conv) return;
+            const turns = conv.messages.flatMap((message, index) =>
+                message.timing ? [{ turn_index: index, ...message.timing }] : []);
+            const data = JSON.stringify({
+                format: 'menor-agent-timing-v1', captured_at: new Date().toISOString(),
+                turn_count: turns.length, turns,
+                note: 'Apenas métricas técnicas; não inclui mensagens nem histórico do usuário.',
+            }, null, 2);
+            const url = URL.createObjectURL(new Blob([data], { type: 'application/json;charset=utf-8' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'menor-tempos-' + conv.id + '.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
         function exportChat() {
             const conv = getActiveConv();
             if (!conv) return;
@@ -1777,6 +1834,7 @@
             content.textContent = 'Interpretando contexto e escolhendo a próxima ação...';
             document.getElementById('generationStatus').textContent =
                 'Analisando a intenção com o modelo local…';
+            const requestStart = Date.now();
             const response = await turnFetch('/agent/run', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -1817,8 +1875,10 @@
                     : item.status === 'planned' ? 'Ação apenas planejada, não executada.'
                         : 'Uma operação não foi concluída.').join('\n') : '';
             const notice = result.reply + (events ? '\n\n' + events : '');
+            const timing = safeTiming(result.agent_metrics);
+            if (timing) timing.browser_request_wall_ms = Math.max(0, Date.now() - requestStart);
             imageReply(conv, content, notice, result.image || '', result.artifact || null,
-                result.phase === 'approval' ? result.approval : null);
+                result.phase === 'approval' ? result.approval : null, timing);
             return true;
         }
 
@@ -1945,7 +2005,8 @@
             return data;
         }
 
-        function imageReply(conv, content, message, imageUrl = '', artifact = null, approval = null) {
+        function imageReply(conv, content, message, imageUrl = '', artifact = null, approval = null,
+                            timing = null) {
             assertLiveTurn(conv);
             content.textContent = message;
             if (approval) {
@@ -1965,7 +2026,8 @@
             conv.messages.push({ role: 'bot', content: message,
                 ...(imageUrl ? { image: imageUrl } : {}),
                 ...(artifact ? { artifact } : {}),
-                ...(approval ? { approval } : {}) });
+                ...(approval ? { approval } : {}),
+                ...(timing ? { timing } : {}) });
             save();
             scrollToBottom();
         }
