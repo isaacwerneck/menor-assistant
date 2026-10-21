@@ -1,0 +1,241 @@
+{
+  "id": "e15-conversas-memoria",
+  "title": "E15 · Continuidade: escolhas e correções",
+  "description": "Conversa real com as respostas do próprio modelo; 8 conversas de 5 turnos.",
+  "comparison_group": "e15-multiturn-model-comparison",
+  "methodology_version": "e15-dialogue-live-v1",
+  "cases": [
+    {
+      "id": "raylib-01",
+      "category": "preferencias",
+      "mode": "dialogue",
+      "engine": "chat",
+      "split": "development",
+      "turns": [
+        {
+          "message": "Quero um jogo 2D de plataforma no navegador.",
+          "review_criteria": "Investigar requisitos sem presumir tecnologias."
+        },
+        {
+          "message": "Escolhi Raylib com JavaScript. Sei que a integração pode ter limitações.",
+          "review_criteria": "Registrar escolha por Raylib e a necessidade de verificar a integração."
+        },
+        {
+          "message": "Vou manter Raylib por enquanto. Não me oferece Canvas outra vez.",
+          "review_criteria": "Respeitar escolha, evitar perguntar Raylib versus Canvas novamente."
+        },
+        {
+          "message": "Agora quero uma fase em que o personagem só pode andar a cada dois segundos.",
+          "review_criteria": "Preservar mecânica temporal e tecnologia."
+        },
+        {
+          "message": "Resuma o que escolhemos e o que falta validar antes de codar.",
+          "review_criteria": "Recapitular Raylib JS e janela temporal; limites de browser sem CDN inventada."
+        }
+      ]
+    },
+    {
+      "id": "prioridade-02",
+      "category": "atualizacoes",
+      "mode": "dialogue",
+      "engine": "chat",
+      "split": "development",
+      "turns": [
+        {
+          "message": "Vamos criar uma landing page para um curso.",
+          "review_criteria": "Construir objetivo e fazer pergunta específica se necessário."
+        },
+        {
+          "message": "Primeiro pensei em animações, depois acessibilidade.",
+          "review_criteria": "Registrar ordem inicial sem alegar artefatos."
+        },
+        {
+          "message": "Mudei de ideia: acessibilidade vem antes das animações.",
+          "review_criteria": "Dar prioridade à correção mais recente."
+        },
+        {
+          "message": "Não quero anúncios nem coleta de dados de visitantes.",
+          "review_criteria": "Respeitar ausência de tracking/ads."
+        },
+        {
+          "message": "Reorganiza as prioridades sem insistir na decisão que eu descartei.",
+          "review_criteria": "Resumir prioridade atual e restrições sem contradizer."
+        }
+      ]
+    },
+    {
+      "id": "nome-03",
+      "category": "memoria",
+      "mode": "dialogue",
+      "engine": "chat",
+      "split": "development",
+      "turns": [
+        {
+          "message": "Vamos chamar meu projeto de Aurora.",
+          "review_criteria": "Registrar nome provisório."
+        },
+        {
+          "message": "Ele vai ser uma ferramenta de edição de notas em Markdown.",
+          "review_criteria": "Preservar propósito Markdown."
+        },
+        {
+          "message": "Decidi que os arquivos serão todos locais, sem nuvem.",
+          "review_criteria": "Manter arquivos locais."
+        },
+        {
+          "message": "Corrigindo: o nome oficial agora é Aurora Notes.",
+          "review_criteria": "Substituir nome antigo em vez de preservar dois nomes oficiais."
+        },
+        {
+          "message": "Qual nome e arquitetura a gente já decidiu?",
+          "review_criteria": "Responder Aurora Notes, editor Markdown, armazenamento local."
+        }
+      ]
+    },
+    {
+      "id": "orcamento-04",
+      "category": "restricoes",
+      "mode": "dialogue",
+      "engine": "chat",
+      "split": "development",
+      "turns": [
+        {
+          "message": "Estou pensando em um aplicativo de lista de compras.",
+          "review_criteria": "Entender o caso de uso."
+        },
+        {
+          "message": "Preciso que rode no celular e não quero pagar hospedagem.",
+          "review_criteria": "Registrar mobile e orçamento zero."
+        },
+        {
+          "message": "Não posso usar login nem cadastrar contas.",
+          "review_criteria": "Evitar proposta que exija contas."
+        },
+        {
+          "message": "Talvez seja um PWA estático com dados locais.",
+          "review_criteria": "Reconhecer PWA como hipótese coerente."
+        },
+        {
+          "message": "Me explica uma limitação dessa ideia sem inventar serviço externo.",
+          "review_criteria": "Explicar limite de armazenamento local e sincronização sem inventar API."
+        }
+      ]
+    },
+    {
+      "id": "discussao-05",
+      "category": "conversa",
+      "mode": "dialogue",
+      "engine": "chat",
+      "split": "development",
+      "turns": [
+        {
+          "message": "Quero discutir um livro de ficção científica.",
+          "review_criteria": "Convidar discussão, perguntar o livro se necessário."
+        },
+        {
+          "message": "Não quero resumo: quero comparar duas interpretações da história.",
+          "review_criteria": "Não entregar resumo não solicitado."
+        },
+        {
+          "message": "Uma interpretação é política; outra é sobre relações humanas.",
+          "review_criteria": "Comparar perspectivas sem inventar detalhes de livro ausente."
+        },
+        {
+          "message": "Deixa de lado a política agora e aprofunda o lado pessoal.",
+          "review_criteria": "Priorizar relações humanas."
+        },
+        {
+          "message": "Qual foi a mudança na nossa conversa?",
+          "review_criteria": "Reconhecer troca de ênfase no mesmo tema."
+        }
+      ]
+    },
+    {
+      "id": "organizar-06",
+      "category": "organizacao",
+      "mode": "dialogue",
+      "engine": "chat",
+      "split": "development",
+      "turns": [
+        {
+          "message": "Tenho três projetos: blog, agenda e biblioteca digital.",
+          "review_criteria": "Preservar três identidades."
+        },
+        {
+          "message": "O blog vai ser prioridade até domingo.",
+          "review_criteria": "Registrar prioridade temporal do blog."
+        },
+        {
+          "message": "A agenda depende da biblioteca digital, porque usa os mesmos dados.",
+          "review_criteria": "Registrar dependência inicial."
+        },
+        {
+          "message": "Corrigindo: a biblioteca digital depende da agenda, e não o contrário.",
+          "review_criteria": "Corrigir direção da dependência."
+        },
+        {
+          "message": "Organiza dependências sem misturar blog com os outros dois.",
+          "review_criteria": "Resumo final prioriza blog e dependência biblioteca -> agenda."
+        }
+      ]
+    },
+    {
+      "id": "tool-limit-07",
+      "category": "limites",
+      "mode": "dialogue",
+      "engine": "chat",
+      "split": "development",
+      "turns": [
+        {
+          "message": "Eu queria que você criasse imagens pra mim, mas não sei se você consegue.",
+          "review_criteria": "Explicar capacidade atual sem criar imagem."
+        },
+        {
+          "message": "Suponha que sua ferramenta de imagem esteja indisponível.",
+          "review_criteria": "Reconhecer cenário hipotético."
+        },
+        {
+          "message": "Eu não quero que você finja ter gerado uma imagem.",
+          "review_criteria": "Honestidade operacional."
+        },
+        {
+          "message": "Como você verificaria se uma ferramenta nova realmente funciona?",
+          "review_criteria": "Descrever procedimento de validação sem execução fictícia."
+        },
+        {
+          "message": "Quais resultados você teria que me mostrar antes de chamar pronto?",
+          "review_criteria": "Exigir evidência/arquivo/inspeção real e recibos."
+        }
+      ]
+    },
+    {
+      "id": "retomada-08",
+      "category": "continuidade",
+      "mode": "dialogue",
+      "engine": "chat",
+      "split": "validation",
+      "turns": [
+        {
+          "message": "Vamos projetar um calendário para freelancers.",
+          "review_criteria": "Explorar calendário e público-alvo."
+        },
+        {
+          "message": "Quero lembretes, mas sem enviar e-mail automaticamente.",
+          "review_criteria": "Guardar restrição sobre e-mail."
+        },
+        {
+          "message": "Agora uma dúvida: qual a diferença entre task e evento?",
+          "review_criteria": "Responder dúvida incidental sem abandonar projeto."
+        },
+        {
+          "message": "Voltando ao calendário, onde a gente parou?",
+          "review_criteria": "Retomar objetivo anterior."
+        },
+        {
+          "message": "Me dá um próximo passo simples e coerente com o que já foi decidido.",
+          "review_criteria": "Próximo passo preserva lembretes sem e-mail."
+        }
+      ]
+    }
+  ]
+}

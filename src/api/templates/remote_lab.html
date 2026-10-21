@@ -213,6 +213,7 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 <div class="section-intro"><div><span class="lab-eyebrow">AVALIAÇÃO EM LOTE</span><h2>Suas baterias de testes</h2></div>
 <span class="section-note">Execução sequencial</span></div>
 <p>Escolha várias baterias e execute tudo de uma vez. O Menor roda <strong>uma por vez</strong>, salva um relatório por bateria e mostra o progresso. Os resultados anteriores são reconhecidos neste servidor.</p>
+<p class="helper"><strong>E15 · Conversas completas:</strong> usa respostas geradas pelo próprio modelo ao longo de vários turnos. Não cria arquivos nem executa ferramentas. Os critérios semânticos verificam decisões; naturalidade, utilidade e qualidade continuam exigindo avaliação humana.</p>
 <div class="lab-dashboard" aria-label="Resumo dos testes">
 <div class="dashboard-stat"><strong id="suiteTotal">—</strong><span>Baterias disponíveis</span></div>
 <div class="dashboard-stat"><strong id="suiteDone">—</strong><span>Já executadas</span></div>
@@ -236,8 +237,10 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 <input type="search" id="suiteSearch" autocomplete="off" placeholder="Nome, assunto ou ID"></div>
 <div class="suite-tools" role="group" aria-label="Seleção de testes">
 <button type="button" id="selectRecommended">Selecionar as 4 recomendadas</button>
-<button type="button" id="selectE8" title="Seleciona somente as oito baterias E8, 128 casos de inferência">
+<button type="button" id="selectE8" title="Seleciona as oito baterias E8, 128 casos">
 Selecionar avaliação completa E8 (128 casos)</button>
+<button type="button" id="selectE15" title="Seleciona quatro baterias multiturmo E15, 136 mensagens por modelo">
+Selecionar conversas E15 (136 mensagens)</button>
 <button type="button" id="selectPending">Marcar pendentes visíveis</button>
 <button type="button" id="clearSelection">Desmarcar tudo</button>
 <button type="button" id="batchRefresh">Atualizar situação</button>
@@ -552,7 +555,9 @@ function renderSuites() {
         status.textContent = item.status === "running" ? "Em andamento"
             : item.run_count ? "Feita " + item.run_count + " vez(es)" : "Pendente";
         const size = document.createElement("span"); size.className = "suite-chip";
-        size.textContent = fmt(item.cases) + " perguntas";
+        size.textContent = item.scenarios && item.scenarios !== item.cases
+            ? fmt(item.scenarios) + " conversas · " + fmt(item.cases) + " mensagens"
+            : fmt(item.cases) + " perguntas";
         chips.append(status, size);
         if (Number.isInteger(item.recommended_order)) {
             const badge = document.createElement("span"); badge.className = "suite-chip";
@@ -635,7 +640,11 @@ function renderReports() {
                 + item.automatic_passes + " acertos automáticos · "
                 + (item.automatic_failures ?? "—") + " falhas · "
                 + item.ungraded + " sem nota · "
-                + (item.evaluation_model || "modelo padrão") + " · " + label;
+                + (item.evaluation_model || "modelo padrão") + " · " + label
+                + (Number.isInteger(item.dialogue_scenarios)
+                   ? " · " + item.dialogue_completed + "/" +
+                     item.dialogue_scenarios + " conversas completas (não é nota de qualidade)"
+                   : "");
             const actions = document.createElement("div"); actions.className = "actions";
             const download = document.createElement("a");
             download.href = "/lab/reports/" + encodeURIComponent(item.run_id) + "/download";
@@ -869,6 +878,16 @@ $("selectE8").addEventListener("click", () => {
         ? "Avaliação E8 selecionada. O Lab testa o modelo; para ferramentas e aprovações use também o roteiro real."
         : "As baterias E8 não estão instaladas neste servidor. Atualize o Menor antes de executar.";
 });
+$("selectE15").addEventListener("click", () => {
+    if (queueRunning) return;
+    selectedSuites.clear();
+    for (const item of suiteItems) if (/^e15-/.test(item.id)) selectedSuites.add(item.id);
+    $("suiteSearch").value = "";
+    setFilter("all");
+    $("batchStatus").textContent = selectedSuites.size
+        ? "Baterias de conversas E15 selecionadas. O relatório inclui cada turno e histórico gerado."
+        : "Baterias E15 indisponíveis. Atualize a versão do Menor.";
+});
 $("selectPending").addEventListener("click", () => {
     if (queueRunning) return;
     for (const item of suiteItems.filter(suiteMatches))
@@ -901,6 +920,7 @@ function renderQueue(st) {
         $("queueCurrent").textContent = active
             ? "Agora: " + (current ? current.title : st.suite_id) +
                 (st.queue_model ? " · " + st.queue_model : "")
+                + (st.active_conversation ? " · conversa " + st.active_conversation : "")
             : finished.length + " bateria(s) finalizada(s)"
                 + (errors.length ? " · " + errors.length + " com erro" : "");
         const totalCases = Number.isInteger(st.overall_total) ? st.overall_total : 0;

@@ -11,7 +11,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.api import remote_lab
+from src.api import remote_lab, lab_dialogues
 
 SUITES = Path(__file__).resolve().parents[2] / "lab" / "suites"
 DATA = Path(os.environ.get("MENOR_LAB_DATA_DIR", str(Path.home() / "menor-data" / "lab")))
@@ -127,7 +127,10 @@ def validate_suite(data):
         if not isinstance(cid, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", cid) or cid in ids:
             raise ValueError("ID de caso inválido ou duplicado.")
         ids.add(cid)
-        remote_lab.LabRequest.model_validate(case)
+        if case.get("mode") == "dialogue":
+            lab_dialogues.validate_case(case)
+        else:
+            remote_lab.LabRequest.model_validate(case)
         expected = case.get("expected_contains", [])
         exact = case.get("expected_exact")
         grader = case.get("grader", "strict")
@@ -153,6 +156,50 @@ def validate_suite(data):
         if not isinstance(criterion, str) or len(criterion) > 500:
             raise ValueError("Critério de revisão inválido.")
     return data
+
+
+def _case_units(case):
+    return len(case["turns"]) if case.get("mode") == "dialogue" else 1
+
+
+def _suite_units(suite):
+    return sum(_case_units(case) for case in suite["cases"])
+
+
+def _update_progress(done, total, queue=None):
+    with _LOCK:
+        STATE.update(done=done, total=total)
+        if queue is not None:
+            STATE["overall_done"] = queue["completed_cases"] + done
+
+
+def _run_dialogue_case(case, suite, results, queue=None):
+    model = case.get("model") or suite.get("evaluation_model")
+    acquired = remote_lab._INFERENCE.acquire(timeout=60)
+    try:
+        if not acquired:
+            # Sem inventar respostas: anota uma falha por turno.
+            for index, turn in enumerate(case["turns"], 1):
+                results.append({
+                    "id": case["id"] + "-t" + str(index).zfill(2),
+                    "conversation_id": case["id"], "turn_index": index,
+                    "category": case.get("category", "dialogue"),
+                    "split": case.get("split", "development"),
+                    "mode": "dialogue", "engine": case["engine"],
+                    "requested_model": model, "question": turn["message"],
+                    "review_criteria": turn["review_criteria"], "history": [],
+                    "checks": turn.get("checks", {}),
+                    "result": {"status": "busy", "reply": ""},
+                    "elapsed_seconds": 0, "automatic_pass": False,
+                    "format_compliant": None,
+                })
+            return
+        for item in lab_dialogues.execute(case, model=model):
+            results.append(item)
+            _update_progress(len(results), _suite_units(suite), queue)
+    finally:
+        if acquired:
+            remote_lab._INFERENCE.release()
 
 
 def _boolean_answer(value):
@@ -234,7 +281,8 @@ def suites():
             )
             result.append({
                 "id": suite_id, "title": data.get("title", suite_id),
-                "description": data.get("description", ""), "cases": len(data["cases"]),
+                "description": data.get("description", ""),
+                "cases": _suite_units(data), "scenarios": len(data["cases"]),
                 "source": "imported" if path.parent == DATA / "suites" else "builtin",
                 "status": state, "run_count": saved["run_count"],
                 "last_report": saved["last_report"], "recommended_order": order,
@@ -277,11 +325,13 @@ def _run(suite, run_id, queue=None):
     checkout_start = _checkout_snapshot()
     try:
         DATA.mkdir(parents=True, exist_ok=True)
-        for index, case in enumerate(suite["cases"]):
-            with _LOCK:
-                STATE.update(done=index, total=len(suite["cases"]))
-                if queue is not None:
-                    STATE["overall_done"] = queue["completed_cases"] + index
+        for case in suite["cases"]:
+            _update_progress(len(results), _suite_units(suite), queue)
+            if case.get("mode") == "dialogue":
+                with _LOCK:
+                    STATE["active_conversation"] = case["id"]
+                _run_dialogue_case(case, suite, results, queue)
+                continue
             payload = remote_lab.LabRequest.model_validate(case)
             began = time.monotonic()
             if not remote_lab._INFERENCE.acquire(timeout=60):
@@ -307,6 +357,17 @@ def _run(suite, run_id, queue=None):
                             "elapsed_seconds": round(time.monotonic() - began, 3),
                             "automatic_pass": passed,
                             "format_compliant": numeric_format_compliance(case, output) if passed is True else None})
+        with _LOCK:
+            STATE.pop("active_conversation", None)
+        # Conclusão do cenário significa que TODOS os turnos receberam resposta
+        # estruturalmente válida; não afirma que as respostas foram úteis.
+        dialogue_ids = {case["id"] for case in suite["cases"]
+                        if case.get("mode") == "dialogue"}
+        dialogue_completed = sum(
+            all(item["result"].get("status") in ("answered", "decision_validated")
+                for item in results if item.get("conversation_id") == dialogue_id)
+            for dialogue_id in dialogue_ids
+        )
         checkpoints = {"module_import": _MODULE_IMPORT_CHECKOUT, "run_start": checkout_start,
                        "run_finish": _checkout_snapshot()}
         revisions = [item.get("revision") for item in checkpoints.values()]
@@ -318,6 +379,9 @@ def _run(suite, run_id, queue=None):
                       "tracked_changes": any(item["tracked_changes"] for item in checkpoints.values())
                       if all(revisions) else None,
                   },
+                  "dialogue_scenarios": len(dialogue_ids),
+                  "dialogue_completed": dialogue_completed,
+                  "dialogue_failed": len(dialogue_ids) - dialogue_completed,
                   "comparison_group": suite.get("comparison_group"),
                   "methodology_version": suite.get("methodology_version", "legacy"),
                   "started_at": started, "finished_at": datetime.now(timezone.utc).isoformat(),
@@ -334,6 +398,10 @@ def _run(suite, run_id, queue=None):
         summary = {key: report[key] for key in ("run_id", "suite_id", "started_at", "finished_at",
                    "total", "automatic_passes", "automatic_failures", "ungraded")}
         summary["evaluation_model"] = report["evaluation_model"]
+        if dialogue_ids:
+            summary["dialogue_scenarios"] = report["dialogue_scenarios"]
+            summary["dialogue_completed"] = report["dialogue_completed"]
+            summary["dialogue_failed"] = report["dialogue_failed"]
         (DATA / (run_id + ".summary.json")).write_text(json.dumps(summary, indent=2), encoding="utf-8")
         publish_status = "disabled"
         if os.environ.get("MENOR_LAB_REPORTS_PUBLISH") == "1":
@@ -383,7 +451,7 @@ def start(suite_id, *, model=None):
         run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[: 8]
         STATE.clear()
         STATE.update(status="running", suite_id=suite_id, run_id=run_id,
-                     done=0, total=len(suite["cases"]))
+                     done=0, total=_suite_units(suite))
     threading.Thread(target=_run, args=(suite, run_id), daemon=True).start()
     return run_id
 
@@ -395,7 +463,7 @@ def _run_queue(entries):
     Os relatórios concluídos continuam salvos no disco local.
     """
     global _RUNNING
-    total_cases = sum(len(suite["cases"]) for suite, _ in entries)
+    total_cases = sum(_suite_units(suite) for suite, _ in entries)
     completed_cases = 0
     finished = []
     failures = []
@@ -405,7 +473,8 @@ def _run_queue(entries):
             with _LOCK:
                 STATE.update(
                     status="running", suite_status="running", suite_id=suite["id"],
-                    queue_model=suite.get("evaluation_model"), run_id=run_id, done=0, total=len(suite["cases"]),
+                    queue_model=suite.get("evaluation_model"), run_id=run_id,
+                    done=0, total=_suite_units(suite),
                     queue_index=position, queue_total=len(entries),
                     overall_done=completed_cases, overall_total=total_cases,
                 )
@@ -415,7 +484,7 @@ def _run_queue(entries):
                              "status": "completed" if succeeded else "failed"})
             if not succeeded:
                 failures.append(suite["id"])
-            completed_cases += len(suite["cases"])
+            completed_cases += _suite_units(suite)
             with _LOCK:
                 STATE.update(queue_finished=list(finished), queue_failures=list(failures),
                              overall_done=completed_cases)
@@ -457,7 +526,7 @@ def start_queue(suite_ids, *, model=None, models=None):
     # Uma bateria por modelo, sem inferências paralelas competindo pela CPU.
     suites_to_run = [_with_model(suite, candidate)
                      for suite in original_suites for candidate in selected_models]
-    total_cases = sum(len(suite["cases"]) for suite in suites_to_run)
+    total_cases = sum(_suite_units(suite) for suite in suites_to_run)
     if total_cases > 800:
         raise ValueError("Limite de 800 casos por fila; divida em duas rodadas.")
     # Alocar IDs antes de publicar o estado, sem iniciar inferência.
@@ -471,7 +540,7 @@ def start_queue(suite_ids, *, model=None, models=None):
         STATE.clear()
         STATE.update(
             status="running", suite_id=entries[0][0]["id"], run_id=entries[0][1],
-            done=0, total=len(entries[0][0]["cases"]),
+            done=0, total=_suite_units(entries[0][0]),
             queue_index=1, queue_total=len(entries),
             queue_suite_ids=list(suite_ids), queue_models=[name for name in selected_models if name],
             queue_finished=[], queue_failures=[],
