@@ -9,6 +9,15 @@ from ops import model_latency
 
 
 class LatencyTests(unittest.TestCase):
+    def test_missing_measurements_do_not_become_zero_or_residual_time(self):
+        summary = model_latency.numeric_summary({
+            "total_duration": 3_000_000_000, "eval_duration": 1_000_000_000,
+        })
+        self.assertEqual(summary["ollama_total_ms"], 3000)
+        self.assertNotIn("generation_tokens_per_second", summary)
+        self.assertNotIn("prompt_tokens_per_second", summary)
+        self.assertNotIn("other_model_ms", summary)
+
     def test_reject_remote_targets_and_hostile_model_identifiers(self):
         for url in ("https://example.org:11434", "http://192.168.1.4:11434",
                     "http://user:password@localhost:11434",
