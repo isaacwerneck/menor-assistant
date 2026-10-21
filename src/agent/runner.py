@@ -399,7 +399,8 @@ def _critique_plan(message, history, pending, skills, facts, state, tools, decis
 def _collaborate(state, message, history, metrics=None):
     """Conserva escolhas posteriores sem tomar decisão de executar."""
     previous = state.get("goal", "") if state.get("phase") == "collaboration" else ""
-    goal = previous or message[:420]
+    goal = (message[:420] if conversation.is_collaboration_request(message)
+            and len(message.strip()) > len(previous.strip()) else previous or message[:420])
     requirements = list(state.get("requirements", []))[-3:]
     if previous and message.strip() and message.strip() != previous.strip():
         # Guarda fatos escolhidos após o pedido inicial, até 3 mudanças recentes.
