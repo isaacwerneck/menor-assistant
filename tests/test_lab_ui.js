@@ -54,6 +54,10 @@ function browser(overrides = {}) {
         FormData: class { append() {} },
         fetch: async (url, opts) => {
             requests.push({url, opts});
+            if (url === "/models")
+                return {ok:!overrides.modelsFailed, json:async () => ({models:overrides.models || [
+                    {name:"control:7b"}, {name:"candidate:14b"},
+                ]})};
             if (url === "/lab/compare")
                 return {ok:true, json:async () => app.compare};
             if (url === "/lab/batches")
@@ -100,6 +104,33 @@ test("Lab: script parses and chat has desktop and mobile navigation to the lab",
     assert.equal((chat.match(/href="\/lab\/view"/g) || []).length, 3);
     assert.match(chat, /Laboratório · Testes/);
     assert.match(chat, /Lab · Testes/);
+});
+
+test("Lab: installed model applies to direct, planner and queue without changing defaults", async () => {
+    const ui = browser();
+    await ui.ready();
+    assert.equal(ui.requests.filter(item => item.opts?.method === "POST").length, 0);
+    assert.deepEqual(ui.elements.get("evaluationModel").children.map(item => item.value),
+        ["", "control:7b", "candidate:14b"]);
+    ui.elements.get("evaluationModel").value = "candidate:14b";
+    ui.elements.get("question").value = "Uma pergunta pública";
+    await ui.click("runDirect");
+    await ui.click("runPlanner");
+    for (const call of ui.requests.filter(item => item.url === "/lab/compare"))
+        assert.equal(JSON.parse(call.opts.body).model, "candidate:14b");
+    await ui.click("selectRecommended");
+    await ui.click("batchRun");
+    assert.equal(JSON.parse(ui.requests.find(item => item.url === "/lab/batches/queue").opts.body).model,
+        "candidate:14b");
+    assert.match(ui.confirmations[0], /candidate:14b/);
+});
+
+test("Lab: missing model list keeps default and never starts inference", async () => {
+    const ui = browser({modelsFailed:true});
+    await ui.ready();
+    assert.match(ui.elements.get("modelStatus").textContent, /Não consegui/);
+    assert.equal(ui.elements.get("evaluationModel").value, "");
+    assert.equal(ui.requests.filter(item => item.opts?.method === "POST").length, 0);
 });
 
 test("Lab: shows reliable totals, done and pending from saved reports", async () => {

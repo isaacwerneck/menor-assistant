@@ -50,6 +50,35 @@ o de baterias diferentes concluídas.
   nenhum dos dois executa ferramentas.
 - `decision_validated` demonstra contrato/JSON válido, **não qualidade do plano**.
 
+### Escolher modelo por avaliação — início da fase 1
+
+O seletor **Modelo desta avaliação** consulta os modelos instalados pelo endpoint
+autenticado `/models`. A seleção vale para testes avulsos e para a próxima fila;
+atualizar a lista ou selecionar não inicia inferência. A fila captura a escolha
+ao confirmar; trocar o seletor depois não muda uma execução já iniciada.
+
+**Padrão configurado ou definido na bateria** mantém o comportamento anterior:
+cada caso pode definir `model`; sem isso, usa a configuração vigente do modo.
+Uma seleção explícita substitui o modelo de todos os casos daquela execução,
+sem editar o JSON original, as variáveis de ambiente ou o padrão do chat.
+Não instala nem baixa modelos. Um nome inválido é rejeitado antes da inferência;
+um modelo indisponível falha pela chamada ao Ollama, sem download automático.
+
+A API aceita `model` opcional em `POST /lab/compare`, no corpo de
+`POST /lab/batches/queue` e na query de `POST /lab/batches/{suite_id}/run`.
+Os relatórios completos registram `evaluation_model` quando há substituição,
+`requested_model` por caso e `result.model` para o modelo solicitado ao Ollama.
+São nomes, não prova de digest/pesos. Relatórios antigos continuam legíveis.
+O comparador `python -m ops.eval_compare BASELINE.json CANDIDATO.json`
+inclui a contagem de modelos nos dois resumos; a publicação permanece igual.
+
+Para comparar candidatos, repetir a mesma bateria com o mesmo perfil, histórico,
+critérios e configuração de inferência. Registrar hardware, versão/digest,
+carga, contexto efetivo e estado frio/quente separadamente; alternar as rodadas
+e revisar respostas inéditas manualmente. Comparar acertos, erros, p50/p95 e
+tokens/s. Esta entrega prepara a medição: não comprova melhora de qualidade,
+velocidade ou memória e não escolhe um vencedor.
+
 ### Diagnóstico de inferência sem nova chamada ao modelo
 
 O modo `planner` inclui `diagnostics.outcome`: `validated`, `timeout`,

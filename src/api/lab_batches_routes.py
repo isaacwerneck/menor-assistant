@@ -34,13 +34,15 @@ async def import_batch(request: Request, file: UploadFile = File(...)):
 
 class QueueRequest(BaseModel):
     suite_ids: list[str] = Field(min_length=1, max_length=24)
+    model: str | None = Field(default=None, min_length=1, max_length=90)
 
 
 @router.post("/lab/batches/queue")
 def run_batch_queue(body: QueueRequest, request: Request):
     auth.require_owner(request)
     try:
-        return lab_batches.start_queue(body.suite_ids)
+        options = {"model": body.model} if body.model is not None else {}
+        return lab_batches.start_queue(body.suite_ids, **options)
     except FileNotFoundError as error:
         raise HTTPException(404, "Uma bateria selecionada não foi encontrada.") from error
     except ValueError as error:
@@ -50,10 +52,11 @@ def run_batch_queue(body: QueueRequest, request: Request):
 
 
 @router.post("/lab/batches/{suite_id}/run")
-def run_batch(suite_id: str, request: Request):
+def run_batch(suite_id: str, request: Request, model: str | None = None):
     auth.require_owner(request)
     try:
-        return {"run_id": lab_batches.start(suite_id)}
+        options = {"model": model} if model is not None else {}
+        return {"run_id": lab_batches.start(suite_id, **options)}
     except FileNotFoundError as error:
         raise HTTPException(404, "Bateria não encontrada.") from error
     except ValueError as error:

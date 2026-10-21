@@ -9,7 +9,8 @@ completa em produção.
 
 O [plano de referência do Menor](PLANO_MENOR_ASSISTANT.md) reúne a proposta
 recebida, sua revisão técnica e o checklist acompanhado por evidências.
-Está em avaliação; os itens de implementação não estão marcados como concluídos.
+A implementação inicial permite comparar modelos instalados no Lab; a escolha do
+modelo padrão e os demais marcos continuam pendentes de evidências.
 
 **Migrando o projeto para Codex?** Comece em
 [`AGENTS.md`](AGENTS.md) e no

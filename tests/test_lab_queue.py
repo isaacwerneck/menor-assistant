@@ -128,6 +128,37 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(lab_batches.state()["status"], "idle")
         self.assertFalse(list(self.store.glob("*.summary.json")))
 
+    def test_model_override_is_local_to_run_and_saved_in_full_report(self):
+        from ops.eval_compare import compare
+        self.suite("bateria-modelos", ["pergunta pública"])
+        original = lab_batches.load_suite("bateria-modelos")
+        runs = []
+
+        def direct(payload):
+            return {"status": "answered", "reply": "OK", "model": payload.model}
+
+        with (
+            patch.object(lab_batches.threading, "Thread", InlineThread),
+            patch.object(lab_batches.remote_lab, "_direct", side_effect=direct),
+        ):
+            for model in ("control:7b", "candidate:14b"):
+                run = lab_batches.start_queue(["bateria-modelos"], model=model)
+                report = json.loads(lab_batches.report_path(run["run_ids"][0]).read_text())
+                self.assertEqual(report["evaluation_model"], model)
+                self.assertEqual(report["cases"][0]["requested_model"], model)
+                self.assertEqual(report["cases"][0]["result"]["model"], model)
+                runs.append(report)
+        self.assertEqual(lab_batches.load_suite("bateria-modelos"), original)
+        self.assertEqual(compare(*runs)["graded_pass_delta"], 0)
+
+    def test_invalid_model_does_not_start_queue(self):
+        self.suite("bateria-modelos", ["pergunta pública"])
+        with patch.object(lab_batches.threading, "Thread") as worker:
+            with self.assertRaises(ValueError):
+                lab_batches.start_queue(["bateria-modelos"], model="../../privado")
+            worker.assert_not_called()
+        self.assertFalse(lab_batches._RUNNING)
+
     def test_cannot_start_second_queue_while_active(self):
         self.suite("primeira-bateria", ["a1"])
         with lab_batches._LOCK:
@@ -169,6 +200,29 @@ class QueueTests(unittest.TestCase):
         updated = next(x for x in lab_batches.suites() if x["id"] == "primeira-bateria")
         self.assertEqual(updated["run_count"], 1)
         self.assertEqual(updated["last_report"]["automatic_failures"], 0)
+
+    def test_routes_forward_optional_model_without_changing_default_calls(self):
+        request = lab_batches_routes.QueueRequest(
+            suite_ids=["primeira-bateria"], model="candidate:14b")
+        with patch.object(lab_batches_routes.auth, "require_owner"), patch.object(
+                lab_batches, "start_queue") as start_queue, patch.object(
+                lab_batches, "start", return_value="run") as start:
+            lab_batches_routes.run_batch_queue(request, None)
+            start_queue.assert_called_once_with(["primeira-bateria"], model="candidate:14b")
+            lab_batches_routes.run_batch("primeira-bateria", None, model="candidate:14b")
+            start.assert_called_once_with("primeira-bateria", model="candidate:14b")
+            lab_batches_routes.run_batch("primeira-bateria", None)
+            start.assert_called_with("primeira-bateria")
+
+    def test_invalid_model_route_returns_422_before_worker(self):
+        self.suite("primeira-bateria", ["a1"])
+        request = lab_batches_routes.QueueRequest(
+            suite_ids=["primeira-bateria"], model="../../privado")
+        with patch.object(lab_batches_routes.auth, "require_owner"):
+            with self.assertRaises(HTTPException) as response:
+                lab_batches_routes.run_batch_queue(request, None)
+            self.assertEqual(response.exception.status_code, 422)
+            self.assertFalse(lab_batches._RUNNING)
 
     def test_api_auth_and_input_errors_are_not_bypassed(self):
         request = lab_batches_routes.QueueRequest(suite_ids=["primeira-bateria"])

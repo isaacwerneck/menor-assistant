@@ -41,11 +41,14 @@ class LabMessage(BaseModel):
 class LabRequest(BaseModel):
     mode: Literal["planner", "direct"]
     profile: Literal["baseline", "natural", "assistant"] = "baseline"
+    model: str | None = Field(default=None, min_length=1, max_length=90)
     message: str = Field(min_length=1, max_length=1200)
     history: list[LabMessage] = Field(default_factory=list, max_length=8)
 
     @model_validator(mode="after")
     def check_total(self):
+        if self.model is not None:
+            model_identifier(self.model)
         if not self.message.strip() or len(self.message) + sum(
                 len(item.content) for item in self.history) > 4200:
             raise ValueError("Histórico do laboratório excede o limite.")
@@ -65,7 +68,7 @@ def _limit(now):
 def _direct(payload):
     """Baseline sem o roteador JSON nem ferramentas; somente inferência local."""
     url = local_endpoint(os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
-    model = model_identifier(os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
+    model = payload.model or model_identifier(os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
     natural = payload.profile == "natural"
     assistant = payload.profile == "assistant"
     voice = LAB_ASSISTANT_VOICE if assistant else (
@@ -100,7 +103,7 @@ def _direct(payload):
 def _planner(payload):
     """A mesma decisão estruturada da frente A, mas sem memória nem ferramentas."""
     local_endpoint(os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
-    model = model_identifier(os.environ.get("MENOR_REASONING_MODEL") or os.environ.get(
+    model = payload.model or model_identifier(os.environ.get("MENOR_REASONING_MODEL") or os.environ.get(
         "OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")))
     diagnostics = {}
     result = intelligence.decide(
@@ -108,6 +111,7 @@ def _planner(payload):
         [item.model_dump() for item in payload.history],
         tools=[], capabilities=[], knowledge="", feedback_examples=[],
         paused_goals=[], pending=None, last_result=None, preferences="", diagnostics=diagnostics,
+        **({"model": payload.model} if payload.model is not None else {}),
     )
     if result is None:
         return {"status": "no_valid_decision", "reply":

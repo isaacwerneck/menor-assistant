@@ -63,6 +63,18 @@ class CompareTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             eval_compare.compare(before, after)
 
+    def test_model_names_are_preserved_without_rejecting_candidate(self):
+        before = report("base", [{**case("one", True), "result": {
+            "status": "answered", "model": "control:7b"}}])
+        after = report("candidate", [{**case("one", True), "result": {
+            "status": "answered", "model": "candidate:14b"}}])
+        after["evaluation_model"] = "candidate:14b"
+        result = eval_compare.compare(before, after)
+        self.assertEqual(result["baseline"]["models"], {"control:7b": 1})
+        self.assertEqual(result["candidate"]["models"], {"candidate:14b": 1})
+        self.assertEqual(result["candidate"]["evaluation_model"], "candidate:14b")
+        self.assertIsNone(result["baseline"]["evaluation_model"])
+
     def test_empty_report_has_no_false_scores(self):
         stats = eval_compare.summarize(report("empty", []))
         self.assertIsNone(stats["graded_pass_rate"])

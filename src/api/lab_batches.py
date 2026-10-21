@@ -299,6 +299,7 @@ def _run(suite, run_id, queue=None):
             results.append({"id": case["id"], "category": case.get("category", "geral"),
                             "split": case.get("split", "development"), "mode": payload.mode,
                             "profile": payload.profile, "grader": case.get("grader", "strict"),
+                            "requested_model": payload.model,
                             "question": payload.message, "history": [item.model_dump() for item in payload.history],
                             "expected_contains": case.get("expected_contains", []),
                             "expected_exact": case.get("expected_exact"),
@@ -310,6 +311,7 @@ def _run(suite, run_id, queue=None):
                        "run_finish": _checkout_snapshot()}
         revisions = [item.get("revision") for item in checkpoints.values()]
         report = {"run_id": run_id, "suite_id": suite["id"],
+                  "evaluation_model": suite.get("evaluation_model"),
                   "code_provenance": {
                       "checkpoints": checkpoints,
                       "revision_changed": len(set(revisions)) > 1 if all(revisions) else None,
@@ -362,9 +364,17 @@ def _run(suite, run_id, queue=None):
                 _RUNNING = False
 
 
-def start(suite_id):
+def _with_model(suite, model):
+    if model is None:
+        return suite
+    model = remote_lab.model_identifier(model)
+    return {**suite, "evaluation_model": model,
+            "cases": [{**case, "model": model} for case in suite["cases"]]}
+
+
+def start(suite_id, *, model=None):
     global _RUNNING
-    suite = load_suite(suite_id)
+    suite = _with_model(load_suite(suite_id), model)
     with _LOCK:
         if _RUNNING:
             raise RuntimeError("Já existe uma bateria em execução.")
@@ -423,7 +433,7 @@ def _run_queue(entries):
             _RUNNING = False
 
 
-def start_queue(suite_ids):
+def start_queue(suite_ids, *, model=None):
     """Inicia lotes independentes, um após o outro; valida tudo ANTES de iniciar."""
     global _RUNNING
     if not isinstance(suite_ids, list) or not 1 <= len(suite_ids) <= 24:
@@ -433,7 +443,7 @@ def start_queue(suite_ids):
         raise ValueError("ID de bateria inválido.")
     if len(set(suite_ids)) != len(suite_ids):
         raise ValueError("A mesma bateria foi selecionada mais de uma vez.")
-    suites_to_run = [load_suite(suite_id) for suite_id in suite_ids]
+    suites_to_run = [_with_model(load_suite(suite_id), model) for suite_id in suite_ids]
     total_cases = sum(len(suite["cases"]) for suite in suites_to_run)
     if total_cases > 800:
         raise ValueError("Limite de 800 casos por fila; divida em duas rodadas.")
