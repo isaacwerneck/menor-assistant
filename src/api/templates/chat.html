@@ -775,7 +775,24 @@
             .approval-card { padding: 13px; }
         }
         @media(hover:none) { .conv-item .conv-delete { opacity: 1; } }
-    </style>
+    
+/* E11: ações secundárias recolhidas, controles principais acessíveis. */
+.topbar-overflow{position:relative;flex:none}
+.topbar-overflow>summary{display:flex;align-items:center;justify-content:center;cursor:pointer;
+border:1px solid var(--border,#454053);border-radius:10px;min-height:40px;
+padding:7px 11px;color:inherit;list-style:none}
+.topbar-overflow>summary::-webkit-details-marker{display:none}
+.topbar-overflow>summary:focus-visible{outline:2px solid #c5b5ff;outline-offset:2px}
+.topbar-overflow-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;
+min-width:min(275px,88vw);padding:9px;border-radius:12px;
+background:#222033;border:1px solid #514663;box-shadow:0 12px 28px #0008;
+display:flex;flex-direction:column;gap:6px}
+.topbar-overflow-menu>button,.topbar-overflow-menu>a{width:100%;min-height:42px;
+display:flex;align-items:center;justify-content:flex-start;text-align:left;
+text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
+@media(max-width:520px){.topbar-overflow-menu{position:fixed;right:10px;top:60px}
+.topbar-overflow>summary{padding:7px 9px}}
+</style>
 </head>
 <body>
     <!-- SIDEBAR -->
@@ -823,15 +840,20 @@
                 <div class="topbar-title" id="topbarTitle">Menor AI</div>
             </div>
             <div class="topbar-actions" role="group" aria-label="Ações da conversa">
-                <a href="/lab/view" class="lab-top-link" title="Abrir baterias de testes">Lab · Testes</a>
                 <button type="button" class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
                     aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
-                <button type="button" class="toggle-sidebar-btn memory-top" onclick="openBrain()"
-                    aria-label="Abrir conhecimentos salvos" title="Conhecimentos salvos">Memória</button>
-                <button type="button" class="toggle-sidebar-btn export-top" onclick="exportChatTimings()"
-                    aria-label="Exportar tempos técnicos da conversa em JSON" title="Tempos técnicos (JSON)">⏱</button>
-                <button type="button" class="toggle-sidebar-btn export-top" onclick="exportChat()"
-                    aria-label="Exportar conversa em Markdown" title="Exportar conversa">↓</button>
+                <details class="topbar-overflow">
+                    <summary aria-label="Mais ações da conversa">Mais ⋯</summary>
+                    <div class="topbar-overflow-menu">
+                        <a href="/lab/view" class="lab-top-link" title="Abrir baterias de testes">Lab · Testes</a>
+                        <button type="button" class="toggle-sidebar-btn memory-top" onclick="openBrain()"
+                            aria-label="Abrir conhecimentos salvos" title="Conhecimentos salvos">Memória</button>
+                        <button type="button" class="toggle-sidebar-btn export-top" onclick="exportChatTimings()"
+                            aria-label="Exportar tempos técnicos da conversa em JSON" title="Tempos técnicos (JSON)">Tempos (JSON)</button>
+                        <button type="button" class="toggle-sidebar-btn export-top" onclick="exportChat()"
+                            aria-label="Exportar conversa em Markdown" title="Exportar conversa">Exportar chat</button>
+                    </div>
+                </details>
                 <div class="topbar-model" id="modelName" title="Modelo ativo informado pela API">Carregando…</div>
             </div>
         </header>

@@ -363,3 +363,25 @@ um modelo já instalado configurado por `MENOR_PLAN_REVIEW_MODEL`.
 Por padrão fica desligada até medirmos desempenho na CPU. Ela nunca concede
 permissões e pode devolver uma pergunta, uma reformulação única ou um plano
 marcado como preliminar. Veja [detalhes](docs/chat_a_revisao_de_planos.md).
+
+
+## E11 — Lab, comparação 7B/14B e diagnóstico de desempenho (21/10/2026)
+
+- Em **Menor Lab → Suas baterias**, marque uma ou duas instalações do Ollama
+  no seletor **Modelos para esta execução**. Baterias repetem os mesmos casos
+  em sequência e salvam relatórios independentes com o modelo identificado.
+  A seleção não altera o modelo do chat (7B permanece o padrão).
+- Em **Histórico**, use busca/filtros/paginação, **Verificar envios no GitHub**
+  para comparar hashes com `lab-reports`, **Selecionar não enviados** e
+  **Enviar selecionados** com confirmação. O envio é supervisionado; não há
+  upload automático do texto completo dos testes.
+- Em **Sistema**, CPU/RAM e GPU (quando houver telemetria do driver) são
+  consultadas por endpoint privado. Modelos carregados vêm do `/api/ps`,
+  e seus tamanhos de memória **não** representam utilização da GPU.
+- Para investigar throughput de CPU, rode voluntariamente
+  `python3 -m ops.model_latency --live --thread-sweep --samples 2 --model qwen2.5-coder:7b`
+  com Ollama ocioso. São dez inferências públicas, sem alterar configurações.
+- A nova bateria `e11-modelos-latencia-e-ferramentas` inclui 12 perguntas;
+  não executa tools. Protocolo, fontes oficiais, limitações e plano em
+  [docs/otimizacao_e11_lab_sistema.md](docs/otimizacao_e11_lab_sistema.md).
+

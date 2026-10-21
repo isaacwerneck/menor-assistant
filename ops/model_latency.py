@@ -74,15 +74,20 @@ def numeric_summary(response):
     return result
 
 
-def measure_one(post, endpoint, model, prompt):
+def measure_one(post, endpoint, model, prompt, *, num_thread=None):
     start = time.monotonic()
+    options = {"temperature": 0.1, "num_predict": 80}
+    if num_thread is not None:
+        if type(num_thread) is not int or num_thread not in (1, 2, 4, 6, 8):
+            raise ValueError("Número de threads fora do experimento aprovado.")
+        options["num_thread"] = num_thread
     with post(endpoint, json={
         "model": model,
         "messages": [
             {"role": "system", "content": "Responda em português de modo conciso."},
             {"role": "user", "content": prompt},
         ],
-        "stream": False, "options": {"temperature": 0.1, "num_predict": 80},
+        "stream": False, "options": options,
     }, timeout=(3, 70)) as response:
         response.raise_for_status()
         payload = response.json()
@@ -116,17 +121,58 @@ def benchmark(*, samples=2, post=None, url=None, model=None):
     }
 
 
+def thread_sweep(*, samples=2, post=None, url=None, model=None):
+    """Experimento voluntário: mesma pergunta e modelo, diferentes threads.
+
+    Cada rodada alterna a ordem para reduzir efeito de cache e aquecimento.
+    Não altera serviços, variáveis de ambiente nem modelo padrão.
+    """
+    if type(samples) is not int or not 1 <= samples <= 3:
+        raise ValueError("Samples deve estar entre 1 e 3.")
+    endpoint = local_endpoint(url or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"))
+    selected = model_identifier(model or os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
+    caller = post if post is not None else requests.post
+    observations = {thread: [] for thread in (1, 2, 4, 6, 8)}
+    for index in range(samples):
+        order = (1, 2, 4, 6, 8) if index % 2 == 0 else (8, 6, 4, 2, 1)
+        for threads in order:
+            outcome = measure_one(caller, endpoint, selected, PUBLIC_PROBES[0],
+                                  num_thread=threads)
+            observations[threads].append(outcome)
+    data = []
+    for threads, rows in observations.items():
+        speeds = [row["metrics"]["generation_tokens_per_second"] for row in rows
+                  if "generation_tokens_per_second" in row["metrics"]]
+        prefills = [row["metrics"]["prompt_processing_ms"] for row in rows
+                    if "prompt_processing_ms" in row["metrics"]]
+        data.append({"threads": threads, "samples": len(rows),
+                     "median_seconds": round(statistics.median(
+                         row["elapsed_seconds"] for row in rows), 3),
+                     "median_generation_tokens_per_second": round(statistics.median(speeds), 2)
+                     if speeds else None,
+                     "median_prompt_ms": round(statistics.median(prefills), 2)
+                     if prefills else None,
+                     "details": rows})
+    return {"model": selected, "status": "measured", "variants": data,
+            "privacy": "fixed_public_prompts_only",
+            "limits": "Não mede workloads longos, interferência térmica, GPU nem efeito de concorrência."}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Benchmark local e voluntário do Ollama")
     parser.add_argument("--live", action="store_true",
                         help="Autoriza uma a três inferências de prompts públicos no Ollama local.")
     parser.add_argument("--samples", type=int, default=2, help="Número de inferências (1 a 3).")
+    parser.add_argument("--model", default=None, help="Modelo já instalado para a medição.")
+    parser.add_argument("--thread-sweep", action="store_true",
+                        help="Com --live, testa 1/2/4/6/8 threads em sequência; gera mais carga.")
     args = parser.parse_args(argv)
     if not args.live:
         print("Somente com --live: nada foi executado no modelo.")
         return 0
     try:
-        result = benchmark(samples=args.samples)
+        result = (thread_sweep(samples=args.samples, model=args.model)
+                  if args.thread_sweep else benchmark(samples=args.samples, model=args.model))
     except (ValueError, requests.RequestException, OSError) as error:
         print("Benchmark indisponível: " + type(error).__name__, file=sys.stderr)
         return 1
