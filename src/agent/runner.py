@@ -558,12 +558,14 @@ def _advance(state, message, history, project=None, metrics=None):
             return _answer("Ação cancelada, sem executar a ferramenta.")
         if choice != "approve":
             title, description = _approval_details(state["tool"])
-            return _answer(
+            explanation = (
                 "Branch é uma cópia separada do código; o PR é o pedido de revisão "
                 "antes de juntar a mudança à versão principal. " + description
                 if state["tool"] in ("developer.propose", "developer.build")
                 else title + ": " + description
-                + " A ação continua pendente, sem executar nada. "
+            )
+            return _answer(
+                explanation + " A ação continua pendente, sem executar nada. "
                 "Você pode aprovar, pedir detalhes ou cancelar.",
                 **state,
             )
