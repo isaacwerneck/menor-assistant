@@ -1803,3 +1803,40 @@ test('E8: tela mobile reduz peso visual sem eliminar controles de documento e fo
     assert.match(html, /id="chooseDocumentBtn"/);
     assert.match(html, /aria-label="Anexar documento privado"/);
 });
+
+test('E10: arquivo JSON de tempos só contém métricas permitidas, sem conteúdo privado', async () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('mensagem privada');
+    const metrics = {
+        agent_wall_ms: 17000, chat_wall_ms: 15900,
+        chat_ollama: {
+            model_load_ms: 900, prompt_processing_ms: 1500,
+            token_generation_ms: 12000, eval_count: 120,
+            generation_tokens_per_second: 10,
+            private_text: 'SEGREDO NA TELEMETRIA',
+        },
+        raw_prompt: 'SEGREDO',
+        nonfinite_ms: Infinity,
+    };
+    const safe = ui.context.safeTiming(metrics);
+    assert.equal(safe.ollama.generation_tokens_per_second, 10);
+    assert.equal(safe.raw_prompt, undefined);
+    assert.equal(safe.ollama.private_text, undefined);
+    conv.messages.push({ role: 'bot', content: 'SEGREDO DA CONVERSA', timing: safe });
+    ui.context.exportChatTimings();
+    const payload = JSON.parse(await ui.getBlob().text());
+    assert.equal(payload.format, 'menor-agent-timing-v1');
+    assert.equal(payload.turn_count, 1);
+    assert.equal(payload.turns[0].chat_wall_ms, 15900);
+    assert.equal(payload.turns[0].ollama.token_generation_ms, 12000);
+    assert.doesNotMatch(JSON.stringify(payload), /SEGREDO|mensagem privada/);
+    assert.match(ui.downloads[0], /^menor-tempos-.*\.json$/);
+});
+
+test('E10: metricas invalidas não viram dados exportáveis', () => {
+    const ui = browser();
+    assert.equal(ui.context.safeTiming(null), null);
+    assert.equal(ui.context.safeTiming({agent_wall_ms: -10, chat_wall_ms: NaN}), null);
+    assert.equal(ui.context.safeTiming({ agent_wall_ms: 20,
+        chat_ollama: { eval_count: '99', model_load_ms: -4 } }).agent_wall_ms, 20);
+});

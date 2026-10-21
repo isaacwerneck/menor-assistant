@@ -2,7 +2,7 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import requests
 
@@ -45,20 +45,74 @@ class ConversationModelTests(unittest.TestCase):
         self.assertEqual(post.call_count, 1)
 
     @patch("src.agent.conversation.requests.post")
-    def test_thin_binary_response_gets_one_second_chance(self, post):
-        first = Mock()
-        first.__enter__ = Mock(return_value=first)
-        first.__exit__ = Mock(return_value=False)
-        first.json.return_value = {"message": {"content": "SIM"}}
-        second = Mock()
-        second.__enter__ = Mock(return_value=second)
-        second.__exit__ = Mock(return_value=False)
-        second.json.return_value = {"message": {"content": "Podemos começar pelo código da cobra."}}
-        post.side_effect = [first, second]
-        result = conversation.reply("vamos criar um jogo?", goal="Jogo da cobrinha")
-        self.assertIn("código", result)
-        self.assertEqual(post.call_count, 2)
-        self.assertIn("não com uma palavra", post.call_args.kwargs["json"]["messages"][-1]["content"])
+    def test_thin_binary_uses_one_inference_and_records_timings(self, post):
+        response = post.return_value.__enter__.return_value
+        response.json.return_value = {
+            "message": {"content": "SIM"}, "eval_count": 5,
+            "eval_duration": 1_000_000_000, "total_duration": 1_300_000_000,
+            "load_duration": 100_000_000, "prompt_eval_duration": 200_000_000,
+        }
+        diagnostics = {}
+        result = conversation.reply("vamos criar um jogo?", goal="jogo", diagnostics=diagnostics)
+        self.assertIsNone(result)
+        post.assert_called_once()
+        self.assertEqual(diagnostics["chat_attempts"], 1)
+        self.assertEqual(diagnostics.get("chat_quality_guard"), "thin_answer", diagnostics)
+        self.assertEqual(diagnostics["chat_ollama"]["generation_tokens_per_second"], 5.0)
+        self.assertEqual(diagnostics["chat_ollama"]["model_load_ms"], 100.0)
+        self.assertGreaterEqual(diagnostics["chat_wall_ms"], 0)
+
+    def test_raylib_choice_survives_fallback(self):
+        goal = "jogo de plataforma em JavaScript; decisão posterior: raylib javascript"
+        answer = conversation.safe_fallback(goal, "no raylib! cria os arquivos")
+        self.assertIn("você escolheu JavaScript com Raylib", answer)
+        self.assertIn("autorização", answer)
+        self.assertNotIn("Canvas) ou", answer)
+
+    def test_followup_uses_real_user_slang(self):
+        state = {"phase": "collaboration", "goal": "jogo plataforma"}
+        for message in ("no raylib! quero que vc crie os arquivos pra mim ai cara",
+                        "tenta dnv", "faz jogo pra mim e depois vamos subir no github",
+                        "raylib javascript"):
+            with self.subTest(message=message):
+                self.assertTrue(conversation.follows_project(state, message))
+
+    @patch("src.agent.conversation.requests.post")
+    def test_repeated_technology_question_gets_grounded_fallback(self, post):
+        response = post.return_value.__enter__.return_value
+        response.json.return_value = {"message": {
+            "content": "Para começar, quer rodar no navegador (Canvas) ou no PC com Raylib?"
+        }}
+        metrics = {}
+        answer = conversation.reply("no raylib!", goal="Jogo JavaScript com Raylib",
+                                    diagnostics=metrics)
+        self.assertIsNone(answer)
+        self.assertEqual(metrics["chat_quality_guard"], "repeated_resolved_choice")
+        post.assert_called_once()
+
+    @patch("src.agent.conversation.requests.post")
+    def test_fake_raylib_cdn_does_not_pass_as_verified_code(self, post):
+        response = post.return_value.__enter__.return_value
+        response.json.return_value = {"message": {
+            "content": "Use o script https://www.raylib.com/raylib-wasm.js"}}
+        self.assertIsNone(conversation.reply("me mostre raylib", goal="Jogo com Raylib"))
+        post.assert_called_once()
+
+    def test_ollama_diagnostics_have_only_numbers_and_status(self):
+        from ops.model_latency import numeric_summary
+        summary = numeric_summary({
+            "total_duration": 3_000_000_000, "load_duration": 400_000_000,
+            "prompt_eval_duration": 600_000_000, "eval_duration": 1_800_000_000,
+            "prompt_eval_count": 90, "eval_count": 18,
+            "message": {"content": "PASSWORD SHARED EXAMPLE"},
+        })
+        self.assertEqual(summary["model_load_ms"], 400.0)
+        self.assertEqual(summary["prompt_processing_ms"], 600.0)
+        self.assertEqual(summary["token_generation_ms"], 1800.0)
+        self.assertEqual(summary["other_model_ms"], 200.0)
+        self.assertEqual(summary["generation_tokens_per_second"], 10.0)
+        self.assertEqual(summary["prompt_tokens_per_second"], 150.0)
+        self.assertNotIn("PASSWORD", str(summary))
 
     @patch("src.agent.conversation.requests.post")
     def test_never_claim_unverified_file_creation(self, post):
