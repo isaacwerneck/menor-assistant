@@ -55,7 +55,7 @@ class E10WorkflowTests(unittest.TestCase):
                     self.assertEqual(result["phase"], "collaboration")
                 state = store.inspect(session)
                 self.assertIn("Raylib", state["technology"])
-                self.assertIn("raylib javascript", respond.call_args.kwargs["goal"].lower())
+                self.assertIn("javascript com raylib", respond.call_args.kwargs["goal"].lower())
                 decide.assert_not_called()
 
 

@@ -57,7 +57,7 @@ class ConversationModelTests(unittest.TestCase):
         self.assertIsNone(result)
         post.assert_called_once()
         self.assertEqual(diagnostics["chat_attempts"], 1)
-        self.assertEqual(diagnostics["chat_quality_guard"], "thin_answer")
+        self.assertEqual(diagnostics.get("chat_quality_guard"), "thin_answer", diagnostics)
         self.assertEqual(diagnostics["chat_ollama"]["generation_tokens_per_second"], 5.0)
         self.assertEqual(diagnostics["chat_ollama"]["model_load_ms"], 100.0)
         self.assertGreaterEqual(diagnostics["chat_wall_ms"], 0)
