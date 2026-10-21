@@ -6,6 +6,7 @@ somente texto do Ollama; não acessa workspace, shell ou repositório.
 import logging
 import os
 import re
+import unicodedata
 
 import requests
 
@@ -56,9 +57,11 @@ def is_collaboration_request(message):
 
 def follows_project(state, message):
     """Não transformar mensagens vagas em autorização para ferramentas."""
+    folded = unicodedata.normalize("NFKD", message.casefold())
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
     return (state.get("phase") == "collaboration"
-            and not CHANGE_TOPIC.search(message)
-            and bool(FOLLOWUP.search(message)))
+            and not CHANGE_TOPIC.search(folded)
+            and bool(FOLLOWUP.search(folded)))
 
 
 def _messages(message, history, goal):
