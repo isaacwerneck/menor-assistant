@@ -449,3 +449,33 @@ test("E13: archival is opt-in, persistent across UI fetches, and never deletes J
     assert.equal(JSON.parse(ui.requests.filter(x => x.url === "/lab/reports/archive")[1].opts.body)
         .mode, "restore_all");
 });
+
+test("E15: selection queues 4 dialogue suites and counts model-specific turns", async () => {
+    const e15 = [
+        ["e15-conversas-descoberta", 32],
+        ["e15-conversas-memoria", 40],
+        ["e15-intencao-sem-antigos-gatilhos", 32],
+        ["e15-seguranca-e-autorizacao", 32],
+    ].map(([id,cases]) => ({
+        id, title:id, description:"Conversa simulada", cases, scenarios:8,
+        run_count:0, status:"pending", last_report:null,
+    }));
+    const ui = browser({suites:[...SUITES, ...e15]});
+    await ui.ready();
+    await ui.click("selectE15");
+    assert.equal(ui.cards().length, 9);
+    assert.match(ui.elements.get("selectionCount").textContent, /4 bateria/);
+    assert.match(ui.elements.get("selectionCount").textContent, /136 caso/);
+    assert.match(ui.cards().find(item => item.id === e15[0].id)
+        .node.children[1].children[0].children[1].textContent, /8 conversas/);
+    const labels = ui.elements.get("batchModelChoices").children;
+    for (const item of labels) {
+        item.children[0].checked = true;
+        item.children[0].listeners.change();
+    }
+    assert.match(ui.elements.get("selectionCount").textContent, /272 caso/);
+    await ui.click("batchRun");
+    const args = JSON.parse(ui.requests.find(item => item.url === "/lab/batches/queue").opts.body);
+    assert.equal(args.suite_ids.length, 4);
+    assert.deepEqual(args.models, ["control:7b", "candidate:14b"]);
+});

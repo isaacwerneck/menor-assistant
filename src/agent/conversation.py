@@ -11,7 +11,7 @@ import unicodedata
 
 import requests
 
-from ops.model_latency import numeric_summary
+from ops.model_latency import numeric_summary, model_identifier
 
 
 LOG = logging.getLogger(__name__)
@@ -121,12 +121,14 @@ def _repeats_resolved_choice(value, goal):
     )) or "raylib-wasm.js" in question
 
 
-def reply(message, history=None, goal="", diagnostics=None):
+def reply(message, history=None, goal="", diagnostics=None, model=None):
     """Uma inferência por turno; guarda métricas de desempenho sem texto privado."""
     if not isinstance(message, str) or not message.strip():
         return None
     url = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/chat"
-    model = os.environ.get("MENOR_CHAT_MODEL") or os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
+    model = (model_identifier(model) if model is not None
+             else os.environ.get("MENOR_CHAT_MODEL")
+             or os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
     messages = _messages(message, history, goal)
     coding = bool(re.search(r"\b(?:codigo|código|javascript|python|html|css|programar|"
                             r"arquivo|implementa)\b", message, re.I))

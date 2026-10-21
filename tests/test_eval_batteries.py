@@ -22,9 +22,17 @@ class EvaluationBatteryTests(unittest.TestCase):
                 identifiers = [case["id"] for case in data["cases"]]
                 self.assertEqual(len(identifiers), len(set(identifiers)))
                 for case in data["cases"]:
-                    self.assertLessEqual(len(case["message"]), 1200)
-                    self.assertIn(case["mode"], {"direct", "planner"})
-                if data.get("methodology_version") == "menor-e8-acceptance-v1":
+                    if case["mode"] == "dialogue":
+                        self.assertGreaterEqual(len(case["turns"]), 2)
+                        self.assertLessEqual(len(case["turns"]), 8)
+                        self.assertTrue(all(turn.get("review_criteria") for turn in case["turns"]))
+                    else:
+                        self.assertLessEqual(len(case["message"]), 1200)
+                        self.assertIn(case["mode"], {"direct", "planner"})
+                if data.get("methodology_version") == "e15-dialogue-live-v1":
+                    self.assertEqual(len(data["cases"]), 8)
+                    self.assertGreaterEqual(lab_batches._suite_units(data), 32)
+                elif data.get("methodology_version") == "menor-e8-acceptance-v1":
                     self.assertEqual(len(data["cases"]), 16)
                 elif data["id"] not in {
                     "diagnostico-inicial", "triagem-16-v1", "diagnostico-geral-192-v1",
