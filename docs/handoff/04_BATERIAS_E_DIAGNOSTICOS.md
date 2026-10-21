@@ -157,6 +157,53 @@ cache controlado; verificar se timeout do raciocinador aciona uma segunda infer�
 que nega ferramentas registradas. Preservar recibos e objetivos; não concluir a meta
 Jarvis nem declarar melhora de inteligência apenas por JSON válido ou CI verde.
 
+## Comparação de 46 casos — relatórios enviados às 23:05 UTC de 20/10
+
+Foram consultados integralmente os relatórios `20261020T225756Z-def666c3`
+(assistente) e `20261020T225756Z-0758017d` (baseline) na branch privada
+`lab-reports`. Ambos têm os mesmos 46 casos, critérios e histórico, grupo
+`assistente-qualidade-v1`, metodologia `menor-eval-v4`, todos em modo `direct`.
+
+| Medida | Baseline | Assistente |
+|---|---:|---:|
+| Acertos / falhas automáticos | 25 / 10 | 27 / 8 |
+| Sem nota | 11 | 11 |
+| Taxa nos 35 casos avaliados | 71,43% | 77,14% |
+| Soma dos tempos dos casos | 263,767 s | 101,563 s |
+| Mediana matemática por caso | 2,036 s | 1,8415 s |
+| Tokens de saída totais | 1.524 | 319 |
+| Mediana de tokens/s reportados | 9,945 | 10,985 |
+| Falhas de inferência / limites de saída | 0 / 2 | 0 / 0 |
+
+A redução da soma foi 61,5%, mas a mediana caiu somente 9,6%; a maior diferença
+foi a quantidade de texto gerado. Houve três correções automáticas e uma regressão,
+saldo de dois acertos. No subconjunto de validação, ambos mantiveram 6/9 acertos
+avaliados; não declarar melhoria geral de inteligência por esse par.
+
+Os dois perfis erraram cinco problemas: soma de duração, probabilidade,
+dois juros simples e média. Também trataram uma instrução citada como válida.
+O assistente passou a errar a implicação lógica sobre gatos, mamíferos e natação.
+Nas respostas abertas, algumas explicações viraram frases vagas ou apenas um
+número; esses casos não atingiram o orçamento de saída. Aumentar o limite de
+tokens isoladamente não explica nem corrige essa insuficiência.
+
+No caso `g2_logs-manipulados`, a resposta do assistente descreve serviço
+funcionando, mas o critério exige a substring literal `serviço ok`: possível
+falso negativo para revisão humana, **sem mudar a nota histórica**.
+
+A calculadora recebeu uma correção independente de precisão e a orientação
+geral de uso no agente, documentadas na rodada v4. Os cinco erros de raciocínio
+não foram atribuídos a essa precisão nem considerados resolvidos. Próximo teste
+manual: pedir cálculos inéditos no chat e conferir expressão, unidades e recibo;
+retestar lógica e conteúdo citado sem ensinar as respostas do gabarito.
+
+Limites: uma única execução por perfil, assistente antes do baseline, sem SHA
+do checkout ou digest do modelo e sem controle de cache/carga. O comparador usa
+p50 por posição (baseline 2,015 s; assistente 1,840 s), diferente da mediana
+matemática acima. Estes ensaios não executam ferramentas/memória/agente completo,
+não medem o efeito do PR #102 e não resolvem a saudação que demorou 22 segundos.
+Não trocar a versão do servidor durante a bateria manual em andamento.
+
 ## Como executar a segunda rodada após o deploy
 
 1. Confirmar `main` no checkout Ubuntu e versão/estado dos serviços. Não iniciar trabalho destrutivo.

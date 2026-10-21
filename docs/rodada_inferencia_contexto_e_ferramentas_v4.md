@@ -76,6 +76,16 @@ de prompt não garante reduzir a mediana dos dois caminhos.
 - A inclusão de calculadora no catálogo não melhora automaticamente o
   benchmark `direct`, que **não executa tools**. Para usar a ferramenta,
   testar o modo agente real com autorização/recibo adequados.
+- Correção posterior: constantes são lidas do texto original da expressão,
+  preservando dígitos que a conversão intermediária para `float` perdia.
+  A verificação de magnitude não arredonda o valor antes de aplicar o limite;
+  a saída também não é arredondada novamente pelo contexto decimal do chamador.
+  As operações mantêm precisão de 28 dígitos e os limites existentes.
+- O raciocinador recebe orientação geral para preferir a calculadora e conferir
+  fórmula/unidades. Isso não cria um interpretador determinístico de problemas
+  escritos nem altera o perfil direto do laboratório. Três testes reproduzem
+  os erros de precisão/limite antes da correção; recibos dos testes ficam em
+  diretório temporário isolado dos dados do proprietário.
 
 ### 4. Aritmética: precisão sem maquiar o formato
 
