@@ -503,7 +503,7 @@ def _understand(state, message, history, project=None, metrics=None):
         if decision.get("tool"):
             try:
                 next_state, receipt = _selected_tool(decision["tool"], decision["arguments"])
-            except (ValueError, OSError, RuntimeError) as error:
+            except (ValueError, OSError, RuntimeError, LookupError) as error:
                 LOGGER.info("Ferramenta selecionada indisponível: %s", type(error).__name__)
                 answer = conversation.reply(message, history,
                                             goal=pending["goal"] if pending else "")
