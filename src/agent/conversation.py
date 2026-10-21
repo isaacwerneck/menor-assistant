@@ -33,7 +33,8 @@ SYSTEM = (
 FOLLOWUP = re.compile(
     r"\b(?:como assim|nao entendi|me ajuda|ajudar|programar|codar|"
     r"vamos|bora|sim|quero|desejo|continua|come[cç]a|o que (?:voce|vc) consegue|"
-    r"o que (?:voce|vc) pode|e o codigo|me mostra)\b",
+    r"o que (?:voce|vc) pode|e o codigo|me mostra|adiciona|adicione|"
+    r"pontuacao|controles?|colisao|teclas?|codigo|escreve|proximo|passo)\b",
     re.IGNORECASE,
 )
 NEW_GAME = re.compile(

@@ -20,7 +20,8 @@ class ConversationModelTests(unittest.TestCase):
             "crie um registro de projeto chamado Jogo novo"))
         current = {"phase": "collaboration", "goal": "quero criar um jogo da cobrinha"}
         for message in ("como assim? vc vai me ajudar a programar",
-                        "o que você consegue fazer?", "sim desejo criar esse jogo"):
+                        "o que você consegue fazer?", "sim desejo criar esse jogo",
+                        "adiciona pontuação e colisões"):
             self.assertTrue(conversation.follows_project(current, message))
         self.assertFalse(conversation.follows_project(current, "vamos mudar de assunto"))
 
@@ -173,7 +174,7 @@ class CollaborationRunnerTests(unittest.TestCase):
             "src.agent.runner.contextual_knowledge", return_value=""
         ):
             result = self.run_turn("e9a", "Como começo a investigar esse erro de login?")
-        self.assertIn("investigar", result["reply"])
+        self.assertIn("erro de login", result["reply"])
         respond.assert_called_once()
 
 
