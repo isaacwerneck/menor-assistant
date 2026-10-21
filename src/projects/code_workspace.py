@@ -8,6 +8,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import subprocess
 
 import requests
 
@@ -32,6 +34,23 @@ SYSTEM = (
     "Se o pedido exigir vários arquivos, implemente apenas a responsabilidade "
     "do arquivo solicitado. Nunca inclua segredos, tokens ou dados pessoais."
 )
+
+
+def check_js_syntax(source, *, required=False):
+    """Node --check apenas interpreta sintaxe; não executa código do modelo."""
+    node = shutil.which("node")
+    if not node:
+        if required:
+            raise RuntimeError("Node.js é necessário para validar JS antes de salvar este aplicativo.")
+        return False
+    try:
+        result = subprocess.run([node, "--check"], input=source, text=True,
+                                capture_output=True, timeout=8, check=False)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RuntimeError("Validação de sintaxe JavaScript indisponível.") from error
+    if result.returncode != 0:
+        raise ValueError("JavaScript gerado não passou na validação de sintaxe.")
+    return True
 
 
 def _target(slug, filename, workspace=None):
@@ -80,6 +99,7 @@ def create(slug, filename, goal, dry_run=True, workspace=None):
         raise ValueError("O modelo não retornou código-fonte utilizável.")
     if filename.endswith(".py"):
         ast.parse(source, filename=filename)
+    js_checked = check_js_syntax(source) if filename.endswith(".js") else False
     # Arquivos .js/.html/.css não são executados automaticamente nem testados.
     with _write_lock:
         target = _target(slug, filename, workspace)
@@ -94,6 +114,7 @@ def create(slug, filename, goal, dry_run=True, workspace=None):
         "bytes": len(source.encode("utf-8")),
         "sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
         "tested": False,
+        "syntax_checked": bool(js_checked or filename.endswith(".py")),
         "executed": False,
         "review_required": True,
     }

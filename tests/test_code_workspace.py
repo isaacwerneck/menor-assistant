@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from src.agent import runner
 from src.memory.store import BrainStore
@@ -77,6 +77,19 @@ class CodeWorkspaceTests(unittest.TestCase):
                 create(self.slug, "snake.py", "Implemente um Snake em Python para teste",
                        dry_run=False, workspace=self.workspace)
         self.assertFalse((self.files / "snake.py").exists())
+
+    def test_javascript_syntax_validation_blocks_bad_file_before_write(self):
+        source = "const broken ="
+        response = {"message": {"content": json.dumps({"source": source})}}
+        with (patch("src.projects.code_workspace.requests.post") as post,
+              patch("src.projects.code_workspace.shutil.which", return_value="/usr/bin/node"),
+              patch("src.projects.code_workspace.subprocess.run",
+                    return_value=MagicMock(returncode=1))):
+            post.return_value.__enter__.return_value.json.return_value = response
+            with self.assertRaisesRegex(ValueError, "sintaxe"):
+                create(self.slug, "game.js", "Faça código JS válido em Canvas",
+                       dry_run=False, workspace=self.workspace)
+        self.assertFalse((self.files / "game.js").exists())
 
     def test_symlinked_code_directory_cannot_escape_workspace(self):
         with tempfile.TemporaryDirectory() as external:

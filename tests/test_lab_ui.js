@@ -36,6 +36,7 @@ function browser(overrides = {}) {
         suites: (overrides.suites || SUITES).map(item => ({...item})),
         reports: overrides.reports || [REPORT],
         syncedStatuses: overrides.syncedStatuses || {},
+        archivedIds: overrides.archivedIds || [],
         status: overrides.status || {status:"idle"},
         compare: overrides.compare || {},
         denied: overrides.denied || false,
@@ -65,6 +66,14 @@ function browser(overrides = {}) {
                 return {ok:true, json:async () => ({items:app.suites})};
             if (url === "/lab/reports")
                 return {ok:true, json:async () => ({items:app.reports})};
+            if (url === "/lab/reports/archive-state")
+                return {ok:true, json:async () => ({archived_ids:app.archivedIds})};
+            if (url === "/lab/reports/archive") {
+                const mode = JSON.parse(opts.body).mode;
+                app.archivedIds = mode === "archive_all" ? app.reports.map(x => x.run_id) : [];
+                return {ok:true, json:async () => ({archived:app.archivedIds.length,
+                    unchanged_report_files:app.reports.length})};
+            }
             if (url === "/lab/reports/sync") {
                 const counts = {not_sent:0, sent:0, conflict:0, invalid:0};
                 for (const state of Object.values(app.syncedStatuses))
@@ -418,4 +427,25 @@ test("E12: performance UI separates prefill, generation, loading and cache", asy
                         "carregamento: 2 ms", "90% do prompt"]) {
         assert.ok(shown.includes(item), item);
     }
+});
+
+test("E13: archival is opt-in, persistent across UI fetches, and never deletes JSON", async () => {
+    const ui = browser();
+    await ui.ready();
+    assert.equal(ui.elements.get("batchReports").children.length, 1);
+    await ui.click("archiveOld");
+    await ui.ready();
+    assert.equal(ui.elements.get("batchReports").children.length, 0);
+    assert.match(ui.elements.get("historySummary").textContent, /1 arquivados/);
+    assert.ok(ui.confirmations[0].includes("Nenhum arquivo será excluído"));
+    const operations = ui.requests.filter(x => x.url === "/lab/reports/archive");
+    assert.equal(JSON.parse(operations[0].opts.body).mode, "archive_all");
+    await ui.click("viewArchived");
+    assert.equal(ui.elements.get("batchReports").children.length, 1);
+    await ui.click("restoreArchive");
+    await ui.ready();
+    assert.equal(ui.elements.get("batchReports").children.length, 1);
+    assert.equal(ui.app.reports.length, 1);
+    assert.equal(JSON.parse(ui.requests.filter(x => x.url === "/lab/reports/archive")[1].opts.body)
+        .mode, "restore_all");
 });

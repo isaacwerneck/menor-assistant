@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
 
-from src.api import lab_batches, lab_publish, lab_report_sync
+from src.api import lab_batches, lab_publish, lab_report_sync, lab_archive
 from src.security import auth
 
 router = APIRouter()
@@ -78,6 +78,28 @@ def batch_status(request: Request):
 def batch_reports(request: Request):
     auth.require_owner(request)
     return {"items": lab_batches.reports()}
+
+
+@router.get("/lab/reports/archive-state")
+def archive_state(request: Request):
+    auth.require_owner(request)
+    try:
+        return lab_archive.state()
+    except (OSError, ValueError) as error:
+        raise HTTPException(503, "Índice de arquivo indisponível.") from error
+
+
+class ArchiveRequest(BaseModel):
+    mode: str
+
+
+@router.post("/lab/reports/archive")
+def archive_reports(body: ArchiveRequest, request: Request):
+    auth.require_owner(request)
+    try:
+        return lab_archive.change(body.mode)
+    except (OSError, ValueError) as error:
+        raise HTTPException(422, "Não foi possível atualizar o arquivo de relatórios.") from error
 
 
 @router.get("/lab/reports/sync")
