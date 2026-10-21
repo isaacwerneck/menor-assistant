@@ -40,6 +40,8 @@ class ConversationModelTests(unittest.TestCase):
         self.assertNotIn("format", payload)
         self.assertEqual(payload["messages"][0]["role"], "system")
         self.assertIn("Objetivo em andamento", payload["messages"][1]["content"])
+        self.assertEqual(payload["messages"][1]["role"], "user")
+        self.assertEqual(sum(turn["role"] == "system" for turn in payload["messages"]), 1)
         self.assertEqual(payload["messages"][-1]["content"], "como a gente começa?")
         self.assertEqual(payload["stream"], False)
         self.assertEqual(post.call_count, 1)

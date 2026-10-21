@@ -34,6 +34,11 @@ Os campos só aparecem quando disponíveis; ausência de um campo **não é
 zero**. Valores de um modelo não podem ser comparados diretamente aos de
 outro com prompt, hardware, quantização ou condições diferentes.
 
+Na revisão de integração, o tempo residual só é calculado quando total,
+carregamento, prefill e geração estão presentes. Um componente ausente não
+é substituído por zero. O objetivo conversacional também é enviado com papel
+de usuário, como dado: conteúdo do projeto não vira instrução de sistema.
+
 ## Diagnóstico seguro no Ubuntu (somente leitura)
 
 Sem instalar ou alterar configuração do servidor, execute quando o Menor

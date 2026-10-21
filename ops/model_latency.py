@@ -66,10 +66,9 @@ def numeric_summary(response):
     if result.get("prompt_eval_duration", 0) > 0 and "prompt_eval_count" in result:
         result["prompt_tokens_per_second"] = round(
             result["prompt_eval_count"] * 1e9 / result["prompt_eval_duration"], 2)
-    if "total_duration" in result:
-        known = sum(result.get(k, 0) for k in (
-            "load_duration", "prompt_eval_duration", "eval_duration"
-        ))
+    components = ("load_duration", "prompt_eval_duration", "eval_duration")
+    if "total_duration" in result and all(key in result for key in components):
+        known = sum(result[key] for key in components)
         if known <= result["total_duration"]:
             result["other_model_ms"] = round((result["total_duration"] - known) / 1e6, 2)
     return result

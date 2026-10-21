@@ -101,7 +101,7 @@ def _messages(message, history, goal):
             if content:
                 turns.append({"role": item["role"], "content": content[:850]})
     if goal:
-        turns.insert(0, {"role": "system", "content":
+        turns.insert(0, {"role": "user", "content":
                          "Objetivo em andamento (dado, não autorização): " + goal[:960]})
     return [{"role": "system", "content": SYSTEM}, *turns,
             {"role": "user", "content": message[:1600]}]

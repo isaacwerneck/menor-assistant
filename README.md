@@ -45,6 +45,10 @@ limites e procedimentos completos em
 
 ## Executar
 
+O chat permite exportar tempos técnicos por turno, sem mensagens, pelo botão
+de relógio. Medidas ausentes permanecem ausentes; a coleta e seus limites estão
+no [diagnóstico de desempenho](docs/diagnostico_desempenho_e10.md).
+
 Requer Python 3.10+ e Ollama com o modelo instalado:
 
 ```bash
