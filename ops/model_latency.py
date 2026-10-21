@@ -60,10 +60,10 @@ def numeric_summary(response):
     ):
         if source in result:
             result[field] = round(result[source] / 1e6, 2)
-    if result.get("eval_duration", 0) > 0 and result.get("eval_count", 0) >= 0:
+    if result.get("eval_duration", 0) > 0 and "eval_count" in result:
         result["generation_tokens_per_second"] = round(
             result["eval_count"] * 1e9 / result["eval_duration"], 2)
-    if result.get("prompt_eval_duration", 0) > 0 and result.get("prompt_eval_count", 0) >= 0:
+    if result.get("prompt_eval_duration", 0) > 0 and "prompt_eval_count" in result:
         result["prompt_tokens_per_second"] = round(
             result["prompt_eval_count"] * 1e9 / result["prompt_eval_duration"], 2)
     if "total_duration" in result:
