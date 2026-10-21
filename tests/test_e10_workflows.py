@@ -33,8 +33,10 @@ class E10WorkflowTests(unittest.TestCase):
                     self.assertGreater(len(turn["expected"]), 20)
                     self.assertTrue(turn["requires_human_review"])
 
-    def test_raylib_choice_survives_many_followups(self):
-        with tempfile.TemporaryDirectory() as root, patch.dict(os.environ, {"MENOR_DATA_DIR": root}):
+    def test_project_choice_survives_many_semantic_followups(self):
+        with tempfile.TemporaryDirectory() as root, patch.dict(os.environ, {
+            "MENOR_DATA_DIR": root, "MENOR_INTELLIGENCE_ENABLED": "1",
+        }):
             store = TaskStore()
             session = "e10ScenarioSession"
             messages = [
@@ -45,18 +47,28 @@ class E10WorkflowTests(unittest.TestCase):
                 "tenta dnv",
                 "agora vamos revisar antes de criar os arquivos",
             ]
-            with (
-                patch.object(runner.conversation, "reply", return_value="Plano do jogo válido.") as respond,
-                patch.object(runner.intelligence, "decide") as decide,
-            ):
+            initial = {
+                "move": "clarify", "relation": "start",
+                "goal": "Projeto de jogo de plataforma em JavaScript Raylib",
+                "reply": "Vamos organizar a ideia.",
+                "question": "Como será o movimento?",
+                "steps": [], "acceptance": [],
+            }
+            followup = {
+                "move": "answer", "relation": "refine",
+                "reply": "Seguimos no mesmo projeto com as decisões já definidas.",
+                "steps": [], "acceptance": [],
+            }
+            with patch.object(runner.intelligence, "decide",
+                              side_effect=[initial, *[followup for _ in messages[1:]]]) as decide:
                 for n, message in enumerate(messages):
                     result = runner.run(session, "e10ScenarioTurn" + str(n), message, [],
                                         tasks=store)
-                    self.assertEqual(result["phase"], "collaboration")
+                    self.assertEqual(result["phase"], "goal")
                 state = store.inspect(session)
-                self.assertIn("Raylib", state["technology"])
-                self.assertIn("javascript com raylib", respond.call_args.kwargs["goal"].lower())
-                decide.assert_not_called()
+                self.assertIn("Raylib", state["goal"])
+                self.assertIn("Raylib", decide.call_args.kwargs["pending"]["goal"])
+                self.assertEqual(decide.call_count, len(messages))
 
 
 if __name__ == "__main__":

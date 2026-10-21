@@ -104,8 +104,8 @@ class ApprovalTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "não cria jogos"):
             propose(issue, dry_run=False)
         with patch.object(runner, "perform") as executor:
-            _, answer = runner._selected_tool("developer.propose", {"issue": issue})
-            self.assertIn("não consigo criar", answer["reply"])
+            with self.assertRaisesRegex(ValueError, "escopo"):
+                runner._selected_tool("developer.propose", {"issue": issue})
             executor.assert_not_called()
 
 

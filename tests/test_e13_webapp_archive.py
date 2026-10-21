@@ -95,8 +95,13 @@ class WebAppContractTests(unittest.TestCase):
     def test_explicit_game_request_routes_to_approval_if_project_selected(self):
         state = {"phase": "idle"}
         approval = ({"phase": "approval"}, {"phase": "approval", "handled": True})
-        with patch("src.agent.runner._selected_tool", return_value=approval) as selected:
-            after, response = runner._advance(state, "Cria um jogo da cobrinha", [],
+        proposed = {"move": "act", "reply": "Preparar o projeto",
+                    "tool": "projects.code.webapp",
+                    "arguments": {"slug": self.slug, "goal": "Crie um jogo simples em Canvas"},
+                    "goal": "Criar um jogo"}
+        with (patch("src.agent.runner.intelligence.decide", return_value=proposed),
+              patch("src.agent.runner._selected_tool", return_value=approval) as selected):
+            after, response = runner._advance(state, "Inicie a implementação do combinado", [],
                                               project=self.slug)
         self.assertEqual(after["phase"], "approval")
         self.assertTrue(response["handled"])
