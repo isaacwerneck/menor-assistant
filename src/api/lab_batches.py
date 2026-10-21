@@ -333,6 +333,7 @@ def _run(suite, run_id, queue=None):
         # Publicar somente métricas, sem perguntas, respostas ou histórico privados.
         summary = {key: report[key] for key in ("run_id", "suite_id", "started_at", "finished_at",
                    "total", "automatic_passes", "automatic_failures", "ungraded")}
+        summary["evaluation_model"] = report["evaluation_model"]
         (DATA / (run_id + ".summary.json")).write_text(json.dumps(summary, indent=2), encoding="utf-8")
         publish_status = "disabled"
         if os.environ.get("MENOR_LAB_REPORTS_PUBLISH") == "1":
@@ -404,12 +405,13 @@ def _run_queue(entries):
             with _LOCK:
                 STATE.update(
                     status="running", suite_status="running", suite_id=suite["id"],
-                    run_id=run_id, done=0, total=len(suite["cases"]),
+                    queue_model=suite.get("evaluation_model"), run_id=run_id, done=0, total=len(suite["cases"]),
                     queue_index=position, queue_total=len(entries),
                     overall_done=completed_cases, overall_total=total_cases,
                 )
             succeeded = _run(suite, run_id, queue=context)
             finished.append({"suite_id": suite["id"], "run_id": run_id,
+                             "model": suite.get("evaluation_model"),
                              "status": "completed" if succeeded else "failed"})
             if not succeeded:
                 failures.append(suite["id"])
@@ -433,7 +435,7 @@ def _run_queue(entries):
             _RUNNING = False
 
 
-def start_queue(suite_ids, *, model=None):
+def start_queue(suite_ids, *, model=None, models=None):
     """Inicia lotes independentes, um após o outro; valida tudo ANTES de iniciar."""
     global _RUNNING
     if not isinstance(suite_ids, list) or not 1 <= len(suite_ids) <= 24:
@@ -443,7 +445,18 @@ def start_queue(suite_ids, *, model=None):
         raise ValueError("ID de bateria inválido.")
     if len(set(suite_ids)) != len(suite_ids):
         raise ValueError("A mesma bateria foi selecionada mais de uma vez.")
-    suites_to_run = [_with_model(load_suite(suite_id), model) for suite_id in suite_ids]
+    if models is not None:
+        if model is not None or not isinstance(models, list) or not 1 <= len(models) <= 2:
+            raise ValueError("Escolha um ou dois modelos, sem combinar com o campo legado.")
+        if len(set(models)) != len(models):
+            raise ValueError("Modelos repetidos na mesma avaliação.")
+        selected_models = [remote_lab.model_identifier(name) for name in models]
+    else:
+        selected_models = [model]
+    original_suites = [load_suite(suite_id) for suite_id in suite_ids]
+    # Uma bateria por modelo, sem inferências paralelas competindo pela CPU.
+    suites_to_run = [_with_model(suite, candidate)
+                     for suite in original_suites for candidate in selected_models]
     total_cases = sum(len(suite["cases"]) for suite in suites_to_run)
     if total_cases > 800:
         raise ValueError("Limite de 800 casos por fila; divida em duas rodadas.")
@@ -460,7 +473,8 @@ def start_queue(suite_ids, *, model=None):
             status="running", suite_id=entries[0][0]["id"], run_id=entries[0][1],
             done=0, total=len(entries[0][0]["cases"]),
             queue_index=1, queue_total=len(entries),
-            queue_suite_ids=list(suite_ids), queue_finished=[], queue_failures=[],
+            queue_suite_ids=list(suite_ids), queue_models=[name for name in selected_models if name],
+            queue_finished=[], queue_failures=[],
             overall_done=0, overall_total=total_cases,
         )
     try:
@@ -471,6 +485,7 @@ def start_queue(suite_ids, *, model=None):
             STATE.update(status="failed", error="ThreadStartFailed")
         raise
     return {"suite_ids": list(suite_ids), "total": total_cases,
+            "models": [name for name in selected_models if name],
             "run_ids": [run_id for _, run_id in entries]}
 
 
@@ -482,7 +497,7 @@ def state():
 def reports():
     DATA.mkdir(parents=True, exist_ok=True)
     result = []
-    for path in sorted(DATA.glob("*.summary.json"), reverse=True)[: 100]:
+    for path in sorted(DATA.glob("*.summary.json"), reverse=True)[: 2000]:
         try:
             result.append(json.loads(path.read_text(encoding="utf-8")))
         except (OSError, ValueError):

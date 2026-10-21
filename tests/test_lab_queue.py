@@ -183,7 +183,7 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(listed["status"], "completed")
         self.assertEqual(listed["last_report"]["run_id"],
                          "20261020T000103Z-00000067")
-        self.assertEqual(len(lab_batches.reports()), 100)
+        self.assertEqual(len(lab_batches.reports()), 104)
 
     def test_malformed_or_orphan_summary_does_not_mark_suite_completed(self):
         self.suite("primeira-bateria", ["a1"])

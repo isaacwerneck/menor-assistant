@@ -92,3 +92,13 @@ button:disabled{cursor:not-allowed;opacity:.52}
 }
 @media(max-width:370px){.intro>button{width:100%}}
 @media(prefers-reduced-motion:reduce){button{transition:none;transform:none!important}}
+
+/* Recursos passivos e divulgação progressiva: sem poluir a navegação mobile. */
+.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.metric-card h3{font-size:.85rem;color:var(--secondary);margin-bottom:12px}
+.metric-card strong{display:block;font-size:clamp(1.2rem,2.7vw,2rem);font-variant-numeric:tabular-nums}
+.metric-card progress{width:100%;height:12px;accent-color:var(--accent);margin:12px 0 8px}
+.advanced-group{margin-top:35px;border-top:1px solid var(--border);padding-top:14px}
+.advanced-group>summary{cursor:pointer;min-height:44px;font-weight:650}
+.advanced-group>.section{margin-top:20px}
+@media(max-width:760px){.metric-grid{grid-template-columns:1fr}.metric-card{padding:15px}}

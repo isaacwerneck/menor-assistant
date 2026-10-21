@@ -35,6 +35,7 @@ function browser(overrides = {}) {
     const app = {
         suites: (overrides.suites || SUITES).map(item => ({...item})),
         reports: overrides.reports || [REPORT],
+        syncedStatuses: overrides.syncedStatuses || {},
         status: overrides.status || {status:"idle"},
         compare: overrides.compare || {},
         denied: overrides.denied || false,
@@ -64,6 +65,17 @@ function browser(overrides = {}) {
                 return {ok:true, json:async () => ({items:app.suites})};
             if (url === "/lab/reports")
                 return {ok:true, json:async () => ({items:app.reports})};
+            if (url === "/lab/reports/sync") {
+                const counts = {not_sent:0, sent:0, conflict:0, invalid:0};
+                for (const state of Object.values(app.syncedStatuses))
+                    if (Object.hasOwn(counts, state)) counts[state] += 1;
+                return {ok:true, json:async () => ({available:true,
+                    items:app.syncedStatuses, counts})};
+            }
+            if (url === "/lab/reports/publish-batch")
+                return {ok:true, json:async () => ({status:"running", total:1})};
+            if (url === "/lab/reports/publish-batch/status")
+                return {ok:true, json:async () => ({status:"completed", total:1, done:1, errors:[]})};
             if (url === "/lab/batches/status")
                 return {ok:true, json:async () => app.status};
             if (url === "/lab/batches/queue") {
@@ -341,4 +353,52 @@ test("E8: seletor não inicia teste sozinho, sem deployment e durante fila ativa
     await ui.click("batchRefresh");
     await ui.click("selectE8");
     assert.equal(ui.requests.filter(x => x.url === "/lab/batches/queue").length, 0);
+});
+
+test("Lab: user chooses two installed models at queue execution, independently", async () => {
+    const ui = browser();
+    await ui.ready();
+    const labels = ui.elements.get("batchModelChoices").children;
+    assert.equal(labels.length, 2);
+    const a = labels[0].children[0], b = labels[1].children[0];
+    a.checked = true; a.listeners.change();
+    b.checked = true; b.listeners.change();
+    await ui.click("selectRecommended");
+    assert.match(ui.elements.get("selectionCount").textContent, /120 caso/);
+    await ui.click("batchRun");
+    const payload = JSON.parse(ui.requests.find(x => x.url === "/lab/batches/queue").opts.body);
+    assert.deepEqual(payload.models, ["control:7b", "candidate:14b"]);
+    assert.equal(payload.suite_ids.length, 4);
+    assert.match(ui.confirmations[0], /control:7b.*candidate:14b/);
+});
+
+test("Lab: history is paged and only verified missing reports can be sent in bulk", async () => {
+    const reports = Array.from({length:18}, (_, i) => ({
+        ...REPORT, run_id:"20261021T" + String(i).padStart(6,"0") + "Z-" +
+            i.toString(16).padStart(8,"0"),
+    }));
+    const syncedStatuses = Object.fromEntries(reports.map((r,i) =>
+        [r.run_id, i === 0 ? "not_sent" : "sent"]));
+    const ui = browser({reports, syncedStatuses});
+    await ui.ready();
+    assert.equal(ui.elements.get("batchReports").children[0].children.length, 16);
+    assert.equal(ui.elements.get("moreReports").hidden, false);
+    await ui.click("syncReports");
+    assert.match(ui.elements.get("reportSyncStatus").textContent, /1 não enviados/);
+    await ui.click("selectNotSent");
+    assert.match(ui.elements.get("reportSelection").textContent, /1 relatório/);
+    await ui.click("publishSelected");
+    const requests = ui.requests.filter(x => x.url === "/lab/reports/publish-batch");
+    assert.equal(requests.length, 1);
+    assert.deepEqual(JSON.parse(requests[0].opts.body).run_ids, [reports[0].run_id]);
+    assert.match(ui.confirmations[0], /COMPLETOS/);
+});
+
+test("Lab: without GitHub verification nothing enters unsent bulk queue", async () => {
+    const ui = browser();
+    await ui.ready();
+    await ui.click("selectNotSent");
+    assert.match(ui.elements.get("reportSyncStatus").textContent, /Primeiro verifique/);
+    assert.equal(ui.elements.get("publishSelected").disabled, true);
+    assert.equal(ui.requests.filter(x => x.url === "/lab/reports/publish-batch").length, 0);
 });

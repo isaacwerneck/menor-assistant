@@ -154,5 +154,56 @@ async function refresh() {
       (errors ? errors + " fonte(s) indisponível(is)." : "Todas as fontes responderam.");
   } finally { ui.refresh.disabled = false; }
 }
-ui.refresh.addEventListener("click", refresh);
+function metric(id, bar, value) {
+  const valid = typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
+  document.getElementById(id).textContent = valid ? value.toFixed(1) + "%" : "Indisponível";
+  const progress = document.getElementById(bar);
+  progress.value = valid ? value : 0;
+  progress.setAttribute("aria-label", valid ? value.toFixed(1) + "%" : "Métrica indisponível");
+}
+let livePending = false;
+async function refreshLive() {
+  if (livePending || (typeof document.hidden === "boolean" && document.hidden)) return;
+  livePending = true;
+  const summary = document.getElementById("live-updated");
+  try {
+    const data = await get("/workspace/system/live");
+    metric("live-cpu", "cpu-bar", data.cpu_percent);
+    metric("live-ram", "ram-bar", data.ram_percent);
+    metric("live-gpu", "gpu-bar", data.gpu_percent);
+    const ram = document.getElementById("live-ram-detail");
+    ram.textContent = typeof data.ram_used_mib === "number" &&
+      typeof data.ram_total_mib === "number"
+      ? (data.ram_used_mib / 1024).toFixed(1) + " / " +
+        (data.ram_total_mib / 1024).toFixed(1) + " GiB ocupados (exclui cache recuperável)"
+      : "Memória indisponível";
+    const target = document.getElementById("live-models");
+    target.replaceChildren();
+    if (Array.isArray(data.loaded_models) && data.loaded_models.length) {
+      for (const model of data.loaded_models.slice(0, 8)) {
+        if (typeof model.name !== "string") continue;
+        target.append(card(model.name, "Carregado no Ollama", [
+          typeof model.size_mib === "number" ? "Pesos e buffers: " +
+            (model.size_mib / 1024).toFixed(1) + " GiB" : "",
+          typeof model.gpu_loaded_mib === "number" ?
+            "Memória reportada em GPU: " + (model.gpu_loaded_mib / 1024).toFixed(1) +
+            " GiB (não é uso percentual)" : "Offload não verificado",
+        ]));
+      }
+    } else {
+      clear(target, data.ollama === "available" ? "Nenhum modelo carregado no momento." :
+        "Ollama não respondeu à consulta de modelos carregados.");
+    }
+    summary.textContent = "Última leitura: " + new Date().toLocaleTimeString("pt-BR") +
+      ". CPU inicial pode estar indisponível até a segunda amostra.";
+  } catch (error) {
+    summary.textContent = "Métricas indisponíveis: " +
+      (error instanceof Error ? error.message : "consulta não concluída");
+  } finally {
+    livePending = false;
+  }
+}
+ui.refresh.addEventListener("click", () => { refresh(); refreshLive(); });
 refresh();
+refreshLive();
+setInterval(refreshLive, 3000);
