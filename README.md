@@ -348,4 +348,3 @@ um modelo já instalado configurado por `MENOR_PLAN_REVIEW_MODEL`.
 Por padrão fica desligada até medirmos desempenho na CPU. Ela nunca concede
 permissões e pode devolver uma pergunta, uma reformulação única ou um plano
 marcado como preliminar. Veja [detalhes](docs/chat_a_revisao_de_planos.md).
-[… truncated at ~4201 of 4222 tokens — use ctx_read with lines= parameter to see specific sections]
