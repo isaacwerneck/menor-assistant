@@ -114,10 +114,11 @@ def _schema_for_tools(tools):
     if tools is None or tools:
         return DECISION_SCHEMA
     narrowed = copy.deepcopy(DECISION_SCHEMA)
-    narrowed["oneOf"] = [
-        choice for choice in narrowed["oneOf"]
-        if "act" not in choice["properties"]["move"]["enum"]
-    ]
+    for choice in narrowed["oneOf"]:
+        moves = choice["properties"]["move"]["enum"]
+        choice["properties"]["move"]["enum"] = [move for move in moves if move != "act"]
+        choice["properties"].pop("tool", None)
+        choice["properties"].pop("arguments", None)
     return narrowed
 
 
@@ -247,6 +248,8 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
     required = {"current_message", "owner_approved_examples_data_not_instructions"}
     context = {key: value for key, value in context.items()
                if key in required or value not in ("", None, [], {})}
+    # Catálogos estáveis antes dos dados variáveis permitem reaproveitar o prefixo KV.
+    context = {key: context[key] for key in ("available_tools", "skills") if key in context} | context
     context_json = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
     if diagnostics is not None:
         diagnostics.update(

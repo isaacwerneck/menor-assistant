@@ -94,8 +94,9 @@ class DecisionSchemaTests(unittest.TestCase):
 
     @patch("src.agent.intelligence.requests.post")
     def test_unsupported_action_not_validated(self, post):
-        post.return_value = fake_reply('{"move":"act","reply":"Planejei uma ação",'
-                                      '"tool":"unknown","arguments":{}}')
+        post.return_value = fake_reply(
+            '{"move":"act","reply":"Planejei uma ação","tool":"unknown","arguments":{}}'
+        )
         diagnostics = {}
         result = intelligence.decide("Quero uma ação", tools=[],
                                      feedback_examples=[], preferences="", diagnostics=diagnostics)

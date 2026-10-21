@@ -108,6 +108,12 @@ ou GPU durante a avaliação.
 
 ## Limitações
 
+Na revisão de integração do PR #108, as implementações já presentes na `main`
+foram preservadas: o schema sem ferramentas mantém os movimentos de resposta,
+a auditoria conserva sua triagem sanitizada e os testes respeitam as suítes E8 e
+os recibos legíveis. O incremento restante acrescenta testes e este registro;
+não representa uma segunda melhoria de desempenho sobre o mesmo código.
+
 Estas alterações são principalmente de **orçamento, roteiro e instrumento
 de avaliação**, não fine-tuning nem otimização de kernels. A CPU ainda
 poderá levar dezenas de segundos para gerar planos estruturados.

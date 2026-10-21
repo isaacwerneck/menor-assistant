@@ -46,7 +46,17 @@ def inspect(directory, limit=100):
     scanned, total, passes, failures, ungraded, technical = 0, 0, 0, 0, 0, 0
     timings, prefill, generation, token_rates = [], [], [], []
     statuses, by_suite, prompts = Counter(), {}, set()
+    prompt_executions = 0
     ceiling_hits = 0
+    technical_graded_failures = 0
+    completed_graded_failures = 0
+    validation_issues = Counter()
+    known_validation_issues = {
+        "move", "goal", "text_type", "reply_or_question", "steps_or_acceptance",
+        "steps_required", "question_required", "relation", "resume_goal_id",
+        "unknown_goal", "query", "tool_arguments_type", "tool", "tool_schema",
+        "arguments", "tool_required",
+    }
     for path in sorted(directory.glob("*.json"), reverse=True):
         if scanned >= limit:
             break
@@ -72,6 +82,9 @@ def inspect(directory, limit=100):
         item = by_suite.setdefault(suite, {
             "reports": 0, "cases_executed": 0, "graded_passes": 0,
             "graded_failures": 0, "ungraded": 0, "technical_failures": 0,
+            "technical_graded_failures": 0, "completed_graded_failures": 0,
+            "output_limits": 0, "statuses": Counter(), "validation_issues": Counter(),
+            "_timings": [],
         })
         item["reports"] += 1
         for case in cases:
@@ -96,12 +109,28 @@ def inspect(directory, limit=100):
                 status = "unknown"
             status = status if status in _KNOWN_STATES else "unknown"
             statuses[status] += 1
+            item["statuses"][status] += 1
+            if outcome is False:
+                if status not in _COMPLETE:
+                    technical_graded_failures += 1
+                    item["technical_graded_failures"] += 1
+                else:
+                    completed_graded_failures += 1
+                    item["completed_graded_failures"] += 1
+            if status == "no_valid_decision":
+                diagnostic = result.get("diagnostics")
+                if isinstance(diagnostic, dict):
+                    issue = diagnostic.get("validation_issue")
+                    if isinstance(issue, str) and issue in known_validation_issues:
+                        validation_issues[issue] += 1
+                        item["validation_issues"][issue] += 1
             if status not in _COMPLETE:
                 technical += 1
                 item["technical_failures"] += 1
             elapsed = case.get("elapsed_seconds")
             if type(elapsed) in (int, float) and math.isfinite(elapsed) and 0 <= elapsed <= 3600:
                 timings.append(elapsed)
+                item["_timings"].append(elapsed)
             perf = result.get("performance")
             perf = perf if isinstance(perf, dict) else {}
             p = _seconds(perf, "prompt_eval_duration")
@@ -115,16 +144,33 @@ def inspect(directory, limit=100):
                 token_rates.append(speed)
             if result.get("output_limited") is True:
                 ceiling_hits += 1
+                item["output_limits"] += 1
             question = case.get("question")
             history = case.get("history")
             if isinstance(question, str) and len(question) <= 10000:
                 key = json.dumps([question, history], ensure_ascii=False, sort_keys=True)
                 prompts.add(hashlib.sha256(key.encode()).digest())
+                prompt_executions += 1
+    for suite in by_suite.values():
+        suite["latency_p50_seconds"] = _median(suite.pop("_timings"))
+        suite["statuses"] = dict(sorted(suite["statuses"].items()))
+        suite["validation_issues"] = dict(sorted(suite["validation_issues"].items()))
+    attention = sorted(by_suite, key=lambda suite_id: (
+        -by_suite[suite_id]["technical_failures"],
+        -by_suite[suite_id]["completed_graded_failures"],
+        -by_suite[suite_id]["output_limits"],
+        suite_id,
+    ))
     return {
         "reports": scanned, "cases_executed": total,
         "unique_prompt_history_pairs": len(prompts),
+        "repeated_prompt_executions": prompt_executions - len(prompts),
         "graded_passes": passes, "graded_failures": failures, "ungraded": ungraded,
+        "technical_graded_failures": technical_graded_failures,
+        "completed_graded_failures": completed_graded_failures,
         "technical_failures": technical, "statuses": dict(sorted(statuses.items())),
+        "validation_issues": dict(sorted(validation_issues.items())),
+        "priority_suites": attention,
         "latency_p50_seconds": _median(timings), "latency_p95_seconds": _p95(timings),
         "prefill_p50_seconds": _median(prefill), "generation_p50_seconds": _median(generation),
         "tokens_per_second_p50": _median(token_rates),
@@ -132,6 +178,9 @@ def inspect(directory, limit=100):
         "suites": dict(sorted(by_suite.items())),
         "caveats": [
             "Casos agregados e repetidos contam execuções, não perguntas independentes.",
+            "Repetição é estimada pela igualdade exata de pergunta e histórico; perfis diferentes podem se repetir.",
+            "Uma falha automática técnica não prova resposta semanticamente incorreta.",
+            "Prioridade indica triagem operacional, não ranking de inteligência nem causalidade.",
             "Sem nota automática exige revisão humana; contrato válido não prova plano correto.",
             "Métricas de prefill e geração são as fornecidas pelo Ollama, quando presentes.",
         ],

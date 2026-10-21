@@ -5,6 +5,7 @@ Gera resumo local JSON, sem rede e sem alterar arquivos.
 """
 import argparse
 import json
+import math
 import re
 import unicodedata
 import statistics
@@ -100,7 +101,8 @@ def summarize(report, suite):
         status = result.get("status", "unknown")
         mode = case.get("mode", spec["mode"])
         elapsed = case.get("elapsed_seconds")
-        elapsed = elapsed if type(elapsed) in (int, float) and elapsed >= 0 else None
+        elapsed = (elapsed if type(elapsed) in (int, float)
+                   and math.isfinite(elapsed) and elapsed >= 0 else None)
         auto = case.get("automatic_pass")
         if auto is True:
             grade = "passed"

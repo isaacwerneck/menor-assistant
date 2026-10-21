@@ -8,10 +8,13 @@ import base64
 import json
 import os
 import secrets
+import re
+import unicodedata
 
 import requests
 
 from src.agent.diagnostics import analyze
+from src.agent.ponytail import coding_guidance
 from src.tools.audit import record
 
 OWNER_REPO = "isaacwerneck/menor-assistant"
@@ -41,6 +44,18 @@ def status():
         "allowed_files": list(ALLOWED),
         "last_diagnostics": analyze(),
     }
+
+
+def is_new_project_request(issue):
+    """Impede usar uma proposta de correção como falsa criação de aplicativo."""
+    if not isinstance(issue, str):
+        return False
+    folded = unicodedata.normalize("NFKD", issue.casefold())
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    return bool(re.search(
+        r"\b(criar|cria|crie|fazer|faz|construir|montar|implementar|desenvolver)"
+        r"\b.{0,120}\b(jogo|game|site|aplicativo|app)\b", folded,
+    ))
 
 
 def choose_target(issue):
@@ -90,6 +105,7 @@ def _propose_with_model(issue, path, original):
                 "preserve API e comportamento existente. Retorne APENAS JSON: "
                 '{"source":"conteúdo integral corrigido","reason":"razão sucinta","tests":"testes recomendados"}. '
                 "Não gere shell, novas dependências, rede, credenciais nem imports perigosos."
+                "\n" + coding_guidance()
             )},
             {"role": "user", "content": (
                 f"Problema: {issue}\nArquivo permitido: {path}\n"
@@ -115,6 +131,8 @@ def _propose_with_model(issue, path, original):
 def propose(issue, dry_run=True):
     if not isinstance(issue, str) or not 12 <= len(issue.strip()) <= MAX_ISSUE:
         raise ValueError("Descreva o problema em 12 a 600 caracteres.")
+    if is_new_project_request(issue):
+        raise ValueError("Esta ferramenta corrige o Menor; não cria jogos ou aplicativos novos.")
     path = choose_target(issue)
     if dry_run:
         return {"status": "planned", "target": path,

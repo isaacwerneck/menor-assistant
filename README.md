@@ -279,6 +279,11 @@ a execução é recusada. Pesquisas externas recebem filtragem preventiva de
 dados privados; não envie senhas ou tokens em consultas.
 ## Avaliação integrada de contexto e latência
 
+O raciocinador organiza catálogos de ferramentas/skills antes dos campos variáveis
+do contexto para favorecer reaproveitamento de prefixo. O ganho no Ubuntu ainda
+exige [medição controlada](docs/chat_a_benchmark_real.md); isso não evita partida
+fria nem torna perguntas simples instantâneas.
+
 O [relatório de 19/10/2026](docs/chat_a_benchmark_real.md#avaliação-integrada-remota--19102026)
 registra testes reais no navegador, problemas encontrados e limites de medição.
 O planejador preserva o pedido completo, recebe preferências, usa resposta JSON

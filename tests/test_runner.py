@@ -51,7 +51,8 @@ class HarnessTests(unittest.TestCase):
         ]
         result = self.run_turn("Liste meus projetos")
         self.assertEqual(result["events"], [{"tool": "projects.list", "status": "executed"}])
-        self.assertIn("projects.list", result["reply"])
+        self.assertIn("Concluí as operações de leitura", result["reply"])
+        self.assertNotIn("projects.list", result["reply"])
         self.assertEqual(model.call_args.args[2][0]["status"], "executed")
 
     @patch("src.agent.runner.perform")

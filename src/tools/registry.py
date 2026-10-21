@@ -20,6 +20,7 @@ from src.tools.calculator import calculate
 from src.tools.file_analysis.agent_bridge import invoke as invoke_file_bridge
 from src.tools.file_analysis.contracts import FILE_ID
 from src.projects.manager import create_project
+from src.projects.code_workspace import create as create_code_file
 from src.projects.workspace import ProjectWorkspace
 
 
@@ -82,6 +83,11 @@ TOOLS = {
     "projects.add_task": Tool(
         "projects.add_task", "Registra uma tarefa no projeto informado.", "write", True, ("slug", "text"),
     ),
+    "projects.code.create": Tool(
+        "projects.code.create",
+        "Cria UM arquivo de código novo num projeto existente; sem executar ou testar; revisão exigida.",
+        "write", True, ("slug", "filename", "goal"),
+    ),
     "brain.remember": Tool(
         "brain.remember", "Salva preferência ou conhecimento fornecido pelo proprietário.",
         "write", True, ("kind", "text"),
@@ -131,6 +137,8 @@ def perform(name, arguments, dry_run=True):
         raise ValueError("Identificador de arquivo privado inválido.")
     if name == "developer.build":
         build(arguments["name"], arguments["goal"], dry_run=True)
+    if name == "projects.code.create":
+        create_code_file(arguments["slug"], arguments["filename"], arguments["goal"], dry_run=True)
     if name in ("web.read", "web.browse"):
         web.public_url(arguments["url"])
     if dry_run:
@@ -184,6 +192,9 @@ def perform(name, arguments, dry_run=True):
         output = ProjectWorkspace().append(
             arguments["slug"], "task", arguments["text"], origin="painel",
         )
+    elif name == "projects.code.create":
+        output = create_code_file(arguments["slug"], arguments["filename"],
+                                  arguments["goal"], dry_run=False)
     elif name == "brain.remember":
         store = BrainStore()
         if arguments["kind"] == "preference":

@@ -126,7 +126,9 @@ class ToolSelectionContractTests(unittest.TestCase):
         perform.return_value = {"status": "planned", "tool": "projects.create"}
         state, reply = runner._selected_tool("projects.create", {"name": "Estudos"})
         self.assertEqual(state["phase"], "approval")
-        self.assertIn("Posso executar?", reply["reply"])
+        self.assertIn("Quer que eu siga?", reply["reply"])
+        self.assertEqual(reply["approval"]["title"], "Criar projeto")
+        self.assertNotIn("projects.create", reply["reply"])
         perform.assert_called_once_with("projects.create", {"name": "Estudos"}, dry_run=True)
 
 

@@ -256,3 +256,58 @@ test("Lab: manual direct comparison allows selecting improved profile without ch
     await ui.click("runDirect");
     assert.equal(JSON.parse(ui.requests.at(-1).opts.body).profile, "baseline");
 });
+
+test("E7: laboratório preserva resultados, seleção e atalhos de navegação", () => {
+    for (const id of ["teste-avulso", "suiteList", "selectionCount",
+        "batchRun", "suiteSearch", "runDirect", "runPlanner", "reportsHistory"])
+        assert.match(lab, new RegExp('id="' + id + '"'));
+    assert.match(lab, /class="compare-results"/);
+    assert.match(lab, /class="lab-jump-nav"/);
+    assert.match(lab, /class="batch-action-bar"/);
+    assert.match(lab, /aria-label="Seções do laboratório"/);
+});
+
+test("E7: painel de teste avulso fecha semanticamente antes dos dois resultados", () => {
+    assert.match(lab, /id="teste-avulso"[\s\S]*id="status"[\s\S]*<\/section>\s*<div class="compare-results"/);
+});
+
+test("E8: seleção em um toque marca só as oito suítes, não os testes antigos", async () => {
+    const e8 = [
+        "e8-conversa-natural", "e8-contexto-sequencia", "e8-aprovacao-dialogo",
+        "e8-codigo-escopo", "e8-honestidade-execucao", "e8-falhas-recuperacao",
+        "e8-seguranca-privacidade", "e8-raciocinio-qualidade",
+    ];
+    const entries = SUITES.concat(e8.map(id => ({id, title:id, description:"E8",
+        cases:16, run_count:0, status:"pending", last_report:null})));
+    const ui = browser({suites:entries, reports:[]});
+    await ui.ready();
+    await ui.click("selectRecommended");
+    ui.input("suiteSearch", "algum termo");
+    await ui.click("selectE8");
+    assert.equal(ui.elements.get("suiteSearch").value, "");
+    assert.equal(ui.elements.get("filterAll").attrs["aria-pressed"], "true");
+    assert.match(ui.elements.get("selectionCount").textContent, /8 bateria/);
+    assert.match(ui.elements.get("selectionCount").textContent, /128 caso/);
+    assert.match(ui.elements.get("batchStatus").textContent, /modelo/);
+    await ui.click("batchRun");
+    const calls = ui.requests.filter(x => x.url === "/lab/batches/queue");
+    assert.equal(calls.length, 1);
+    const ids = JSON.parse(calls[0].opts.body).suite_ids;
+    assert.deepEqual([...ids].sort(), [...e8].sort());
+    assert.match(ui.confirmations[0], /128 perguntas/);
+    assert.equal(ui.elements.get("queuePanel").hidden, false);
+});
+
+test("E8: seletor não inicia teste sozinho, sem deployment e durante fila ativa", async () => {
+    const ui = browser({suites:SUITES, reports:[]});
+    await ui.ready();
+    await ui.click("selectE8");
+    assert.match(ui.elements.get("batchStatus").textContent, /não estão instaladas/);
+    assert.equal(ui.elements.get("batchRun").disabled, true);
+    assert.equal(ui.requests.filter(x => x.url === "/lab/batches/queue").length, 0);
+    ui.app.status = {status:"running", queue_total:2, queue_index:1,
+        suite_id:"programacao-debug", overall_total:24, overall_done:3};
+    await ui.click("batchRefresh");
+    await ui.click("selectE8");
+    assert.equal(ui.requests.filter(x => x.url === "/lab/batches/queue").length, 0);
+});

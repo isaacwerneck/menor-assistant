@@ -388,7 +388,9 @@ test('núcleo do servidor assume tarefa e mostra recibo sem chamar roteadores an
     }) });
     ui.elements.get('userInput').value = 'Liste meus projetos';
     await ui.context.sendMsg();
-    assert.match(ui.context.getActiveConv().messages.at(-1).content, /projects.list/);
+    const reply = ui.context.getActiveConv().messages.at(-1).content;
+    assert.match(reply, /Consulta concluída.*Operação concluída e registrada/s);
+    assert.doesNotMatch(reply, /projects\.list/);
     assert.equal(ui.routed.length, 0);
     assert.equal(ui.requests.length, 0);
 });
@@ -1684,10 +1686,10 @@ test('D: recibos planejados e falhos não aparecem como sucesso executado', asyn
     ui.elements.get('userInput').value = 'Quais ferramentas foram executadas?';
     await ui.context.sendMsg();
     const reply = ui.context.getActiveConv().messages.at(-1).content;
-    assert.match(reply, /✓ projects.list · executed/);
-    assert.match(reply, /… developer.propose · planned/);
-    assert.match(reply, /! vision.inspect · failed/);
-    assert.doesNotMatch(reply, /✓ vision.inspect/);
+    assert.match(reply, /Operação concluída e registrada/);
+    assert.match(reply, /Ação apenas planejada/);
+    assert.match(reply, /Uma operação não foi concluída/);
+    assert.doesNotMatch(reply, /developer\.propose|vision\.inspect/);
 });
 
 test('D12: recibo sem arquivo verificado não afirma integridade válida', () => {
@@ -1712,4 +1714,92 @@ test('D14: histórico de cada conversa mantém sua própria ordem cronológica',
     const b = ui.context.buildHistory(second.messages, 'continua B');
     assert.deepEqual(Array.from(a, x => x.content), ['primeiro A', 'segundo A']);
     assert.deepEqual(Array.from(b, x => x.content), ['primeiro B', 'segundo B']);
+});
+
+test('E7: chat mantém ações e organização dos controles no HUD', () => {
+    for (const id of ['sidebarScrim', 'menuToggle', 'userInput', 'sendBtn',
+        'cancelBtn', 'connectionStatus', 'generationStatus']) {
+        assert.match(html, new RegExp('id="' + id + '"'));
+    }
+    assert.match(html, /class="topbar-actions"/);
+    assert.match(html, /class="composer-shell"/);
+    assert.match(html, /class="composer-meta"/);
+    assert.match(html, /href="\/workspace\/system"/);
+    assert.match(html, /grid-template-columns:\s*repeat\(5,minmax\(0,1fr\)\)/);
+});
+
+test('E7: menu mobile abre e fecha com fundo de proteção e estado acessível', () => {
+    const ui = browser();
+    ui.context.window.matchMedia = () => ({ matches: true });
+    ui.context.showWelcome();
+    assert.equal(ui.elements.get('sidebarScrim').hidden, true);
+    ui.context.toggleSidebar();
+    assert.equal(ui.elements.get('sidebarScrim').hidden, false);
+    assert.equal(ui.elements.get('menuToggle').ariaExpanded, 'true');
+    ui.context.closeMobileSidebar();
+    assert.equal(ui.elements.get('sidebarScrim').hidden, true);
+    assert.equal(ui.elements.get('menuToggle').ariaExpanded, 'false');
+});
+
+test('E7: exclusão de conversa exige confirmação explícita', () => {
+    const ui = browser();
+    const conv = ui.context.createConversation('Não apagar sem confirmação');
+    ui.context.window.confirm = () => false;
+    ui.context.deleteConv(conv.id, { stopPropagation() {} });
+    assert.equal(ui.context.getActiveConv().id, conv.id);
+    ui.context.window.confirm = () => true;
+    ui.context.deleteConv(conv.id, { stopPropagation() {} });
+    assert.equal(ui.context.getActiveConv(), undefined);
+});
+
+test('E7: estado da sidebar existe antes da inicialização da página em mobile', () => {
+    const state = script.indexOf("let sidebarShown =");
+    const init = script.indexOf("showWelcome();");
+    assert.ok(state >= 0 && state < init,
+        "A inicialização mobile não pode acessar sidebarShown antes de declará-lo.");
+});
+
+test('E7: menu de projetos permanece acessível na sidebar e navegação inferior tem cinco entradas', () => {
+    const sidebar = html.match(/<nav class="app-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+    const mobile = html.match(/<nav class="mobile-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+    assert.match(sidebar, /onclick="openProjects\(\)"/);
+    assert.equal((mobile.match(/<button\b|<a\b/g) || []).length, 5);
+});
+
+
+test('E8: confirmação usa card com ações humanas, sem parâmetros e nomes internos', async () => {
+    const ui = browser();
+    ui.context.fetch = async (url) => {
+        if (url === '/agent/run') return {
+            ok: true, status: 200, json: async () => ({
+                handled: true, phase: 'approval',
+                reply: 'Proposta aguarda consentimento.',
+                approval: { title: 'Propor correção no Menor',
+                    description: 'Abre PR rascunho sem alterar a main.' },
+            }),
+        };
+        return { ok: true, status: 200, json: async () => ({ decision: 'chat' }) };
+    };
+    ui.elements.get('userInput').value = 'corrige o roteador do menor';
+    await ui.context.sendMsg();
+    const conv = ui.context.getActiveConv();
+    const last = conv.messages.at(-1);
+    assert.equal(last.approval.title, 'Propor correção no Menor');
+    assert.doesNotMatch(last.content, /developer\.propose|Parâmetros/);
+    const root = ui.elements.get('messagesContainer');
+    const bot = root.children.at(-1).children.at(-1);
+    const card = bot.children.find(c => c.className === 'approval-card');
+    assert.ok(card);
+    assert.equal(card.children.at(-1).children.length, 3);
+    assert.equal(card.children.at(-1).children[0].textContent, 'Aprovar');
+    assert.equal(card.children.at(-1).children[1].textContent, 'Explicar');
+    assert.equal(card.children.at(-1).children[2].textContent, 'Cancelar');
+});
+
+test('E8: tela mobile reduz peso visual sem eliminar controles de documento e foco', () => {
+    assert.match(html, /\.input-wrapper:focus-within \{ outline: none;/);
+    assert.match(html, /\.input-wrapper \.file-attach-btn::before/);
+    assert.match(html, /\.mobile-nav \{ min-height: 49px;/);
+    assert.match(html, /id="chooseDocumentBtn"/);
+    assert.match(html, /aria-label="Anexar documento privado"/);
 });
