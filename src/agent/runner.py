@@ -464,8 +464,9 @@ def _understand(state, message, history, project=None, metrics=None):
             if answer:
                 return _answer(answer, **state)
             return _answer(
-                "Não consegui gerar a próxima resposta agora. O objetivo anterior continua salvo; "
-                "nenhuma ação foi executada. Pode tentar novamente?", **state,
+                "Não consegui interpretar a continuação do plano agora. "
+                "O objetivo anterior continua salvo; nenhuma ação foi executada. "
+                "Pode tentar novamente?", **state,
             )
         return None
     decision, review_status = _critique_plan(

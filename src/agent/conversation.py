@@ -10,7 +10,6 @@ import unicodedata
 
 import requests
 
-from src.agent.self_edit import is_new_project_request
 
 LOG = logging.getLogger(__name__)
 SYSTEM = (
@@ -50,9 +49,19 @@ CHANGE_TOPIC = re.compile(
 )
 
 
+DIRECT_GAME = re.compile(
+    r"^\s*(?:crie|cria|criar|faca|faça|faz|fazer|construir|monte|montar|"
+    r"programe|programar|desenvolva|desenvolver)\b\s+"
+    r"(?:(?:um|uma|o|a)\s+)?(?:jogo|game|app|aplicativo|site)\b",
+    re.IGNORECASE,
+)
+
+
 def is_collaboration_request(message):
-    """Pedidos de construir um aplicativo do zero, não editar o código do Menor."""
-    return bool(is_new_project_request(message) or NEW_GAME.search(message))
+    """Pedido de programar app, não cadastrar um projeto com nome 'Jogo X'."""
+    if not isinstance(message, str):
+        return False
+    return bool(NEW_GAME.search(message) or DIRECT_GAME.search(message))
 
 
 def follows_project(state, message):

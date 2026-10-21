@@ -93,7 +93,7 @@ class CollaborationRunnerTests(unittest.TestCase):
         self.session = "e9CollaborationSession"
 
     def run_turn(self, turn_id, message, history=None):
-        return runner.run(self.session, turn_id, message, history or [], tasks=self.store)
+        return runner.run(self.session, "e9Request" + turn_id, message, history or [], tasks=self.store)
 
     @patch("src.agent.runner.intelligence.decide")
     @patch("src.agent.runner.perform")
