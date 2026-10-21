@@ -14,7 +14,7 @@ import requests
 
 from src.agent.context_engine import select_history, select_approved_examples
 from src.agent.voice import ROUTER_VOICE
-from ops.model_latency import model_identifier, numeric_summary
+from ops.model_latency import model_identifier, numeric_summary, configured_num_thread
 
 LOG = logging.getLogger(__name__)
 MOVES = ("answer", "clarify", "plan", "act", "research", "continue", "inspect_result")
@@ -182,12 +182,17 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
         )
     )
     schema = _schema_for_tools(tools)
+    # Apenas override explicitamente configurado; por padrão preserva a inferência atual.
+    inference_options = INFERENCE_OPTIONS.copy()
+    threads = configured_num_thread()
+    if threads is not None:
+        inference_options["num_thread"] = threads
     if diagnostics is not None:
         if not isinstance(diagnostics, dict):
             raise ValueError("Destino de diagnóstico inválido.")
         diagnostics.clear()
         diagnostics.update(
-            outcome="invalid_decision", options=INFERENCE_OPTIONS.copy(),
+            outcome="invalid_decision", options=inference_options.copy(),
             read_timeout_seconds=INFERENCE_TIMEOUT[1],
             prompt_sha256=hashlib.sha256(SYSTEM.encode()).hexdigest(),
             schema_sha256=hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest(),
@@ -274,7 +279,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
                              {"role": "user", "content": context_json}],
                 "format": schema, "stream": False,
                 "keep_alive": os.environ.get("OLLAMA_KEEP_ALIVE", "24h"),
-                "options": INFERENCE_OPTIONS,
+                "options": inference_options,
             },
             timeout=INFERENCE_TIMEOUT,
         ) as response:

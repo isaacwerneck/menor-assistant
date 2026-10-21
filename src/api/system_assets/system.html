@@ -70,6 +70,15 @@
     <p id="live-updated" class="update-note" role="status">Aguardando primeira amostra.</p>
     <div id="live-models" class="grid" aria-label="Modelos efetivamente carregados"></div>
   </section>
+  <section class="section" aria-labelledby="processes-title">
+    <div class="section-header"><div><h2 id="processes-title">O que está usando a memória?</h2>
+      <p>Maiores processos por memória residente (RSS), atualizados a cada 15 segundos.
+      Arquivos compartilhados podem aparecer em mais de um processo: não some esses valores.</p></div></div>
+    <div id="memory-processes" class="process-list" aria-live="polite">
+      <p class="empty">Aguardando leitura dos processos locais.</p>
+    </div>
+    <p id="processes-updated" class="update-note" role="status"></p>
+  </section>
   <section class="section" aria-labelledby="diagnostics-title">
     <div class="section-header"><div><h2 id="diagnostics-title">Diagnósticos locais</h2>
       <p>Evidências do Ubuntu agregadas, sem comandos remotos nem dados sensíveis.</p></div></div>
@@ -100,7 +109,7 @@
   </section>
   </details>
   <p class="source-note">Fontes: <code>/health</code>, <code>/models</code>, <code>/images/status</code>,
-  <code>/agent/skills</code>, <code>/tools</code>, <code>/ops/diagnostics</code> e <code>/workspace/system/live</code> quando disponível. Leituras independentes, sem alterações na API ou no Ollama.
+  <code>/agent/skills</code>, <code>/tools</code>, <code>/ops/diagnostics</code>, <code>/workspace/system/live</code> e <code>/workspace/system/processes</code> quando disponível. Leituras independentes, sem alterações na API ou no Ollama.
   Dados indisponíveis são mostrados como indisponíveis, nunca preenchidos por suposição.</p>
 </main>
 <nav class="mobile-nav" aria-label="Navegação rápida">

@@ -203,7 +203,40 @@ async function refreshLive() {
     livePending = false;
   }
 }
-ui.refresh.addEventListener("click", () => { refresh(); refreshLive(); });
+let processPending = false;
+async function refreshProcesses() {
+  if (processPending || (typeof document.hidden === "boolean" && document.hidden)) return;
+  processPending = true;
+  const target = document.getElementById("memory-processes");
+  const status = document.getElementById("processes-updated");
+  try {
+    const data = await get("/workspace/system/processes");
+    target.replaceChildren();
+    if (data.available !== true || !Array.isArray(data.items)) {
+      clear(target, "Não foi possível consultar os processos do Linux.");
+    } else if (!data.items.length) {
+      clear(target, "Nenhum processo visível nesta leitura.");
+    } else {
+      for (const item of data.items.slice(0, 8)) {
+        if (typeof item.name !== "string" || typeof item.rss_mib !== "number" ||
+            !Number.isFinite(item.rss_mib)) continue;
+        const name = item.name.slice(0, 24);
+        const amount = (item.rss_mib / 1024).toFixed(2) + " GiB RSS";
+        target.append(card(name, amount));
+      }
+    }
+    status.textContent = "Leitura: " + new Date().toLocaleTimeString("pt-BR") +
+      ". RSS inclui páginas compartilhadas e não equivale ao consumo exclusivo.";
+  } catch (error) {
+    status.textContent = "Processos indisponíveis: " +
+      (error instanceof Error ? error.message : "consulta não concluída");
+  } finally {
+    processPending = false;
+  }
+}
+ui.refresh.addEventListener("click", () => { refresh(); refreshLive(); refreshProcesses(); });
 refresh();
 refreshLive();
+refreshProcesses();
 setInterval(refreshLive, 3000);
+setInterval(refreshProcesses, 15000);
