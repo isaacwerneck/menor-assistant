@@ -212,6 +212,8 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 <input type="search" id="suiteSearch" autocomplete="off" placeholder="Nome, assunto ou ID"></div>
 <div class="suite-tools" role="group" aria-label="Seleção de testes">
 <button type="button" id="selectRecommended">Selecionar as 4 recomendadas</button>
+<button type="button" id="selectE8" title="Seleciona somente as oito baterias E8, 128 casos de inferência">
+Selecionar avaliação completa E8 (128 casos)</button>
 <button type="button" id="selectPending">Marcar pendentes visíveis</button>
 <button type="button" id="clearSelection">Desmarcar tudo</button>
 <button type="button" id="batchRefresh">Atualizar situação</button>
@@ -531,6 +533,16 @@ $("selectRecommended").addEventListener("click", () => {
     for (const item of suiteItems) if (Number.isInteger(item.recommended_order))
         selectedSuites.add(item.id);
     setFilter("recommended");
+});
+$("selectE8").addEventListener("click", () => {
+    if (queueRunning) return;
+    selectedSuites.clear();
+    for (const item of suiteItems) if (/^e8-/.test(item.id)) selectedSuites.add(item.id);
+    $("suiteSearch").value = "";
+    setFilter("all");
+    $("batchStatus").textContent = selectedSuites.size
+        ? "Avaliação E8 selecionada. O Lab testa o modelo; para ferramentas e aprovações use também o roteiro real."
+        : "As baterias E8 não estão instaladas neste servidor. Atualize o Menor antes de executar.";
 });
 $("selectPending").addEventListener("click", () => {
     if (queueRunning) return;
