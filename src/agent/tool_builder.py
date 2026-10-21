@@ -24,7 +24,7 @@ def _source(path, revision, token):
     return base64.b64decode(remote["content"], validate=False).decode("utf-8")
 
 
-def _generate(name, goal):
+def _generate(name, goal, retry=False):
     with requests.post(
         os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/chat",
         json={
@@ -44,6 +44,9 @@ def _generate(name, goal):
                 )},
                 {"role": "user", "content": json.dumps({
                     "goal": goal,
+                    **({"retry_instruction": "A primeira proposta falhou na validação local. "
+                        "Gere alternativa mínima correta e teste real que passe; não copie o erro."}
+                       if retry else {}),
                 }, ensure_ascii=False)},
             ],
         }, timeout=(5, 120),
@@ -89,8 +92,13 @@ def build(name, goal, dry_run=True):
         if not isinstance(catalog, dict) or name in catalog or len(catalog) >= 30:
             raise ValueError("Catálogo inválido, cheio ou nome já existente.")
         documentation = _source(DOC, main, token)
-        source, tests, description = _generate(name, goal)
-        verification = verify(name, source, tests)
+        try:
+            source, tests, description = _generate(name, goal)
+            verification = verify(name, source, tests)
+        except (ValueError, SyntaxError):
+            # Um reparo limitado após erro de código/testes; não repete falha do Docker.
+            source, tests, description = _generate(name, goal, retry=True)
+            verification = verify(name, source, tests)
         catalog[name] = description
         files = {
             f"src/tools/generated/{name}.py": source,

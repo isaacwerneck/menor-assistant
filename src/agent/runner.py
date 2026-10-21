@@ -30,7 +30,7 @@ from src.tools import images
 from src.tools.registry import TOOLS, list_tools, perform
 
 LOGGER = logging.getLogger(__name__)
-MAX_STEPS = 4
+MAX_STEPS = 6
 YES = re.compile(r"^(sim+|simm+|pode|bora|vamos|claro|isso|fechou|confirmo)[.!]?$")
 NO = re.compile(r"^(nao|deixa|cancela|cancelar|nao precisa)[.!]?$")
 
@@ -50,6 +50,12 @@ def _approval_details(tool):
         ),
         "projects.create": ("Criar projeto", "Cria o registro de um projeto no Menor."),
         "projects.add_task": ("Adicionar tarefa", "Registra uma tarefa no projeto selecionado."),
+        "projects.code.webapp": (
+            "Gerar aplicativo web inicial",
+            "Cria três arquivos privados (HTML, CSS e JavaScript Canvas) em projeto existente. "
+            "Confere apenas sintaxe JavaScript; não executa o jogo nem garante funcionamento. "
+            "Requer revisão e teste no navegador.",
+        ),
         "projects.code.create": (
             "Gerar arquivo de código",
             "Cria um arquivo novo na pasta privada de um projeto existente, sem sobrescrever. "
@@ -247,6 +253,12 @@ def _human_tool_result(receipt):
         return "Criei o registro do projeto no Menor."
     if name == "projects.add_task":
         return "Registrei a tarefa no projeto."
+    if name == "projects.code.webapp" and isinstance(output, dict):
+        files = output.get("files")
+        if isinstance(files, list) and output.get("syntax_checked") is True:
+            return ("Criei " + str(len(files)) + " arquivos no projeto privado. "
+                    "A sintaxe JS passou, mas NÃO executei o aplicativo no navegador. "
+                    "Revise e teste antes de usar.")
     if name == "projects.code.create" and isinstance(output, dict):
         return (
             "Criei " + str(output.get("path", "um arquivo"))[:180]
@@ -316,7 +328,7 @@ def _tool_loop(message, history):
         _tool_result(name, receipt)
         observations.append({**receipt, "result": json.dumps(receipt["result"], ensure_ascii=False)[:6000]})
     return _observed_answer(
-        "Atingi o limite de quatro passos. Consulte as operações antes de continuar.", observations, "blocked",
+        "Atingi o limite de seis passos. Consulte as operações antes de continuar.", observations, "blocked",
     )
 
 
@@ -653,6 +665,19 @@ def _advance(state, message, history, project=None, metrics=None):
         return _mission_turn(state, message)
     if state["phase"] == "collaboration" and conversation.CHANGE_TOPIC.search(message):
         return _answer("Certo, deixamos esse projeto de lado. Sobre o que você quer conversar?")
+    # Um pedido explícito de criação no projeto escolhido não pode cair no chat
+    # sem ferramentas; pré-valida e aguarda autorização do dono.
+    if (project and re.match(r"^(?:crie|cria|faca|faz|monte|desenvolva|implemente)\b", normal)
+            and re.search(r"\b(?:jogo|game|site|webapp)\b", normal)
+            and conversation.is_collaboration_request(message)):
+        try:
+            return _selected_tool("projects.code.webapp",
+                                  {"slug": project, "goal": message[:280]})
+        except (ValueError, LookupError, OSError) as error:
+            LOGGER.info("Webapp indisponível: %s", type(error).__name__)
+            return _answer("Não consegui preparar os arquivos nesse projeto. "
+                           "Verifique se o projeto existe e está acessível; nada foi gravado.",
+                           "blocked")
     if (conversation.is_collaboration_request(message)
             or conversation.follows_project(state, message)):
         return _collaborate(state, message, history, metrics=metrics)

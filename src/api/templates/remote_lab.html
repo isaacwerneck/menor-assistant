@@ -256,7 +256,13 @@ Selecionar avaliação completa E8 (128 casos)</button>
 <p id="batchStatus" class="status" role="status" aria-live="polite">Preparando sua gaveta.</p>
 <details class="history-details" id="reportsHistory">
 <summary id="historySummary">Histórico de relatórios (0)</summary>
-<p class="helper">Relatórios locais só são considerados enviados quando a verificação no GitHub confirmar o mesmo conteúdo. Comparação não faz upload.</p>
+<p class="helper">Relatórios completos são preservados no servidor e no GitHub.
+O arquivo lógico apenas esconde execuções antigas do painel; não move nem apaga JSON.</p>
+<div class="actions"><button type="button" id="archiveOld">Arquivar histórico atual</button>
+<button type="button" id="viewArchived">Ver arquivados</button>
+<button type="button" id="viewCurrent" hidden>Ver atuais</button>
+<button type="button" id="restoreArchive" hidden>Reativar arquivados</button></div>
+<p class="helper" id="archiveStatus" role="status">Carregando arquivo de relatórios…</p>
 <div class="report-toolbar">
 <div class="actions"><button type="button" id="syncReports">Verificar envios no GitHub</button>
 <button type="button" id="selectNotSent">Selecionar não enviados</button>
@@ -464,6 +470,8 @@ $("clear").addEventListener("click", () => {
 
 let suiteItems = [];
 let savedReports = [];
+let archivedReports = new Set();
+let archiveView = false;
 const selectedSuites = new Set();
 const selectedReports = new Set();
 let reportStatuses = {};
@@ -596,8 +604,11 @@ function reportMatches(item) {
 }
 function renderReports() {
     const target = $("batchReports"); target.replaceChildren();
-    $("historySummary").textContent = "Histórico de relatórios (" + savedReports.length + ")";
-    const filtered = savedReports.filter(reportMatches);
+    $("historySummary").textContent = "Relatórios · " +
+        (savedReports.length - archivedReports.size) + " atuais / " +
+        archivedReports.size + " arquivados";
+    const filtered = savedReports.filter(item =>
+        archivedReports.has(item.run_id) === archiveView && reportMatches(item));
     const visible = filtered.slice(0, reportLimit);
     const bySuite = new Map();
     for (const report of visible) {
@@ -672,8 +683,9 @@ function renderReports() {
         }
         target.append(group);
     }
-    if (!filtered.length) target.textContent = savedReports.length
-        ? "Nenhum relatório corresponde ao filtro." : "Nenhum relatório salvo neste servidor.";
+    if (!filtered.length) target.textContent = archiveView
+        ? "Nenhum relatório arquivado corresponde ao filtro."
+        : "Nenhum relatório atual corresponde ao filtro.";
     $("moreReports").hidden = filtered.length <= reportLimit;
     $("moreReports").textContent = "Mostrar mais " + Math.min(15, filtered.length - reportLimit) +
         " de " + (filtered.length - reportLimit) + " restantes";
@@ -741,7 +753,8 @@ $("selectNotSent").addEventListener("click", () => {
         return;
     }
     selectedReports.clear();
-    const pending = savedReports.filter(item => reportStatus(item) === "not_sent");
+    const pending = savedReports.filter(item =>
+        !archivedReports.has(item.run_id) && reportStatus(item) === "not_sent");
     for (const item of pending.slice(0, 250)) selectedReports.add(item.run_id);
     if (pending.length > 250)
         $("reportSyncStatus").textContent = "Limite seguro: selecione até 250 por envio; repita após concluir.";
@@ -772,15 +785,56 @@ $("publishSelected").addEventListener("click", async () => {
         $("publishProgress").textContent = "Falha ao iniciar envio: " + e.message;
     }
 });
+async function changeArchive(mode) {
+    const description = mode === "archive_all" ? "Arquivar TODOS os relatórios atualmente salvos? "
+        : "Reativar TODOS os relatórios arquivados? ";
+    if (!confirm(description + "Nenhum arquivo será excluído ou enviado ao GitHub.")) return;
+    $("archiveStatus").textContent = "Atualizando arquivo lógico…";
+    try {
+        const res = await fetch("/lab/reports/archive", {
+            method:"POST", credentials:"same-origin",
+            headers:{"Content-Type":"application/json"}, body:JSON.stringify({mode}),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const state = await res.json();
+        $("archiveStatus").textContent = state.unchanged_report_files +
+            " relatórios preservados; " + state.archived + " arquivados.";
+        selectedReports.clear();
+        if (mode === "restore_all") archiveView = false;
+        await batchRefresh();
+    } catch (error) {
+        $("archiveStatus").textContent = "Arquivo não alterado: " + error.message;
+    }
+}
+$("archiveOld").addEventListener("click", () => changeArchive("archive_all"));
+$("restoreArchive").addEventListener("click", () => changeArchive("restore_all"));
+$("viewArchived").addEventListener("click", () => {
+    archiveView = true; reportLimit = 15; updateArchiveView(); renderReports();
+});
+$("viewCurrent").addEventListener("click", () => {
+    archiveView = false; reportLimit = 15; updateArchiveView(); renderReports();
+});
+function updateArchiveView() {
+    $("viewArchived").hidden = archiveView;
+    $("viewCurrent").hidden = !archiveView;
+    $("restoreArchive").hidden = !archiveView;
+    $("archiveOld").hidden = archiveView;
+}
 async function batchRefresh() {
     try {
-        const [batchRes, reportRes] = await Promise.all([
+        const [batchRes, reportRes, archiveRes] = await Promise.all([
             fetch("/lab/batches", {credentials:"same-origin"}),
             fetch("/lab/reports", {credentials:"same-origin"}),
+            fetch("/lab/reports/archive-state", {credentials:"same-origin"}),
         ]);
-        if (!batchRes.ok || !reportRes.ok) throw new Error("Sessão expirada ou servidor indisponível.");
+        if (!batchRes.ok || !reportRes.ok || !archiveRes.ok)
+            throw new Error("Sessão expirada ou arquivo de relatórios indisponível.");
         suiteItems = (await batchRes.json()).items;
         savedReports = (await reportRes.json()).items;
+        archivedReports = new Set((await archiveRes.json()).archived_ids || []);
+        $("archiveStatus").textContent = archivedReports.size +
+            " arquivados; nenhum arquivo apagado.";
+        updateArchiveView();
         const valid = new Set(suiteItems.map(item => item.id));
         for (const id of selectedSuites) if (!valid.has(id)) selectedSuites.delete(id);
         renderCounters(); renderSuites(); renderReports();
