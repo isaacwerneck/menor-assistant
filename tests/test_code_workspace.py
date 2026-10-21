@@ -86,6 +86,24 @@ class CodeWorkspaceTests(unittest.TestCase):
                 create(self.slug, "index.html", "Escreva um Snake de teste",
                        dry_run=True, workspace=self.workspace)
 
+    def test_approval_only_executes_file_action_after_explicit_yes(self):
+        args = {"slug": self.slug, "filename": "game.js",
+                "goal": "Crie um jogo simples de pontuação em JavaScript"}
+        state = {"phase": "approval", "tool": "projects.code.create", "arguments": args}
+        with patch("src.agent.runner.perform") as executor:
+            state_after, question = runner._advance(state, "o que vai fazer?", [])
+            self.assertEqual(state_after["phase"], "approval")
+            self.assertIn("pendente", question["reply"])
+            executor.assert_not_called()
+            receipt = {"status": "executed", "tool": "projects.code.create",
+                       "result": {"path": "projetos/jogo-de-teste/arquivos/game.js",
+                                  "tested": False, "executed": False}}
+            executor.return_value = receipt
+            after, approved = runner._advance(state_after, "eu aprovo", [])
+            self.assertEqual(after["phase"], "idle")
+            self.assertIn("NÃO executei nem testei", approved["reply"])
+            executor.assert_called_once_with("projects.code.create", args, dry_run=False)
+
     def test_tool_registry_fails_closed_before_approval(self):
         with patch.dict(os.environ, {"MENOR_DATA_DIR": str(self.store.data_dir)}):
             args = {"slug": self.slug, "filename": "snake.js",
