@@ -78,6 +78,43 @@ class ConversationModelTests(unittest.TestCase):
                 self.assertTrue(conversation.follows_project(state, message))
 
     @patch("src.agent.conversation.requests.post")
+    def test_repeated_technology_question_gets_grounded_fallback(self, post):
+        response = post.return_value.__enter__.return_value
+        response.json.return_value = {"message": {
+            "content": "Para começar, quer rodar no navegador (Canvas) ou no PC com Raylib?"
+        }}
+        metrics = {}
+        answer = conversation.reply("no raylib!", goal="Jogo JavaScript com Raylib",
+                                    diagnostics=metrics)
+        self.assertIsNone(answer)
+        self.assertEqual(metrics["chat_quality_guard"], "repeated_resolved_choice")
+        post.assert_called_once()
+
+    @patch("src.agent.conversation.requests.post")
+    def test_fake_raylib_cdn_does_not_pass_as_verified_code(self, post):
+        response = post.return_value.__enter__.return_value
+        response.json.return_value = {"message": {
+            "content": "Use o script https://www.raylib.com/raylib-wasm.js"}}
+        self.assertIsNone(conversation.reply("me mostre raylib", goal="Jogo com Raylib"))
+        post.assert_called_once()
+
+    def test_ollama_diagnostics_have_only_numbers_and_status(self):
+        from ops.model_latency import numeric_summary
+        summary = numeric_summary({
+            "total_duration": 3_000_000_000, "load_duration": 400_000_000,
+            "prompt_eval_duration": 600_000_000, "eval_duration": 1_800_000_000,
+            "prompt_eval_count": 90, "eval_count": 18,
+            "message": {"content": "PASSWORD SHARED EXAMPLE"},
+        })
+        self.assertEqual(summary["model_load_ms"], 400.0)
+        self.assertEqual(summary["prompt_processing_ms"], 600.0)
+        self.assertEqual(summary["token_generation_ms"], 1800.0)
+        self.assertEqual(summary["other_model_ms"], 200.0)
+        self.assertEqual(summary["generation_tokens_per_second"], 10.0)
+        self.assertEqual(summary["prompt_tokens_per_second"], 150.0)
+        self.assertNotIn("PASSWORD", str(summary))
+
+    @patch("src.agent.conversation.requests.post")
     def test_never_claim_unverified_file_creation(self, post):
         response = post.return_value.__enter__.return_value
         response.json.return_value = {"message": {"content": "Já criei seu jogo no computador."}}
