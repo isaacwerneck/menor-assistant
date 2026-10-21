@@ -117,13 +117,25 @@ def _load_custom():
 _load_custom()
 
 
-def list_tools():
+MAINTENANCE_TOOLS = frozenset({"developer.propose", "developer.build"})
+
+
+def list_tools(agent_scope=None):
+    """Catálogo do painel ou escopo efetivo do modelo.
+
+    Uma sessão pessoal nunca recebe ferramentas que modificam o próprio
+    assistente. Somente configuração explícita do servidor habilita manutenção.
+    Não há classificação por palavras-chave do pedido do usuário.
+    """
+    if agent_scope not in (None, "personal", "maintenance"):
+        raise ValueError("Escopo de ferramentas inválido.")
     return [
         {
             "name": t.name, "description": t.description, "risk": t.risk,
             "writes": t.writes, "arguments": list(t.arguments),
         }
         for t in TOOLS.values()
+        if agent_scope in (None, "maintenance") or t.name not in MAINTENANCE_TOOLS
     ]
 
 

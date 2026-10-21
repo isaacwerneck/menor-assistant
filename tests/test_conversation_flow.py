@@ -152,55 +152,80 @@ class CollaborationRunnerTests(unittest.TestCase):
     def run_turn(self, turn_id, message, history=None):
         return runner.run(self.session, "e9Request" + turn_id, message, history or [], tasks=self.store)
 
-    @patch("src.agent.runner.intelligence.decide")
     @patch("src.agent.runner.perform")
-    @patch("src.agent.runner.conversation.reply",
-           return_value="Bora fazer o jogo. Qual ambiente você prefere?")
-    def test_game_invite_does_not_trigger_tool_or_plan(self, respond, tool, decide):
-        result = self.run_turn("e9a", "opa eai, vamos criar um jogo?")
-        self.assertEqual(result["phase"], "collaboration")
-        self.assertIn("ambiente", result["reply"])
+    @patch("src.agent.runner.intelligence.decide")
+    def test_idea_uses_model_clarification_without_tools(self, decide, tool):
+        decide.return_value = {
+            "move": "clarify", "goal": "Explorar um projeto", "relation": "start",
+            "reply": "Podemos desenvolver essa ideia juntos.",
+            "question": "Como você imagina a experiência do usuário?",
+            "steps": [], "acceptance": [],
+        }
+        result = self.run_turn("e9a", "opa, tô pensando numa ideia de jogo")
+        self.assertEqual(result["phase"], "goal")
+        self.assertIn("imagina", result["reply"])
         self.assertNotIn("Plano proposto", result["reply"])
         tool.assert_not_called()
-        decide.assert_not_called()
+        self.assertEqual(decide.call_count, 1)
+        self.assertNotIn("developer.propose",
+                         [t["name"] for t in decide.call_args.kwargs["tools"]])
 
-    @patch("src.agent.runner.intelligence.decide")
     @patch("src.agent.runner.perform")
-    @patch("src.agent.runner.conversation.reply",
-           return_value="Vou ajudar com a estrutura e o código. Ainda não executei nada.")
-    def test_followups_keep_coding_brief_across_restart(self, respond, tool, decide):
-        self.run_turn("e9a", "opa eai, vamos criar um jogo?")
-        history = [{"role": "user", "content": "opa eai, vamos criar um jogo?"}]
-        self.run_turn("e9b", "quero criar um jogo da cobrinha, com javascript, framework raylib", history)
+    @patch("src.agent.runner.intelligence.decide")
+    def test_model_maintains_goal_without_word_rules(self, decide, tool):
+        decide.side_effect = [
+            {"move": "clarify", "reply": "Vamos entender sua ideia.",
+             "goal": "Desenvolver um projeto em JavaScript com Raylib",
+             "question": "Qual será a interação central?",
+             "steps": [], "acceptance": [], "relation": "start"},
+            {"move": "answer", "reply": "Anotei a preferência por Raylib.",
+             "relation": "refine", "steps": [], "acceptance": []},
+            {"move": "answer", "reply": "Seguimos com o objetivo definido.",
+             "relation": "refine", "steps": [], "acceptance": []},
+        ]
+        self.run_turn("e9a", "quero um projeto em Javascript e Raylib")
+        history = [{"role": "user", "content": "quero um projeto em Javascript e Raylib"}]
         self.store = TaskStore()
-        updated = self.store.inspect(self.session)
-        self.assertIn("raylib", updated["goal"])
-        self.run_turn("e9c", "como assim? vamos criar o jogo, vc vai me ajudar a programar", history)
-        result = self.run_turn("e9d", "o que você consegue fazer?", history)
-        self.assertEqual(result["phase"], "collaboration")
-        self.assertIn("código", result["reply"])
-        self.assertEqual(self.store.inspect(self.session)["goal"], updated["goal"])
-        self.assertEqual(self.run_turn("e9d", "o que você consegue fazer?", history), result)
+        self.run_turn("e9b", "a interação vai ser por teclado", history)
+        result = self.run_turn("e9c", "quais escolhas já temos?", history)
+        self.assertEqual(result["phase"], "goal")
+        self.assertIn("objetivo", result["reply"])
+        self.assertIn("Raylib", self.store.inspect(self.session)["goal"])
+        self.assertEqual(decide.call_count, 3)
+        self.assertEqual(decide.call_args.kwargs["pending"]["goal"],
+                         "Desenvolver um projeto em JavaScript com Raylib")
         tool.assert_not_called()
-        decide.assert_not_called()
-        self.assertEqual(respond.call_count, 4)
 
     @patch("src.agent.runner.conversation.reply", return_value=None)
+    @patch("src.agent.runner.intelligence.decide")
     @patch("src.agent.runner.perform")
-    def test_failed_inference_preserves_goal_and_explains_limit(self, tool, respond):
-        self.run_turn("e9a", "quero criar um jogo da cobrinha com JavaScript e Raylib")
-        result = self.run_turn("e9b", "como assim? vamos criar esse jogo")
-        self.assertEqual(result["phase"], "collaboration")
-        self.assertIn("Ainda não criei arquivos", result["reply"])
+    def test_failed_inference_preserves_goal_and_explains_limit(self, tool, decide, respond):
+        decide.side_effect = [
+            {"move": "clarify", "goal": "Criar um projeto com Raylib",
+             "question": "Qual o objetivo inicial?", "reply": "Vamos definir o básico.",
+             "steps": [], "acceptance": [], "relation": "start"},
+            None,
+        ]
+        self.run_turn("e9a", "quero criar um projeto em JavaScript com Raylib")
+        result = self.run_turn("e9b", "vamos continuar")
+        self.assertEqual(result["phase"], "goal")
+        self.assertIn("Não consegui interpretar", result["reply"])
         self.assertIn("Raylib", self.store.inspect(self.session)["goal"])
         tool.assert_not_called()
 
-    @patch("src.agent.runner.conversation.reply", return_value="Combinado.")
-    def test_topic_change_stops_project_context(self, respond):
-        self.run_turn("e9a", "vamos criar um jogo da cobrinha?")
-        result = self.run_turn("e9b", "vamos mudar de assunto")
+    @patch("src.agent.runner.intelligence.decide")
+    def test_topic_change_comes_from_semantic_decision(self, decide):
+        decide.side_effect = [
+            {"move": "clarify", "goal": "Desenvolver um jogo",
+             "question": "Que tipo de jogo?", "reply": "Vamos conversar.",
+             "steps": [], "acceptance": [], "relation": "start"},
+            {"move": "answer", "reply": "Claro, podemos falar de outra coisa.",
+             "relation": "switch", "steps": [], "acceptance": []},
+        ]
+        self.run_turn("e9a", "gostaria de discutir uma ideia")
+        result = self.run_turn("e9b", "vamos conversar sobre outra coisa")
         self.assertEqual(result["phase"], "idle")
-        self.assertNotEqual(self.store.inspect(self.session)["phase"], "collaboration")
+        self.assertEqual(self.store.inspect(self.session)["phase"], "idle")
 
     @patch("src.agent.runner.conversation.reply",
            return_value="Vamos escrever a implementação juntos, sem executar.")

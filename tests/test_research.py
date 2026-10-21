@@ -117,11 +117,16 @@ class ResearchTests(unittest.TestCase):
         handle.assert_called_once()
 
     @patch.object(research, "handle")
-    def test_runner_routes_explicit_study_before_tool_building(self, handle):
+    @patch.object(runner.intelligence, "decide", return_value={
+        "move": "research", "reply": "Vou pesquisar",
+        "query": "documentação Python", "steps": [], "acceptance": [],
+    })
+    def test_model_decides_to_study_before_tool_building(self, decide, handle):
         handle.return_value = {"reply": "Estudo com fontes.", "saved": None}
         _, response = runner._advance({"phase": "idle"}, "Estude programação Python", [])
         self.assertEqual(response["reply"], "Estudo com fontes.")
         handle.assert_called_once()
+        decide.assert_called_once()
 
     def test_browser_is_optional_and_reports_unavailability(self):
         with patch.dict(os.environ, {"MENOR_BROWSER_ENABLED": "0"}):
@@ -185,8 +190,9 @@ class ResearchTests(unittest.TestCase):
     def test_build_still_requires_explicit_review_permission(self, model):
         model.return_value = {"action": "tool", "tool": "developer.build",
                               "arguments": {"name": "conversor", "goal": "Converter texto para maiúsculas"}}
-        with patch.object(runner, "perform", return_value={"status": "planned"}) as execute:
-            state, response = runner._tool_loop("Crie um conversor", [])
+        with patch.dict(os.environ, {"MENOR_AGENT_SCOPE": "maintenance"}):
+            with patch.object(runner, "perform", return_value={"status": "planned"}) as execute:
+                state, response = runner._tool_loop("Crie um conversor", [])
         self.assertEqual(state["phase"], "approval")
         self.assertIn("ferramenta de texto", response["reply"])
         self.assertEqual(response["approval"]["title"], "Propor ferramenta de texto")
