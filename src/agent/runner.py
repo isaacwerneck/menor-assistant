@@ -402,16 +402,25 @@ def _collaborate(state, message, history, metrics=None):
     goal = (message[:420] if conversation.is_collaboration_request(message)
             and len(message.strip()) > len(previous.strip()) else previous or message[:420])
     requirements = list(state.get("requirements", []))[-3:]
+    tech = state.get("technology", "")
+    if re.search(r"\braylib\b", message, re.I):
+        tech = "JavaScript com Raylib (integração local a confirmar)"
+    elif re.search(r"\bcanvas\b", message, re.I):
+        tech = "JavaScript no navegador com Canvas"
     if previous and message.strip() and message.strip() != previous.strip():
-        # Guarda fatos escolhidos após o pedido inicial, até 3 mudanças recentes.
-        requirements = (requirements + [message.strip()[:220]])[-3:]
-    briefing = goal + ("\nDecisões e pedidos seguintes: " + " | ".join(requirements)
-                       if requirements else "")
+        if message.strip() not in requirements:
+            requirements = (requirements + [message.strip()[:220]])[-3:]
+    briefing = goal[:310]
+    if tech:
+        briefing += "\nTecnologia escolhida: " + tech
+    if requirements:
+        briefing += "\nDecisões posteriores: " + " | ".join(requirements)
     answer = conversation.reply(message, history, goal=briefing, diagnostics=metrics)
     answer = answer or conversation.safe_fallback(briefing, message)
     if state.get("phase") == "goal":
         return _answer(answer, **state)
-    return _answer(answer, "collaboration", goal=goal, requirements=requirements)
+    return _answer(answer, "collaboration", goal=goal,
+                   technology=tech, requirements=requirements)
 
 
 def _understand(state, message, history, project=None, metrics=None):

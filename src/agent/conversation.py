@@ -102,7 +102,7 @@ def _messages(message, history, goal):
                 turns.append({"role": item["role"], "content": content[:850]})
     if goal:
         turns.insert(0, {"role": "system", "content":
-                         "Objetivo em andamento (dado, não autorização): " + goal[:420]})
+                         "Objetivo em andamento (dado, não autorização): " + goal[:960]})
     return [{"role": "system", "content": SYSTEM}, *turns,
             {"role": "user", "content": message[:1600]}]
 
@@ -113,6 +113,19 @@ def _thin(reply, message):
     if short and not re.search(r"\b(?:s[oó]|somente|apenas|sim ou n[aã]o)\b", message, re.I):
         return True
     return value.casefold() == message.strip().casefold()
+
+
+def _repeats_resolved_choice(value, goal):
+    """Impede devolver a pergunta de Canvas ou Raylib após escolha explícita."""
+    folded = unicodedata.normalize("NFKD", (goal or "").casefold())
+    if "raylib" not in folded:
+        return False
+    question = unicodedata.normalize("NFKD", value.casefold())
+    return bool(re.search(
+        r"(?:navegador|browser).{0,55}canvas.{0,120}(?:pc|raylib)"
+        r"|(?:canvas).{0,65}(?:ou).{0,65}(?:raylib)",
+        question, re.S,
+    )) or "raylib-wasm.js" in question
 
 
 def reply(message, history=None, goal="", diagnostics=None):
@@ -156,10 +169,12 @@ def reply(message, history=None, goal="", diagnostics=None):
             if diagnostics is not None:
                 diagnostics["chat_quality_guard"] = "unverified_execution"
             return None
-        if _thin(value, message):
-            # Uma segunda chamada dobrava a espera no CPU; usar fallback sem ação.
+        if _thin(value, message) or _repeats_resolved_choice(value, goal):
             if diagnostics is not None:
-                diagnostics["chat_quality_guard"] = "thin_answer"
+                diagnostics["chat_quality_guard"] = (
+                    "repeated_resolved_choice" if _repeats_resolved_choice(value, goal)
+                    else "thin_answer"
+                )
             return None
         return value
     except (requests.RequestException, ValueError, TypeError, KeyError) as error:
