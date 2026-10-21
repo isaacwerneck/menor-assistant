@@ -17,8 +17,8 @@ p{color:var(--muted);line-height:1.55}
 label{display:block;font-size:.88rem;margin:12px 0 8px;color:var(--muted)}
 textarea{width:100%;background:#0e0f18;color:var(--text);border:1px solid var(--border);padding:14px;border-radius:12px;font:inherit;resize:vertical;min-height:96px}
 textarea:focus,button:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
-#directProfile{width:100%;max-width:620px;background:#11111d;color:var(--text);border:1px solid var(--border);padding:12px;border-radius:10px;font:inherit}
-#directProfile:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+#directProfile,#evaluationModel{width:100%;max-width:620px;background:#11111d;color:var(--text);border:1px solid var(--border);padding:12px;border-radius:10px;font:inherit}
+#directProfile:focus-visible,#evaluationModel:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 button{background:#302a43;border:1px solid #53446f;border-radius:10px;padding:12px 16px;color:var(--text);font:inherit;cursor:pointer;min-height:44px}
 button.primary{background:#9d89ed;color:#171222;border-color:transparent;font-weight:700}
@@ -156,6 +156,15 @@ main{padding:18px 12px max(54px,env(safe-area-inset-bottom))}
 <a href="#baterias">Baterias e progresso</a><a href="#teste-avulso">Teste avulso</a>
 <a href="#reportsHistory">Histórico</a>
 </nav>
+<section class="panel" aria-labelledby="evaluation-title">
+<h2 id="evaluation-title">Modelo desta avaliação</h2>
+<label for="evaluationModel">Usar nos testes avulsos e nas próximas baterias</label>
+<select id="evaluationModel" aria-describedby="modelStatus">
+<option value="">Padrão configurado ou definido na bateria</option>
+</select>
+<div class="actions"><button type="button" id="refreshModels">Atualizar modelos instalados</button></div>
+<p class="helper" id="modelStatus" role="status">Esta escolha só afeta o Lab; não muda o modelo do chat nem baixa modelos.</p>
+</section>
 <section class="panel" id="teste-avulso" aria-labelledby="quick-test-title">
 <div class="section-intro"><div><span class="lab-eyebrow">EXPERIMENTO</span>
 <h2 id="quick-test-title">Comparação avulsa</h2></div><span class="section-note">Sem ferramentas executadas</span></div>
@@ -243,6 +252,34 @@ Selecionar avaliação completa E8 (128 casos)</button>
 const $ = id => document.getElementById(id);
 const buttons = [$("runDirect"), $("runPlanner")];
 let running = false;
+async function refreshModels() {
+    const selector = $("evaluationModel");
+    const previous = selector.value;
+    $("refreshModels").disabled = true;
+    try {
+        const response = await fetch("/models", {credentials:"same-origin"});
+        if (!response.ok) throw new Error("Lista indisponível.");
+        const data = await response.json();
+        if (!Array.isArray(data.models)) throw new Error("Lista inválida.");
+        const names = [...new Set(data.models.map(item => item?.name)
+            .filter(name => typeof name === "string" && /^[A-Za-z0-9_.:-]{1,90}$/.test(name)))];
+        const configured = document.createElement("option");
+        configured.value = ""; configured.textContent = "Padrão configurado ou definido na bateria";
+        selector.replaceChildren(configured);
+        for (const name of names) {
+            const option = document.createElement("option");
+            option.value = name; option.textContent = name; selector.append(option);
+        }
+        selector.value = names.includes(previous) ? previous : "";
+        $("modelStatus").textContent = names.length + " modelo(s) compatível(is) instalado(s). "
+            + "A seleção só afeta o Lab. Compare a mesma bateria e o mesmo perfil; modelos ausentes não são baixados.";
+    } catch (error) {
+        $("modelStatus").textContent = "Não consegui atualizar os modelos. O padrão configurado continua disponível.";
+    } finally {
+        $("refreshModels").disabled = false;
+    }
+}
+$("refreshModels").addEventListener("click", refreshModels);
 function historyLines(raw) {
     const list = [];
     for (const line of raw.split(/\r?\n/)) {
@@ -304,6 +341,7 @@ async function run(mode) {
             method:"POST", credentials:"same-origin",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({mode,message,history,
+                ...($("evaluationModel").value ? {model:$("evaluationModel").value} : {}),
                 profile: mode === "direct" && ["baseline","natural","assistant"].includes($("directProfile").value)
                     ? $("directProfile").value : "baseline"}),
         });
@@ -633,14 +671,16 @@ $("batchRun").addEventListener("click", async () => {
     if (!ids.length) return;
     const cases = suiteItems.filter(item => selectedSuites.has(item.id))
         .reduce((sum, item) => sum + item.cases, 0);
+    const model = $("evaluationModel").value;
     if (!confirm("Executar " + ids.length + " bateria(s), " + cases
-        + " perguntas, uma por vez? Pode levar bastante tempo e gerar carga na CPU.")) return;
+        + " perguntas, uma por vez? Modelo: " + (model || "padrão configurado ou da bateria")
+        + ". Pode levar bastante tempo e gerar carga na CPU.")) return;
     $("batchRun").disabled = true;
     try {
         const response = await fetch("/lab/batches/queue", {
             method:"POST", credentials:"same-origin",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({suite_ids:ids}),
+            body:JSON.stringify({suite_ids:ids, ...(model ? {model} : {})}),
         });
         if (!response.ok) {
             const body = await response.json().catch(() => ({}));
@@ -656,7 +696,7 @@ $("batchRun").addEventListener("click", async () => {
     }
 });
 (async () => {
-    await batchRefresh();
+    await Promise.all([refreshModels(), batchRefresh()]);
     await refreshQueueStatus();
 })();
 

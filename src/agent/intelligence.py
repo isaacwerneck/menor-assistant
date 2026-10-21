@@ -14,7 +14,7 @@ import requests
 
 from src.agent.context_engine import select_history, select_approved_examples
 from src.agent.voice import ROUTER_VOICE
-from ops.model_latency import numeric_summary
+from ops.model_latency import model_identifier, numeric_summary
 
 LOG = logging.getLogger(__name__)
 MOVES = ("answer", "clarify", "plan", "act", "research", "continue", "inspect_result")
@@ -172,10 +172,15 @@ def _inference_failure(error):
 
 def decide(message, history=None, pending=None, capabilities=None, knowledge="",
            last_result=None, paused_goals=None, tools=None, review_issues=None,
-           feedback_examples=None, preferences=None, diagnostics=None):
+           feedback_examples=None, preferences=None, diagnostics=None, model=None):
     """Retorna decisão validada, ou None se Ollama falhar; nunca age diretamente."""
     if not isinstance(message, str) or not message.strip() or len(message) > 8000:
         raise ValueError("Mensagem inválida.")
+    selected_model = model_identifier(model) if model is not None else (
+        os.environ.get("MENOR_REASONING_MODEL") or os.environ.get(
+            "OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
+        )
+    )
     schema = _schema_for_tools(tools)
     if diagnostics is not None:
         if not isinstance(diagnostics, dict):
@@ -264,9 +269,7 @@ def decide(message, history=None, pending=None, capabilities=None, knowledge="",
         with requests.post(
             os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/chat",
             json={
-                "model": os.environ.get("MENOR_REASONING_MODEL") or os.environ.get(
-                    "OLLAMA_ROUTER_MODEL", os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
-                ),
+                "model": selected_model,
                 "messages": [{"role": "system", "content": SYSTEM}, *turns,
                              {"role": "user", "content": context_json}],
                 "format": schema, "stream": False,

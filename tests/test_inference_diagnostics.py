@@ -1,5 +1,6 @@
 """Diagnóstico sem prompts privados e sem chamadas extras ao Ollama."""
 import json
+import os
 from os.path import commonprefix
 import unittest
 from unittest.mock import MagicMock, patch
@@ -18,6 +19,22 @@ def response(data):
 
 
 class InferenceDiagnosticsTests(unittest.TestCase):
+    @patch.object(intelligence.requests, "post")
+    def test_explicit_model_is_scoped_to_one_decision(self, post):
+        post.return_value = response({"message": {"content": '{"move":"answer","reply":"ok"}'}})
+        with patch.dict(os.environ, {"MENOR_REASONING_MODEL": "control:7b"}):
+            for model in ("candidate:14b", None):
+                intelligence.decide("Pergunta pública", tools=[], preferences="", feedback_examples=[], model=model)
+            self.assertEqual(os.environ["MENOR_REASONING_MODEL"], "control:7b")
+        self.assertEqual([call.kwargs["json"]["model"] for call in post.call_args_list],
+                         ["candidate:14b", "control:7b"])
+
+    def test_invalid_override_fails_before_inference(self):
+        with patch.object(intelligence.requests, "post") as post:
+            with self.assertRaises(ValueError):
+                intelligence.decide("Pergunta pública", model="../../privado", preferences="", feedback_examples=[])
+            post.assert_not_called()
+
     @patch.object(intelligence.requests, "post")
     def test_changing_request_and_private_context_keeps_catalog_prefix(self, post):
         post.return_value = response({"message": {"content": '{"move":"answer","reply":"ok"}'}})
@@ -144,6 +161,24 @@ class InferenceDiagnosticsTests(unittest.TestCase):
 
 
 class LabInferenceDiagnosticsTests(unittest.TestCase):
+    @patch.object(intelligence.requests, "post")
+    def test_lab_model_override_reaches_both_paths_and_preserves_defaults(self, post):
+        post.return_value = response({"message": {"content": '{"move":"answer","reply":"OK"}'}})
+        with patch.dict(os.environ, {"OLLAMA_MODEL": "control:7b", "MENOR_REASONING_MODEL": "reason:7b"}):
+            for runner in (remote_lab._direct, remote_lab._planner):
+                selected = runner(remote_lab.LabRequest(mode="direct", message="Pergunta", model="candidate:14b"))
+                self.assertEqual(selected["model"], "candidate:14b")
+                runner(remote_lab.LabRequest(mode="direct", message="Pergunta"))
+            self.assertEqual(os.environ["OLLAMA_MODEL"], "control:7b")
+            self.assertEqual(os.environ["MENOR_REASONING_MODEL"], "reason:7b")
+        self.assertEqual([call.kwargs["json"]["model"] for call in post.call_args_list],
+                         ["candidate:14b", "control:7b", "candidate:14b", "reason:7b"])
+
+    def test_lab_rejects_invalid_model_identifiers(self):
+        for model in ("", "../../privado", "modelo;comando", "a" * 91):
+            with self.subTest(model=model), self.assertRaises(ValueError):
+                remote_lab.LabRequest(mode="direct", message="Pergunta", model=model)
+
     @patch.object(remote_lab.intelligence, "decide")
     def test_planner_report_includes_failure_metrics_without_retry(self, decide):
         def failed(*args, diagnostics=None, **kwargs):

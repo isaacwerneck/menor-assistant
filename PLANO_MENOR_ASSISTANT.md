@@ -1,6 +1,6 @@
 # PLANO DE ENGENHARIA E ARQUITETURA: MENOR ASSISTANT
 
-> **Status em 21/10/2026: proposta em avaliação, sem implementação iniciada.**
+> **Status em 21/10/2026: implementação inicial da fase 1 em andamento.**
 > O texto recebido foi preservado abaixo. Antes de implementar, ler a revisão
 > técnica e o controle de progresso nas seções 5 e 6; exemplos e estimativas
 > deste documento não são comandos autorizados nem capacidades comprovadas.
@@ -256,6 +256,11 @@ PR/commit, testes e resultado observado. Código/CI aprovados e comportamento
 comprovado no Ubuntu são estados diferentes. Itens parciais continuam `[ ]`.
 
 - [x] Receber e revisar tecnicamente o plano; registrar sua referência no Git.
+- [x] Preparar o Lab para selecionar modelos instalados por avaliação, nos modos
+  direto/planejador e nas baterias; registrar modelo no relatório completo e no
+  comparador sem alterar o chat. Testes locais: 39 Python e 116 Node passaram;
+  integração Linux e comparação real de candidatos ainda pendentes nesta revisão.
+  Fluxo e limites: [laboratório](docs/laboratorio_baterias.md#escolher-modelo-por-avaliação--início-da-fase-1).
 - [ ] Validar hardware atual e comparar modelos/quantizações com qualidade,
   p50/p95 e memória; escolher o padrão por resultado, sem promessa de velocidade.
 - [ ] Consolidar conversa geral e interpretação contextual sem respostas fixas;

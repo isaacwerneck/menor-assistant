@@ -52,6 +52,9 @@ def summarize(report):
                            "graded_pass_rate": round(passed / (passed + failed), 4) if passed + failed else None}
     return {
         "suite_id": report.get("suite_id"), "run_id": report.get("run_id"), "total": len(cases),
+        "evaluation_model": report.get("evaluation_model"),
+        "models": dict(sorted(Counter(case.get("result", {}).get("model") for case in cases
+                                      if isinstance(case.get("result", {}).get("model"), str)).items())),
         "graded": passes + failures, "graded_passes": passes, "graded_failures": failures,
         "ungraded": reviews,
         "numeric_format_mismatches": format_mismatches,

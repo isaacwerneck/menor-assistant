@@ -167,6 +167,7 @@ class RemoteLabTests(unittest.TestCase):
         with patch("src.api.remote_lab.requests.post") as post, patch(
                 "src.api.remote_lab.intelligence.decide") as decide:
             cases = [
+                {"mode": "direct", "message": "Oi", "model": "../../privado"},
                 {"mode": "erase_all", "message": "Oi"},
                 {"mode": "direct", "message": ""},
                 {"mode": "direct", "message": "a" * 1201},
@@ -177,6 +178,21 @@ class RemoteLabTests(unittest.TestCase):
                 self.assertEqual(request("POST", "/lab/compare", value).status_code, 422)
             decide.assert_not_called()
             post.assert_not_called()
+
+    @patch("src.api.remote_lab.auth.require_owner")
+    @patch("src.api.remote_lab.requests.post")
+    def test_authenticated_request_can_choose_local_evaluation_model(self, post, owner):
+        reply = MagicMock()
+        reply.__enter__.return_value = reply
+        reply.json.return_value = {"message": {"content": "Resposta do candidato."}}
+        post.return_value = reply
+        result = request("POST", "/lab/compare", {
+            "mode": "direct", "message": "Pergunta pública", "model": "candidate:14b",
+        })
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json()["model"], "candidate:14b")
+        self.assertEqual(post.call_args.kwargs["json"]["model"], "candidate:14b")
+        self.assertTrue(post.call_args.args[0].endswith("/api/chat"))
 
 
 if __name__ == "__main__":
