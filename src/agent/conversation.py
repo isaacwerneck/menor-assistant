@@ -69,8 +69,14 @@ def follows_project(state, message):
     """Não transformar mensagens vagas em autorização para ferramentas."""
     folded = unicodedata.normalize("NFKD", message.casefold())
     folded = "".join(c for c in folded if not unicodedata.combining(c))
+    explicit_file_action = bool(re.search(
+        r"\b(?:crie|cria|criar|escreva|escreve|salve|salva|gere|gera)\b"
+        r".{0,80}\b(?:arquivo|file)\b.{0,50}\.(?:html|js|css|py|md)\b",
+        folded,
+    ))
     return (state.get("phase") == "collaboration"
             and not CHANGE_TOPIC.search(folded)
+            and not explicit_file_action
             and bool(FOLLOWUP.search(folded)))
 
 
