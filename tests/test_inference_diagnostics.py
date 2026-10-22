@@ -59,21 +59,28 @@ class InferenceDiagnosticsTests(unittest.TestCase):
         self.assertNotIn("Olá", prefix)
         self.assertEqual(post.call_count, 2)
 
-    def test_generation_requires_fields_that_each_move_needs_to_be_valid(self):
-        variants = intelligence.DECISION_SCHEMA["oneOf"]
-        branches = {move: variant for variant in variants
-                    for move in variant["properties"]["move"]["enum"]}
-        self.assertEqual(set(branches), set(intelligence.MOVES))
-        for move in ("plan", "continue"):
-            self.assertIn("goal", branches[move]["required"])
-            self.assertIn("steps", branches[move]["required"])
-            self.assertEqual(branches[move]["properties"]["steps"]["minItems"], 1)
-        self.assertIn("question", branches["clarify"]["required"])
-        self.assertEqual(branches["clarify"]["properties"]["question"]["minLength"], 1)
-        for move in ("answer", "act", "research", "inspect_result"):
-            self.assertEqual(branches[move]["required"], ["move", "reply"])
-        for variant in variants:
-            self.assertFalse(variant["additionalProperties"])
+    def test_generation_has_compact_schema_and_python_guards_required_fields(self):
+        schema = intelligence.DECISION_SCHEMA
+        self.assertNotIn("oneOf", schema)
+        self.assertEqual(set(schema["properties"]["move"]["enum"]),
+                         set(intelligence.MOVES))
+        self.assertEqual(schema["required"], ["move", "reply"])
+        self.assertFalse(schema["additionalProperties"])
+        self.assertIn("action_quote", schema["properties"])
+        for payload in (
+            {"move": "plan", "reply": "Planejar", "steps": ["Definir objetivo"]},
+            {"move": "plan", "reply": "Planejar", "goal": "Trabalho", "steps": []},
+            {"move": "clarify", "reply": "Preciso saber", "goal": "Construir app"},
+        ):
+            response_mock = MagicMock()
+            response_mock.__enter__.return_value = response_mock
+            response_mock.json.return_value = {
+                "message": {"content": json.dumps(payload)}}
+            with patch.object(intelligence.requests, "post",
+                              return_value=response_mock):
+                result = intelligence.decide(
+                    "Um pedido qualquer", feedback_examples=[], preferences="")
+            self.assertIsNone(result)
 
     def infer(self, diagnostics):
         return intelligence.decide("Pergunta sintética", feedback_examples=[], preferences="",

@@ -75,7 +75,8 @@ class ToolReceiptContinuityTests(unittest.TestCase):
         reply = MagicMock()
         reply.__enter__.return_value = reply
         content = ('{"move":"act","reply":"Proposta de projeto",'
-                   '"tool":"projects.create","arguments":{"name":"Projeto Testado"}}')
+                   '"tool":"projects.create","arguments":{"name":"Projeto Testado"},'
+                   '"action_quote":"Crie um projeto"}')
         reply.json.return_value = {"message": {"content": content}}
         post.return_value = reply
         offered = runner.run(self.session, "minimalTurn01", "Crie um projeto", [], tasks=self.tasks)

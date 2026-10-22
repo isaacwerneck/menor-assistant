@@ -78,13 +78,12 @@ class ProfileTests(unittest.TestCase):
 class DecisionSchemaTests(unittest.TestCase):
     def test_without_tools_does_not_advertise_action(self):
         schema = intelligence._schema_for_tools([])
-        moves = [m for v in schema["oneOf"] for m in v["properties"]["move"]["enum"]]
+        moves = schema["properties"]["move"]["enum"]
         self.assertNotIn("act", moves)
         self.assertIn("research", moves)
         self.assertIn("plan", moves)
-        for variant in schema["oneOf"]:
-            self.assertNotIn("tool", variant["properties"])
-            self.assertNotIn("arguments", variant["properties"])
+        self.assertNotIn("tool", schema["properties"])
+        self.assertNotIn("arguments", schema["properties"])
         self.assertIn("act", intelligence.MOVES)
 
     def test_with_tools_keeps_existing_contract(self):
@@ -103,9 +102,7 @@ class DecisionSchemaTests(unittest.TestCase):
         self.assertIsNone(result)
         self.assertEqual(diagnostics["validation_issue"], "tool")
         schema = post.call_args.kwargs["json"]["format"]
-        self.assertNotIn("act", [
-            m for alt in schema["oneOf"] for m in alt["properties"]["move"]["enum"]
-        ])
+        self.assertNotIn("act", schema["properties"]["move"]["enum"])
 
 
 if __name__ == "__main__":

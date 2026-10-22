@@ -9,7 +9,8 @@ from src.agent.intelligence import decide
 def response(tool, arguments):
     item = {"move": "act", "goal": "Consultar arquivo", "reply": "Consultarei o arquivo.",
             "question": "", "steps": [], "acceptance": [], "relation": "start",
-            "resume_goal_id": "", "tool": tool, "arguments": arguments}
+            "resume_goal_id": "", "tool": tool, "arguments": arguments,
+            "action_quote": "Consulte um arquivo"}
     mocked = MagicMock()
     mocked.__enter__.return_value = mocked
     mocked.json.return_value = {"message": {"content": json.dumps(item)}}
@@ -28,6 +29,7 @@ class ToolContractTests(unittest.TestCase):
         mocked.json.return_value = {"message": {"content": json.dumps({
             "move": "act", "reply": "Consultando diagnóstico.",
             "tool": "system.diagnose", "arguments": {},
+            "action_quote": "Consulte o diagnóstico real",
         })}}
         post.return_value = mocked
         schema = {"name": "system.diagnose", "description": "Consultar auditoria",
