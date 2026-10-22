@@ -11,7 +11,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.api import remote_lab, lab_dialogues
+from src.api import remote_lab, lab_dialogues, lab_core
 
 SUITES = Path(__file__).resolve().parents[2] / "lab" / "suites"
 DATA = Path(os.environ.get("MENOR_LAB_DATA_DIR", str(Path.home() / "menor-data" / "lab")))
@@ -195,6 +195,8 @@ def _run_dialogue_case(case, suite, results, queue=None):
                 })
             return
         for item in lab_dialogues.execute(case, model=model):
+            if "scenario_variant" in case:
+                item["scenario_variant"] = case["scenario_variant"]
             results.append(item)
             _update_progress(len(results), _suite_units(suite), queue)
     finally:
@@ -290,12 +292,28 @@ def suites():
             })
         except (ValueError, OSError, TypeError):
             continue
+    for suite_id in lab_core.CORE_IDS:
+        data = validate_suite(lab_core.suite(suite_id))
+        saved = progress.get(suite_id, {"run_count": 0, "last_report": None})
+        status = "running" if suite_id == active else (
+            "completed" if saved["run_count"] else "pending")
+        result.append({
+            "id": suite_id, "title": data["title"], "description": data["description"],
+            "cases": _suite_units(data), "scenarios": len(data["cases"]),
+            "source": "core", "capability": data["capability"], "phase": data["phase"],
+            "evidence_level": data["evidence_level"],
+            "status": status, "run_count": saved["run_count"],
+            "last_report": saved["last_report"],
+            "recommended_order": None, "recommended_label": None,
+        })
     return result
 
 
 def load_suite(suite_id):
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{1,63}", suite_id):
         raise ValueError("ID inválido.")
+    if lab_core.is_core_id(suite_id):
+        return validate_suite(lab_core.suite(suite_id))
     path = DATA / "suites" / (suite_id + ".json")
     if not path.is_file():
         path = SUITES / (suite_id + ".json")
@@ -310,7 +328,7 @@ def save_suite(raw):
     data = validate_suite(json.loads(raw.decode("utf-8")))
     (DATA / "suites").mkdir(parents=True, exist_ok=True)
     path = DATA / "suites" / (data["id"] + ".json")
-    if (SUITES / (data["id"] + ".json")).exists():
+    if (SUITES / (data["id"] + ".json")).exists() or lab_core.is_core_id(data["id"]):
         raise ValueError("Já existe uma bateria com este ID.")
     if path.exists():
         raise ValueError("Já existe uma bateria com este ID.")
@@ -384,6 +402,10 @@ def _run(suite, run_id, queue=None):
                   "dialogue_failed": len(dialogue_ids) - dialogue_completed,
                   "comparison_group": suite.get("comparison_group"),
                   "methodology_version": suite.get("methodology_version", "legacy"),
+                  "core_catalog_version": suite.get("core_catalog_version"),
+                  "core_cycle": suite.get("core_cycle"),
+                  "capability": suite.get("capability"),
+                  "evidence_level": suite.get("evidence_level", "model_only"),
                   "started_at": started, "finished_at": datetime.now(timezone.utc).isoformat(),
                   "total": len(results),
                   "automatic_passes": sum(x["automatic_pass"] is True for x in results),
@@ -398,6 +420,11 @@ def _run(suite, run_id, queue=None):
         summary = {key: report[key] for key in ("run_id", "suite_id", "started_at", "finished_at",
                    "total", "automatic_passes", "automatic_failures", "ungraded")}
         summary["evaluation_model"] = report["evaluation_model"]
+        if report["core_catalog_version"]:
+            summary["core_catalog_version"] = report["core_catalog_version"]
+            summary["core_cycle"] = report["core_cycle"]
+            summary["capability"] = report["capability"]
+            summary["evidence_level"] = report["evidence_level"]
         if dialogue_ids:
             summary["dialogue_scenarios"] = report["dialogue_scenarios"]
             summary["dialogue_completed"] = report["dialogue_completed"]
@@ -443,7 +470,10 @@ def _with_model(suite, model):
 
 def start(suite_id, *, model=None):
     global _RUNNING
-    suite = _with_model(load_suite(suite_id), model)
+    suite = load_suite(suite_id)
+    if lab_core.is_core_id(suite_id):
+        suite = validate_suite(lab_core.suite(suite_id, lab_core.next_cycle(DATA)))
+    suite = _with_model(suite, model)
     with _LOCK:
         if _RUNNING:
             raise RuntimeError("Já existe uma bateria em execução.")
@@ -523,6 +553,14 @@ def start_queue(suite_ids, *, model=None, models=None):
     else:
         selected_models = [model]
     original_suites = [load_suite(suite_id) for suite_id in suite_ids]
+    core_cycle = lab_core.next_cycle(DATA) if any(
+        lab_core.is_core_id(suite_id) for suite_id in suite_ids) else None
+    if core_cycle is not None:
+        original_suites = [
+            validate_suite(lab_core.suite(suite["id"], core_cycle))
+            if lab_core.is_core_id(suite["id"]) else suite
+            for suite in original_suites
+        ]
     # Uma bateria por modelo, sem inferências paralelas competindo pela CPU.
     suites_to_run = [_with_model(suite, candidate)
                      for suite in original_suites for candidate in selected_models]
@@ -545,6 +583,7 @@ def start_queue(suite_ids, *, model=None, models=None):
             queue_suite_ids=list(suite_ids), queue_models=[name for name in selected_models if name],
             queue_finished=[], queue_failures=[],
             overall_done=0, overall_total=total_cases,
+            core_cycle=core_cycle,
         )
     try:
         threading.Thread(target=_run_queue, args=(entries,), daemon=True).start()
@@ -555,6 +594,7 @@ def start_queue(suite_ids, *, model=None, models=None):
         raise
     return {"suite_ids": list(suite_ids), "total": total_cases,
             "models": [name for name in selected_models if name],
+            "core_cycle": core_cycle,
             "run_ids": [run_id for _, run_id in entries]}
 
 

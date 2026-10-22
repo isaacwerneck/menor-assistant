@@ -479,3 +479,64 @@ test("E15: selection queues 4 dialogue suites and counts model-specific turns", 
     assert.equal(args.suite_ids.length, 4);
     assert.deepEqual(args.models, ["control:7b", "candidate:14b"]);
 });
+
+test("E19: fixed 14 capability batteries are primary and old suites remain under All", async () => {
+    const names = [
+        "conversa", "intencao", "memoria", "planejamento", "projetos",
+        "documentos", "programacao", "ferramentas", "seguranca", "pesquisa",
+        "multimodal", "delegacao", "autoaperfeicoamento", "desempenho",
+    ];
+    const core = names.map((name, i) => ({
+        id:"core-" + name, title:String(i + 1) + " · " + name,
+        description:"Capacidade permanente", cases:8, scenarios:2,
+        phase:i < 4 ? "A" : "B", source:"core", evidence_level:"model_only",
+        run_count:0, status:"pending", last_report:null,
+    }));
+    const ui = browser({suites:[...SUITES, ...core]});
+    await ui.ready();
+    assert.equal(ui.cards().length, 14);
+    assert.equal(ui.elements.get("filterCore").attrs["aria-pressed"], "true");
+    assert.match(ui.cards()[0].node.children[1].children[0].children[2].textContent,
+                 /Capacidade fixa/);
+    await ui.click("filterAll");
+    assert.equal(ui.cards().length, 19);
+    await ui.click("selectCore");
+    assert.equal(ui.cards().length, 14);
+    assert.match(ui.elements.get("selectionCount").textContent, /14 bateria/);
+    assert.match(ui.elements.get("selectionCount").textContent, /112 caso/);
+    const choices = ui.elements.get("batchModelChoices").children;
+    for (const item of choices) {
+        item.children[0].checked = true;
+        item.children[0].listeners.change();
+    }
+    assert.match(ui.elements.get("selectionCount").textContent, /224 caso/);
+    await ui.click("batchRun");
+    const payload = JSON.parse(ui.requests.find(item =>
+        item.url === "/lab/batches/queue").opts.body);
+    assert.equal(payload.suite_ids.length, 14);
+    assert.equal(payload.suite_ids[0], "core-conversa");
+    assert.deepEqual(payload.models, ["control:7b", "candidate:14b"]);
+});
+
+test("E19: subset selection supports fixing one capability without running all", async () => {
+    const core = [
+        {id:"core-documentos", title:"06 · Documentos", source:"core", phase:"B",
+         cases:8, scenarios:2, description:"Estrutura de documentos",
+         status:"pending", run_count:0, last_report:null},
+        {id:"core-seguranca", title:"09 · Segurança", source:"core", phase:"C",
+         cases:8, scenarios:2, description:"Permissões",
+         status:"pending", run_count:0, last_report:null},
+    ];
+    const ui = browser({suites:[...SUITES, ...core]});
+    await ui.ready();
+    assert.equal(ui.cards().length, 2);
+    ui.cards()[0].checkbox.checked = true;
+    ui.cards()[0].checkbox.listeners.change();
+    assert.match(ui.elements.get("selectionCount").textContent, /1 bateria/);
+    await ui.click("batchRun");
+    const payload = JSON.parse(ui.requests.find(x =>
+        x.url === "/lab/batches/queue").opts.body);
+    assert.deepEqual(payload.suite_ids, ["core-documentos"]);
+    await ui.click("filterAll");
+    assert.equal(ui.cards().length, 7);
+});
