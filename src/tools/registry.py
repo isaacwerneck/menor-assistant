@@ -84,6 +84,11 @@ TOOLS = {
     "projects.add_task": Tool(
         "projects.add_task", "Registra uma tarefa no projeto informado.", "write", True, ("slug", "text"),
     ),
+    "projects.set_decision": Tool(
+        "projects.set_decision",
+        "Registra ou corrige uma decisão atual num projeto existente; a escolha mais recente substitui a anterior.",
+        "write", True, ("slug", "topic", "value"),
+    ),
     "projects.code.create": Tool(
         "projects.code.create",
         "Cria UM arquivo de código novo num projeto existente; sem executar ou testar; revisão exigida.",
@@ -159,6 +164,10 @@ def perform(name, arguments, dry_run=True):
         create_code_file(arguments["slug"], arguments["filename"], arguments["goal"], dry_run=True)
     if name == "projects.code.webapp":
         build_web_app(arguments["slug"], arguments["goal"], dry_run=True)
+    if name == "projects.set_decision":
+        workspace = ProjectWorkspace()
+        workspace._decision_entry(arguments["topic"], arguments["value"])
+        workspace.read_project(arguments["slug"])
     if name in ("web.read", "web.browse"):
         web.public_url(arguments["url"])
     if dry_run:
@@ -211,6 +220,10 @@ def perform(name, arguments, dry_run=True):
     elif name == "projects.add_task":
         output = ProjectWorkspace().append(
             arguments["slug"], "task", arguments["text"], origin="painel",
+        )
+    elif name == "projects.set_decision":
+        output = ProjectWorkspace().set_decision(
+            arguments["slug"], arguments["topic"], arguments["value"],
         )
     elif name == "projects.code.create":
         output = create_code_file(arguments["slug"], arguments["filename"],

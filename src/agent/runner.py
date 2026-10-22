@@ -67,6 +67,11 @@ def _approval_details(tool):
         ),
         "projects.create": ("Criar projeto", "Cria o registro de um projeto no Menor."),
         "projects.add_task": ("Adicionar tarefa", "Registra uma tarefa no projeto selecionado."),
+        "projects.set_decision": (
+            "Registrar decisão do projeto",
+            "Registra a escolha atual no projeto privado. Se esse tema já tiver uma decisão, "
+            "substitui a escolha anterior. Não executa comandos nem modifica o Menor.",
+        ),
         "projects.code.webapp": (
             "Gerar aplicativo web inicial",
             "Cria três arquivos privados (HTML, CSS e JavaScript Canvas) em projeto existente. "
