@@ -213,7 +213,7 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 <div class="section-intro"><div><span class="lab-eyebrow">AVALIAÇÃO EM LOTE</span><h2>Suas baterias de testes</h2></div>
 <span class="section-note">Execução sequencial</span></div>
 <p>Escolha várias baterias e execute tudo de uma vez. O Menor roda <strong>uma por vez</strong>, salva um relatório por bateria e mostra o progresso. Os resultados anteriores são reconhecidos neste servidor.</p>
-<p class="helper"><strong>E15 · Conversas completas:</strong> usa respostas geradas pelo próprio modelo ao longo de vários turnos. Não cria arquivos nem executa ferramentas. Os critérios semânticos verificam decisões; naturalidade, utilidade e qualidade continuam exigindo avaliação humana.</p>
+<p class="helper"><strong>14 capacidades fixas:</strong> conversação, intenção, memória, planejamento, projetos, documentos, programação, ferramentas, segurança, pesquisa, multimodal, delegação, autoaperfeiçoamento e desempenho. A cada rodada mudam algumas expressões, não a capacidade testada. Dois modelos recebem as mesmas versões. <strong>Os testes de modelo não executam ferramentas nem comprovam entrega de arquivos.</strong> As baterias antigas ficam em “Todas”.</p>
 <div class="lab-dashboard" aria-label="Resumo dos testes">
 <div class="dashboard-stat"><strong id="suiteTotal">—</strong><span>Baterias disponíveis</span></div>
 <div class="dashboard-stat"><strong id="suiteDone">—</strong><span>Já executadas</span></div>
@@ -228,6 +228,7 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 <div class="actions"><button type="button" id="queueViewReports">Ver relatórios concluídos</button></div>
 </div>
 <div class="suite-tools" role="group" aria-label="Filtrar baterias">
+<button type="button" id="filterCore" aria-pressed="false">14 capacidades fixas</button>
 <button type="button" id="filterPending" aria-pressed="true">Pendentes</button>
 <button type="button" id="filterDone" aria-pressed="false">Feitas</button>
 <button type="button" id="filterRecommended" aria-pressed="false">Recomendadas</button>
@@ -236,6 +237,7 @@ para comparar tempo e qualidade, registre também o número de tokens.</p>
 <div class="suite-search-row"><label for="suiteSearch">Buscar bateria</label>
 <input type="search" id="suiteSearch" autocomplete="off" placeholder="Nome, assunto ou ID"></div>
 <div class="suite-tools" role="group" aria-label="Seleção de testes">
+<button type="button" id="selectCore">Selecionar as 14 capacidades (112 mensagens/modelo)</button>
 <button type="button" id="selectRecommended">Selecionar as 4 recomendadas</button>
 <button type="button" id="selectE8" title="Seleciona as oito baterias E8, 128 casos">
 Selecionar avaliação completa E8 (128 casos)</button>
@@ -483,10 +485,11 @@ let reportLimit = 15;
 let publishRunning = false;
 let publishPoll = null;
 let currentFilter = "pending";
+let initialSuiteLoad = true;
 let queueRunning = false;
 let pollHandle = null;
 const filterButtons = {
-    pending: $("filterPending"), done: $("filterDone"),
+    core: $("filterCore"), pending: $("filterPending"), done: $("filterDone"),
     recommended: $("filterRecommended"), all: $("filterAll"),
 };
 const fmt = count => String(count);
@@ -511,6 +514,7 @@ function suiteRank(item) {
 }
 function suiteMatches(item) {
     const matchesFilter = currentFilter === "all"
+        || (currentFilter === "core" && item.source === "core")
         || (currentFilter === "recommended" && Number.isInteger(item.recommended_order))
         || (currentFilter === "done" && item.run_count > 0)
         || (currentFilter === "pending" && item.run_count === 0);
@@ -559,6 +563,11 @@ function renderSuites() {
             ? fmt(item.scenarios) + " conversas · " + fmt(item.cases) + " mensagens"
             : fmt(item.cases) + " perguntas";
         chips.append(status, size);
+        if (item.source === "core") {
+            const marker = document.createElement("span"); marker.className = "suite-chip";
+            marker.textContent = "Capacidade fixa · fase " + item.phase + " · simulação";
+            chips.append(marker);
+        }
         if (Number.isInteger(item.recommended_order)) {
             const badge = document.createElement("span"); badge.className = "suite-chip";
             badge.textContent = "Etapa " + item.recommended_order + " · "
@@ -839,6 +848,12 @@ async function batchRefresh() {
         if (!batchRes.ok || !reportRes.ok || !archiveRes.ok)
             throw new Error("Sessão expirada ou arquivo de relatórios indisponível.");
         suiteItems = (await batchRes.json()).items;
+        if (initialSuiteLoad && suiteItems.some(item => item.source === "core")) {
+            currentFilter = "core";
+            for (const [name, button] of Object.entries(filterButtons))
+                button.setAttribute("aria-pressed", name === "core" ? "true" : "false");
+        }
+        initialSuiteLoad = false;
         savedReports = (await reportRes.json()).items;
         archivedReports = new Set((await archiveRes.json()).archived_ids || []);
         $("archiveStatus").textContent = archivedReports.size +
@@ -861,6 +876,16 @@ function setFilter(filter) {
 for (const [filter, button] of Object.entries(filterButtons))
     button.addEventListener("click", () => setFilter(filter));
 $("suiteSearch").addEventListener("input", renderSuites);
+$("selectCore").addEventListener("click", () => {
+    if (queueRunning) return;
+    selectedSuites.clear();
+    for (const item of suiteItems) if (item.source === "core") selectedSuites.add(item.id);
+    $("suiteSearch").value = "";
+    setFilter("core");
+    $("batchStatus").textContent = selectedSuites.size
+        ? "Selecionadas as 14 capacidades fixas. A mesma rodada de paráfrases será usada nos dois modelos."
+        : "O catálogo principal não está instalado no servidor.";
+});
 $("selectRecommended").addEventListener("click", () => {
     if (queueRunning) return;
     selectedSuites.clear();
