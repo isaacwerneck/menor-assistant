@@ -116,7 +116,10 @@ class RunnerContextIntegrationTests(unittest.TestCase):
     def test_no_unselected_project_is_read(
             self, project_context, semantic, lexical, skills, tools, decide):
         decide.return_value = None
-        self.assertIsNone(runner._understand({"phase": "idle"}, "Me ajuda?", [], project=None))
+        state, receipt = runner._understand({"phase": "idle"}, "Me ajuda?", [], project=None)
+        self.assertTrue(receipt["handled"])
+        self.assertIn("Não executei ferramentas", receipt["reply"])
+        self.assertEqual(state["phase"], "idle")
         project_context.assert_not_called()
 
     @patch("src.agent.intelligence.requests.post")

@@ -73,7 +73,8 @@ class SemanticAgentTests(unittest.TestCase):
         with (patch.object(runner.intelligence, "decide", return_value=model),
               patch.object(runner, "perform") as perform,
               patch.object(runner.conversation, "reply",
-                           return_value="Vamos discutir primeiro os detalhes desse projeto.")):
+                           return_value="Vamos discutir primeiro os detalhes desse projeto."),
+              patch.dict(os.environ, {"MENOR_SECONDARY_INFERENCE_ENABLED": "1"})):
             result = self.run_turn("Quero desenvolver uma ideia de aplicativo")
         self.assertEqual(result["phase"], "idle")
         self.assertNotIn("approval", result)
