@@ -97,16 +97,14 @@ class OutputBudgetTests(unittest.TestCase):
 class ContractSchemaTests(unittest.TestCase):
     def test_no_tools_schema_disallows_action_at_decoder_level(self):
         schema = intelligence._schema_for_tools([])
-        allowed = {x for branch in schema["oneOf"]
-                   for x in branch["properties"]["move"]["enum"]}
+        allowed = set(schema["properties"]["move"]["enum"])
         self.assertNotIn("act", allowed)
         self.assertIn("plan", allowed)
         self.assertIn("answer", allowed)
         self.assertIn("research", allowed)
         self.assertIn("inspect_result", allowed)
-        for choice in schema["oneOf"]:
-            self.assertNotIn("tool", choice["properties"])
-            self.assertNotIn("arguments", choice["properties"])
+        self.assertNotIn("tool", schema["properties"])
+        self.assertNotIn("arguments", schema["properties"])
 
     def test_no_tools_schema_does_not_mutate_real_agent_contract(self):
         baseline = json.dumps(intelligence.DECISION_SCHEMA, sort_keys=True)
@@ -128,7 +126,7 @@ class ContractSchemaTests(unittest.TestCase):
             feedback_examples=[], diagnostics=diag,
         )["move"], "answer")
         payload = post.call_args.kwargs["json"]
-        self.assertNotIn("act", str(payload["format"]["oneOf"][0]["properties"]["move"]["enum"]))
+        self.assertNotIn("act", payload["format"]["properties"]["move"]["enum"])
         self.assertEqual(diag["outcome"], "validated")
         self.assertNotIn("reply", json.dumps(diag))
 

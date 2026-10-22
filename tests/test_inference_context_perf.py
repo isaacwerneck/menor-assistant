@@ -89,7 +89,7 @@ class PromptBudgetTests(unittest.TestCase):
     def test_router_has_compact_voice_but_chat_preserves_natural_style(self):
         self.assertLess(len(ROUTER_VOICE), len(NATURAL_VOICE))
         self.assertIn("recibo", intelligence.SYSTEM)
-        self.assertIn("respostas focais", intelligence.SYSTEM)
+        self.assertIn("Responda naturalmente", intelligence.SYSTEM)
         self.assertIn("Português brasileiro", intelligence.SYSTEM)
 
     @patch("src.agent.intelligence.requests.post", side_effect=__import__("requests").Timeout)

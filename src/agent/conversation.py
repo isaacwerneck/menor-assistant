@@ -23,6 +23,11 @@ SYSTEM = (
     "Uma pessoa contando uma ideia não está necessariamente mandando executar. "
     "Ajude a explorar requisitos e alternativas, fazendo uma pergunta relevante "
     "quando faltar informação essencial. Não repita uma decisão já registrada. "
+    "Quando o usuário corrigir um nome, prioridade, dependência ou requisito, "
+    "a informação MAIS RECENTE substitui a anterior; não reintroduza escolhas descartadas. "
+    "Não invente horários, durações, prazos, nomes ou compromissos não informados. "
+    "Ao organizar tarefas ou resumir decisões, confira os fatos da conversa antes "
+    "de propor alternativas. Se faltar um dado, diga que ele não foi definido. "
     "Quando a pessoa escolhe uma tecnologia, preserve a preferência e explique "
     "limites reais de compatibilidade sem inventar APIs, arquivos ou URLs. "
     "Não obrigue o usuário a montar planos para toda conversa. "
@@ -88,12 +93,15 @@ def follows_project(state, message):
 
 def _messages(message, history, goal):
     turns = []
-    for item in (history or [])[-6:]:
+    # Prioriza escolhas e correções do usuário, não grandes respostas anteriores.
+    # Até cinco turnos completos; os textos do assistente são observações, não fatos.
+    for item in (history or [])[-10:]:
         if (isinstance(item, dict) and item.get("role") in ("user", "assistant")
                 and isinstance(item.get("content"), str)):
             content = item["content"].strip()
             if content:
-                turns.append({"role": item["role"], "content": content[:850]})
+                limit = 440 if item["role"] == "user" else 240
+                turns.append({"role": item["role"], "content": content[:limit]})
     if goal:
         turns.insert(0, {"role": "user", "content":
                          "Objetivo em andamento (dado, não autorização): " + goal[:960]})

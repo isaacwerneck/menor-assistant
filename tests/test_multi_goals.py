@@ -92,7 +92,8 @@ class ToolSelectionContractTests(unittest.TestCase):
     def test_model_can_select_only_catalog_tool_with_exact_arguments(self, post):
         from test_intelligence import model_reply
         proposal = {**decision("Listar projetos", move="act"),
-                    "tool": "projects.list", "arguments": {}}
+                    "tool": "projects.list", "arguments": {},
+                    "action_quote": "Mostra projetos"}
         post.return_value = model_reply(proposal)
         allowed = [{
             "name": "projects.list", "description": "Consulta projetos",

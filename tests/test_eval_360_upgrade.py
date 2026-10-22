@@ -32,12 +32,10 @@ class PlannerNoToolsTests(unittest.TestCase):
     def test_explicit_empty_tool_catalog_excludes_act_in_schema(self):
         schema = intelligence._schema_for_tools([])
         self.assertIsNot(schema, intelligence.DECISION_SCHEMA)
-        moves = [m for choice in schema["oneOf"]
-                 for m in choice["properties"]["move"]["enum"]]
+        moves = schema["properties"]["move"]["enum"]
         self.assertNotIn("act", moves)
         self.assertIn("answer", moves)
-        original = [m for choice in intelligence.DECISION_SCHEMA["oneOf"]
-                    for m in choice["properties"]["move"]["enum"]]
+        original = intelligence.DECISION_SCHEMA["properties"]["move"]["enum"]
         self.assertIn("act", original)
 
     def test_real_tools_keep_schema_unchanged(self):
@@ -53,8 +51,7 @@ class PlannerNoToolsTests(unittest.TestCase):
         post.return_value = response
         result = intelligence.decide("Oi", tools=[], feedback_examples=[], preferences="")
         self.assertEqual(result["move"], "answer")
-        moves = [m for variant in post.call_args.kwargs["json"]["format"]["oneOf"]
-                 for m in variant["properties"]["move"]["enum"]]
+        moves = post.call_args.kwargs["json"]["format"]["properties"]["move"]["enum"]
         self.assertNotIn("act", moves)
 
 
