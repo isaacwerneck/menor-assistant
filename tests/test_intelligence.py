@@ -179,7 +179,8 @@ class UniversalAgentTests(unittest.TestCase):
     @patch("src.agent.runner.intelligence.decide", return_value=None)
     def test_no_model_result_falls_back_to_existing_chat(self, decide):
         result = runner.run(self.session, "universalTurn01", "oi", [], tasks=self.tasks)
-        self.assertFalse(result["handled"])
+        self.assertTrue(result["handled"])
+        self.assertIn("Não executei ferramentas", result["reply"])
 
     @patch("src.agent.runner.intelligence.decide", return_value=verdict("plan"))
     def test_pending_goal_can_be_cancelled_without_any_external_action(self, decide):

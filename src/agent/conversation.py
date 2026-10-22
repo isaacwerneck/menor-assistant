@@ -12,6 +12,7 @@ import unicodedata
 import requests
 
 from ops.model_latency import numeric_summary, model_identifier
+from src.agent.response_budget import output_budget
 
 
 LOG = logging.getLogger(__name__)
@@ -130,9 +131,8 @@ def reply(message, history=None, goal="", diagnostics=None, model=None):
              else os.environ.get("MENOR_CHAT_MODEL")
              or os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"))
     messages = _messages(message, history, goal)
-    coding = bool(re.search(r"\b(?:codigo|código|javascript|python|html|css|programar|"
-                            r"arquivo|implementa)\b", message, re.I))
-    budget = 400 if coding else 220
+    # A extensão solicitada, não um tema/palavra-chave, determina o orçamento.
+    budget = output_budget(message, chat=True)
     started = time.monotonic()
     if diagnostics is not None:
         diagnostics.update(chat_attempts=1, chat_output_budget_tokens=budget,
@@ -142,7 +142,7 @@ def reply(message, history=None, goal="", diagnostics=None, model=None):
             "model": model, "messages": messages, "stream": False,
             "keep_alive": os.environ.get("OLLAMA_KEEP_ALIVE", "24h"),
             "options": {"temperature": 0.2, "num_predict": budget},
-        }, timeout=(4, 58 if coding else 42)) as response:
+        }, timeout=(4, 58 if budget >= 512 else 42)) as response:
             response.raise_for_status()
             data = response.json()
         if diagnostics is not None:

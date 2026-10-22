@@ -236,9 +236,9 @@ class CollaborationRunnerTests(unittest.TestCase):
             "move": "act", "reply": "Operar", "goal": "Cadastrar projeto",
             "tool": "projects.create", "arguments": {"name": "x"},
         }
-        with patch("src.agent.runner.relevant_context", return_value=""), patch(
-            "src.agent.runner.contextual_knowledge", return_value=""
-        ):
+        with (patch("src.agent.runner.relevant_context", return_value=""),
+              patch("src.agent.runner.contextual_knowledge", return_value=""),
+              patch.dict(os.environ, {"MENOR_SECONDARY_INFERENCE_ENABLED": "1"})):
             result = self.run_turn("e9a", "pode cadastrar um projeto?")
         self.assertEqual(result["phase"], "idle")
         self.assertIn("implementação", result["reply"])
@@ -251,9 +251,9 @@ class CollaborationRunnerTests(unittest.TestCase):
     @patch("src.agent.runner.intelligence.decide")
     def test_router_thin_answer_uses_real_chat_answer(self, decide, respond):
         decide.return_value = {"move": "answer", "reply": "SIM", "goal": "ajuda"}
-        with patch("src.agent.runner.relevant_context", return_value=""), patch(
-            "src.agent.runner.contextual_knowledge", return_value=""
-        ):
+        with (patch("src.agent.runner.relevant_context", return_value=""),
+              patch("src.agent.runner.contextual_knowledge", return_value=""),
+              patch.dict(os.environ, {"MENOR_SECONDARY_INFERENCE_ENABLED": "1"})):
             result = self.run_turn("e9a", "Como começo a investigar esse erro de login?")
         self.assertIn("erro de login", result["reply"])
         respond.assert_called_once()

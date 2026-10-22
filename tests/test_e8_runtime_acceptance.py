@@ -12,7 +12,10 @@ class E8RuntimeAcceptanceTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
-        env = patch.dict(os.environ, {"MENOR_DATA_DIR": temp.name})
+        # Cenários E8 de autoedição são testes ADMINISTRATIVOS explícitos,
+        # jamais autorizações implícitas no chat pessoal.
+        env = patch.dict(os.environ, {"MENOR_DATA_DIR": temp.name,
+                                      "MENOR_AGENT_SCOPE": "maintenance"})
         env.start()
         self.addCleanup(env.stop)
         self.store = TaskStore()

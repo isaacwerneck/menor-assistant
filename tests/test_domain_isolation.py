@@ -42,7 +42,8 @@ class DomainIsolationTests(unittest.TestCase):
         result = runner.run("isolation002", "turn00001",
                             "Vamos criar uma ferramenta para analisar PDFs e imagens",
                             [{"role": "user", "content": "pixel art"}], tasks=TaskStore())
-        self.assertFalse(result["handled"])
+        self.assertTrue(result["handled"])
+        self.assertIn("Não executei ferramentas", result["reply"])
         missions.assert_not_called()
 
     def test_non_image_mission_never_proposes_sd_installation(self):

@@ -31,6 +31,13 @@ from src.tools.registry import TOOLS, list_tools, perform
 
 LOGGER = logging.getLogger(__name__)
 MAX_STEPS = 6
+
+
+def _secondary_inference_enabled():
+    """Compatibilidade explícita: não duplica consultas após falhas por padrão."""
+    return os.environ.get("MENOR_SECONDARY_INFERENCE_ENABLED", "0") == "1"
+
+
 YES = re.compile(r"^(sim+|simm+|pode|bora|vamos|claro|isso|fechou|confirmo)[.!]?$")
 NO = re.compile(r"^(nao|deixa|cancela|cancelar|nao precisa)[.!]?$")
 
@@ -222,6 +229,7 @@ def _model_step(message, history, observations):
                              "request": message, "observations": observations,
                          }, ensure_ascii=False)[:12000]}],
             "format": {"oneOf": actions}, "stream": False,
+            "keep_alive": os.environ.get("OLLAMA_KEEP_ALIVE", "24h"),
             "options": {"temperature": 0, "num_predict": 400},
         }, timeout=(4, 45),
     ) as response:
@@ -293,10 +301,18 @@ def _observed_answer(reply, observations, phase="idle"):
     return current, response
 
 
-def _tool_loop(message, history):
+def _tool_loop(message, history, metrics=None):
     observations, seen = [], set()
     for _ in range(MAX_STEPS):
-        step = _model_step(message, history, observations)
+        began = time.monotonic()
+        try:
+            step = _model_step(message, history, observations)
+        finally:
+            if metrics is not None:
+                metrics["tool_model_calls"] = metrics.get("tool_model_calls", 0) + 1
+                metrics["tool_model_wall_ms"] = round(
+                    metrics.get("tool_model_wall_ms", 0.0)
+                    + (time.monotonic() - began) * 1000, 2)
         if step["action"] == "answer":
             if not observations:
                 return _answer("Plano do modelo, sem ação executada:\n" + step.get("reply", ""))
@@ -458,14 +474,25 @@ def _understand(state, message, history, project=None, metrics=None):
     pending = pending_context(state)
     # Fontes são independentes: falha do índice semântico não elimina FTS ou projeto.
     semantic = lexical = project_facts = ""
+    semantic_started = time.monotonic()
     try:
         semantic = relevant_context(message)
     except (requests.RequestException, OSError, ValueError, sqlite3.Error):
         pass
+    finally:
+        if metrics is not None:
+            metrics["semantic_retrieval_ms"] = round(
+                (time.monotonic() - semantic_started) * 1000, 2)
+    lexical_started = time.monotonic()
     try:
         lexical = contextual_knowledge(message)
     except (OSError, ValueError, sqlite3.Error):
         pass
+    finally:
+        if metrics is not None:
+            metrics["lexical_retrieval_ms"] = round(
+                (time.monotonic() - lexical_started) * 1000, 2)
+    project_started = time.monotonic()
     if project:
         try:
             # Projeto selecionado explicitamente pela conversa; não escolha outro
@@ -473,6 +500,9 @@ def _understand(state, message, history, project=None, metrics=None):
             project_facts = ProjectWorkspace().context(project, max_chars=1050)
         except (ValueError, LookupError, OSError):
             pass
+    if metrics is not None:
+        metrics["project_context_ms"] = round(
+            (time.monotonic() - project_started) * 1000, 2)
     if state.get("phase") == "collaboration":
         # Contexto acumulado serve ao modelo, não altera permissões.
         project_brief = "Objetivo discutido: " + str(state.get("goal", ""))[:300]
@@ -512,21 +542,39 @@ def _understand(state, message, history, project=None, metrics=None):
                 if type(value) is int and 0 <= value <= 10 ** 15:
                     metrics[field] = value
     if decision is None:
-        if state.get("phase") == "collaboration":
-            return _collaborate(state, message, history, metrics=metrics)
-        if pending:
-            answer = conversation.reply(message, history, goal=pending["goal"])
-            if answer:
-                return _answer(answer, **state)
+        # Um timeout do 7B não deve provocar outro timeout por padrão.
+        # Nunca inventar uma resposta ou alterar o objetivo após falha.
+        if metrics is not None:
+            metrics["fallback_reason"] = "reasoner_unavailable"
+        if _secondary_inference_enabled():
+            if metrics is not None:
+                metrics["secondary_model_calls"] = metrics.get("secondary_model_calls", 0) + 1
+            if state.get("phase") == "collaboration":
+                return _collaborate(state, message, history, metrics=metrics)
+            if pending:
+                answer = conversation.reply(message, history, goal=pending["goal"])
+                if answer:
+                    return _answer(answer, **state)
+        if pending or state.get("phase") == "collaboration":
             return _answer(
-                "Não consegui interpretar a continuação do plano agora. "
-                "O objetivo anterior continua salvo; nenhuma ação foi executada. "
-                "Pode tentar novamente?", **state,
+                "Não consegui interpretar essa continuação agora. "
+                "O objetivo anterior foi preservado e nenhuma ação foi executada.",
+                **state,
             )
-        return None
+        # Sem segunda tentativa oculta de 40s+ em outra rota da interface.
+        return _answer(
+            "Não consegui interpretar sua mensagem nesta tentativa. "
+            "Não executei ferramentas nem alterei dados; você pode reenviar "
+            "o pedido ou continuar o objetivo anterior.",
+            **state,
+        )
+    review_started = time.monotonic()
     decision, review_status = _critique_plan(
         message, history, pending, skills, facts, state, tools, decision,
     )
+    if metrics is not None:
+        metrics["review_wall_ms"] = round((time.monotonic() - review_started) * 1000, 2)
+        metrics["review_status"] = review_status
     move = decision["move"]
     if move == "inspect_result":
         receipt = state.get("last_result")
@@ -549,16 +597,22 @@ def _understand(state, message, history, project=None, metrics=None):
                 next_state, receipt = _selected_tool(decision["tool"], decision["arguments"])
             except (ValueError, OSError, RuntimeError, LookupError) as error:
                 LOGGER.info("Ferramenta selecionada indisponível: %s", type(error).__name__)
-                answer = conversation.reply(message, history,
-                                            goal=pending["goal"] if pending else "")
+                secondary = _secondary_inference_enabled()
+                if secondary and metrics is not None:
+                    metrics["secondary_model_calls"] = metrics.get("secondary_model_calls", 0) + 1
+                answer = (conversation.reply(
+                    message, history, goal=pending["goal"] if pending else "")
+                    if secondary else None)
                 reply = answer or (
-                    "Não consegui usar a ferramenta escolhida e não executei a ação. "
-                    "Ainda posso ajudar a desenvolver a solução aqui na conversa. "
-                    "Qual parte você quer trabalhar primeiro?"
+                    "A ferramenta escolhida não pôde ser preparada. "
+                    "Não executei nenhuma ação nem alterei seus arquivos. "
+                    "O objetivo permanece disponível para uma nova tentativa."
                 )
+                if metrics is not None:
+                    metrics["fallback_reason"] = "tool_preparation_failed"
                 return _answer(reply, **state) if pending else _answer(reply)
         else:
-            next_state, receipt = _tool_loop(request, history)
+            next_state, receipt = _tool_loop(request, history, metrics=metrics)
         if pending:
             if next_state["phase"] == "approval":
                 next_state["return_goal"] = {
@@ -618,9 +672,17 @@ def _understand(state, message, history, project=None, metrics=None):
         return _answer(decision["reply"], **state)
     reply = decision["reply"]
     if conversation._thin(reply, message):
-        improved = conversation.reply(message, history, goal=pending["goal"] if pending else "")
-        if improved:
-            reply = improved
+        if metrics is not None:
+            metrics["fallback_reason"] = "low_information_reply"
+        secondary = _secondary_inference_enabled()
+        if secondary and metrics is not None:
+            metrics["secondary_model_calls"] = metrics.get("secondary_model_calls", 0) + 1
+        improved = (conversation.reply(message, history, goal=pending["goal"] if pending else "")
+                    if secondary else None)
+        reply = improved or (
+            "Sua pergunta merece uma resposta mais útil, mas a resposta recebida "
+            "foi insuficiente. Pode detalhar o que você quer decidir ou fazer?"
+        )
     last = state.get("last_result")
     if (last and last.get("kind") == "image"
             and re.search(r"(?:n[aã]o|nao).{0,90}(?:gerar|criar).{0,25}imagen", reply, re.I | re.S)):
@@ -655,8 +717,26 @@ def _advance(state, message, history, project=None, metrics=None):
                 "Você pode aprovar, pedir detalhes ou cancelar.",
                 **state,
             )
+        # Uma aprovação armazenada não sobrevive à retirada de permissões.
+        # Revalidar contra o escopo e os argumentos antes de qualquer efeito.
+        tool_name = state.get("tool")
+        args = state.get("arguments")
+        if not isinstance(tool_name, str) or tool_name not in _agent_tool_names():
+            return _answer(
+                "Essa ferramenta não está mais autorizada no escopo atual. "
+                "Não executei a ação; solicite uma nova operação se precisar.", "blocked",
+            )
+        if not isinstance(args, dict):
+            return _answer("A autorização anterior tem argumentos inválidos; "
+                           "nenhuma ação foi executada.", "blocked")
+        spec = TOOLS[tool_name]
+        if (set(args) != set(spec.arguments)
+                or any(not isinstance(value, str) or not 1 <= len(value.strip()) <= 280
+                       for value in args.values())):
+            return _answer("A autorização anterior tem parâmetros incompatíveis; "
+                           "nenhuma ação foi executada.", "blocked")
         try:
-            receipt = perform(state["tool"], state["arguments"], dry_run=False)
+            receipt = perform(tool_name, args, dry_run=False)
         except ImprovementUnavailable as error:
             LOGGER.warning("Proposta supervisionada indisponível: %s", type(error).__name__)
             return _answer(
