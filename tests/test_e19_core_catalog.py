@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.api import lab_batches, lab_core, lab_dialogues
+from src.api import lab_batches, lab_core
 
 
 class NoWorker:
