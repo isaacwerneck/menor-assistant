@@ -86,7 +86,7 @@ class LiveDialogueContracts(unittest.TestCase):
                          ["inference_failed", "skipped_after_failure", "skipped_after_failure"])
         self.assertEqual(model.call_count, 1)
         self.assertNotIn("private token", json.dumps(result))
-        self.assertTrue(all(item["automatic_pass"] is False for item in result))
+        self.assertEqual([item["automatic_pass"] for item in result], [False, None, None])
 
     def test_decision_checks_detect_unwanted_action_without_fake_achievement(self):
         tests = {"forbid_act": True, "forbidden_tools": ["developer.propose"]}

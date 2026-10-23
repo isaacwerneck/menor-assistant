@@ -18,7 +18,8 @@ from ops.model_latency import model_identifier, numeric_summary, configured_num_
 
 LOG = logging.getLogger(__name__)
 MOVES = ("answer", "clarify", "plan", "act", "research", "continue", "inspect_result")
-INFERENCE_OPTIONS = {"temperature": 0.1, "num_predict": 360}
+# Decisões estruturadas devem terminar cedo; 240 tokens cobrem planos curtos sem saída excessiva.
+INFERENCE_OPTIONS = {"temperature": 0.1, "num_predict": 240}
 INFERENCE_TIMEOUT = (4, 40)
 SYSTEM = """Você é Menor, um assistente local. Interprete intenção e contexto,
 não palavras isoladas. O usuário pode estar explorando uma ideia, perguntando,

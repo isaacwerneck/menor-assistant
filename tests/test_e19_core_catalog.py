@@ -138,6 +138,31 @@ class CoreCatalogTests(unittest.TestCase):
             self.assertEqual(scenario["turns"][2]["checks"]["forbidden_tools"],
                              ["developer.propose", "developer.build"])
 
+    def test_skipped_turns_are_ungraded_not_model_failures(self):
+        suite = {
+            "id": "test-failure-cascade",
+            "cases": [{
+                "id": "conversation", "mode": "dialogue", "engine": "semantic",
+                "turns": [
+                    {"message": "Quero criar um aplicativo simples",
+                     "review_criteria": "Identifica a intenção sem executar ferramentas."},
+                    {"message": "Ele precisa salvar os dados",
+                     "review_criteria": "Usa o requisito de persistência no contexto."},
+                ],
+            }],
+        }
+        with (patch.object(lab_batches, "_checkout_snapshot",
+                           return_value={"status": "unavailable"}),
+              patch("src.api.lab_dialogues.run_turn", return_value=(
+                  {"status": "no_valid_decision", "reply": "", "move": None}, None))):
+            self.assertTrue(lab_batches._run(suite, "20261022T222223Z-1234abcd"))
+        report = json.loads((self.root / "20261022T222223Z-1234abcd.json").read_text())
+        self.assertEqual(report["inference_failures"], 1)
+        self.assertEqual(report["skipped_after_failure"], 1)
+        self.assertEqual(report["automatic_failures"], 1)
+        self.assertEqual(report["ungraded"], 1)
+        self.assertEqual(report["cases"][1]["result"]["status"], "skipped_after_failure")
+
     def test_core_report_keeps_cycle_variant_and_no_false_execution_claims(self):
         suite = lab_core.suite("core-memoria", cycle=2)
         cases = []

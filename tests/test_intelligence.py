@@ -132,6 +132,7 @@ class ReasonerContractTests(unittest.TestCase):
     def test_timeout_fails_without_granting_execution(self, post):
         self.assertIsNone(intelligence.decide("Quero criar um sistema"))
         post.assert_called_once()
+        self.assertEqual(post.call_args.kwargs["json"]["options"]["num_predict"], 240)
 
 
 class UniversalAgentTests(unittest.TestCase):

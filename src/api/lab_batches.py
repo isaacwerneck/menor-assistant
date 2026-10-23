@@ -412,8 +412,14 @@ def _run(suite, run_id, queue=None):
                   "automatic_failures": sum(x["automatic_pass"] is False for x in results),
                   "ungraded": sum(x["automatic_pass"] is None for x in results),
                   "numeric_format_mismatches": sum(x["format_compliant"] is False for x in results),
-                  "inference_failures": sum(x["result"].get("status")
-                                            not in ("answered", "decision_validated") for x in results),
+                  "inference_failures": sum(
+                      x["result"].get("status") not in (
+                          "answered", "decision_validated", "skipped_after_failure"
+                      ) for x in results
+                  ),
+                  "skipped_after_failure": sum(
+                      x["result"].get("status") == "skipped_after_failure" for x in results
+                  ),
                   "cases": results}
         (DATA / (run_id + ".json")).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         # Publicar somente métricas, sem perguntas, respostas ou histórico privados.

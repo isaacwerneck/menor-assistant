@@ -37,7 +37,7 @@ class SemanticActionEvidenceTests(unittest.TestCase):
         self.assertIn("action_quote", schema["properties"])
         self.assertEqual(schema["required"], ["move", "reply"])
         self.assertLess(len(intelligence.SYSTEM), 3000)
-        self.assertEqual(payload["options"]["num_predict"], 360)
+        self.assertEqual(payload["options"]["num_predict"], 240)
 
     def test_absent_tool_catalog_prevents_act_in_decoder(self):
         _result, payload = self.decide("Oi", {"move": "answer", "reply": "Olá."}, tools=[])
