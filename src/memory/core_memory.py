@@ -65,6 +65,14 @@ class CoreMemoryManager:
             data = json.loads(raw)
             if not isinstance(data, dict):
                 return dict(DEFAULT_BLOCKS)
+            updated = False
+            for k, v in DEFAULT_BLOCKS.items():
+                if k not in data:
+                    data[k] = v
+                    updated = True
+            if updated:
+                with _CORE_MEM_LOCK:
+                    self._write_atomic(data)
             return data
         except Exception as exc:
             LOGGER.warning("Erro ao ler core_memory.json, restaurando padrões: %s", exc)

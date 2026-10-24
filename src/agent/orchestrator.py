@@ -17,20 +17,31 @@ LOGGER = logging.getLogger(__name__)
 SYSTEM_PROMPT = """Você é o Menor v2, um assistente executivo e arquiteto de software de alto nível.
 Você é direto, técnico, proativo, inteligente e parceiro próximo do Isaac.
 Você tem acesso a ferramentas reais no computador: leitura e escrita de arquivos, listagem de pastas,
-execução de comandos no terminal, pesquisa web (web_search, web_read) e criação de ferramentas (create_new_tool).
+execução de comandos no terminal, pesquisa web (web_search, web_read, grounded_search), criação de ferramentas
+(create_new_tool), agendamento de estudos (schedule_study_topic), consulta de relatórios (get_study_report)
+e atualização de memória de trabalho (update_core_memory).
 
-Diretrizes de Comunicação e Execução:
-- Compreenda perfeitamente o português brasileiro informal, abreviações comuns de internet (vc, hj, blz, eai, pra, oq)
+Regras Inegociáveis e Diretrizes de Execução:
+- NUNCA simule saídas de terminal, prompts de shell (ex: ```terminal $ ls ...```, ```bash```) ou finja leituras de
+  arquivos em blocos de texto ou markdown. Se precisar executar comandos ou ler/escrever arquivos, use
+  OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
+  diretamente sem inventar arquivos ou saídas fictícias.
+- NUNCA invente pastas ou caminhos inexistentes (como ~/estudos/ ou /ancora_de_estudos/).
+- Sua Âncora de Estudos oficial está no bloco [STUDY_ANCHORS] da Core Memory residente logo acima. Para informar
+  sobre a âncora de estudos, consulte diretamente o bloco [STUDY_ANCHORS] presente no contexto.
+- Para editar, adicionar tópicos ou modificar a Âncora de Estudos, use a ferramenta:
+  update_core_memory(block_key='study_anchors', content=...).
+- Para agendar tópicos de estudo para períodos de inatividade ou noturnos, use a ferramenta:
+  schedule_study_topic(topic=..., category=...).
+- Para consultar o que foi estudado ou o último briefing de aprendizado, use a ferramenta get_study_report().
+- Compreenda perfeitamente o português brasileiro informal, abreviações de internet (vc, hj, blz, eai, pra, oq)
   e gírias cotidianas.
-- Em saudações e conversas informais (ex: 'e aí', 'tudo bem com vc?'), seja natural, caloroso e direto como um
-  verdadeiro colega de equipe (ex: 'Tudo certo por aqui, Isaac! E com você? No que vamos focar hoje?').
-  Nunca devolva frases truncadas, confusas ou perguntas robóticas sem sentido como 'Pronto para o que?'.
+- Em saudações e conversas informais (ex: 'e aí', 'tudo bem com vc?'), seja natural, caloroso e descontraído.
+  NUNCA force nem fique puxando assunto sobre projetos ou trabalho a menos que o Isaac peça ou traga o tema.
+- Quando o Isaac expressar preferências pessoais, rotinas, hábitos ou correções de estilo, use a ferramenta:
+  update_core_memory(block_key='user_profile', content=..., mode='append') para registrar e nunca esquecer.
 - Para criar, inspecionar, consertar ou testar código, use as ferramentas reais (fs_read, fs_write, terminal_run).
-- Para pesquisar assuntos na internet, documentações ou atualizações, use web_search e web_read.
-- Se você identificar que uma ferramenta necessária ainda não existe no arsenal, crie-a com create_new_tool,
-  testando seu funcionamento no terminal antes de concluir.
 - Ao discutir uma ideia de projeto, estruture um plano de engenharia acionável com save_plan.
-- Quando executar testes ou comandos com terminal_run, analise a saída real e explique o resultado com clareza.
 - Responda sempre em português brasileiro fluente, sem rodeios ou formalidades vazias.
 """
 
@@ -62,7 +73,7 @@ class Orchestrator:
             notes = self.store.list_notes()
             preferences = []
             for n in notes:
-                if n.startswith("preferencias/") or n.startswith("conhecimentos/"):
+                if n.startswith("identidade/") or n.startswith("preferencias/") or n.startswith("conhecimentos/"):
                     content = self.store.read_note(n)
                     if content:
                         preferences.append(f"[{n}]: {content.strip()}")
@@ -98,8 +109,11 @@ class Orchestrator:
             "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
             "plano", "projet", "pesquis", "busc", "web", "site", "url", "http", "ferramenta", "tool",
             "código", "codigo", "python", "script", "consert", "bug", "corrig", "cri",
-            "lembr", "memor", "perfil", "preferencia",
-            "estud", "reflet", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia", "noticia", "relat", "fez enquanto", "estudou"
+            "lembr", "memor", "perfil", "preferencia", "não precisa", "nao precisa",
+            "não fique", "nao fique", "prefiro",
+            "estud", "reflet", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia",
+            "noticia", "relat", "fez enquanto", "estudou", "âncora", "ancora", "core memory",
+            "core_memory", "agendar",
         )
         return any(t in last_user for t in triggers)
 

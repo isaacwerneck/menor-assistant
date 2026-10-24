@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 
@@ -53,3 +54,16 @@ class TestCoreMemory(unittest.TestCase):
         self.assertEqual(res["block_key"], "user_profile")
         saved = self.mgr.get_block("user_profile")
         self.assertIn("sempre usar pytest", saved)
+
+    def test_auto_migrate_missing_blocks(self):
+        # Simula arquivo antigo sem study_anchors
+        old_data = {
+            "user_profile": "Isaac Antigo",
+            "system_directives": "Diretiva antiga",
+        }
+        self.mgr.file_path.parent.mkdir(parents=True, exist_ok=True)
+        self.mgr.file_path.write_text(json.dumps(old_data), encoding="utf-8")
+        blocks = self.mgr.list_blocks()
+        self.assertIn("study_anchors", blocks)
+        self.assertIn("active_projects", blocks)
+        self.assertEqual(blocks["user_profile"], "Isaac Antigo")

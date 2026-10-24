@@ -42,6 +42,7 @@ LOCAL_ACTION_TRIGGERS = (
     "arquivo", "file", "ler", "leia", "le ", "lê", "escrev", "salv", "list", "pasta", "dir",
     "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
     "plano", "projet", "ferramenta", "tool", "código", "codigo", "consert", "corrig",
+    "preferencia", "perfil", "lembr", "memor",
 )
 
 # Stopwords coloquiais e gírias a remover na reformulação de queries

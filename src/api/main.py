@@ -190,6 +190,13 @@ class AgentRunRequest(ChatRequest):
     turn_id: Optional[str] = Field(default="turn-1", max_length=80)
 
 
+class AgentRouteRequest(BaseModel):
+    message: MessageText
+    history: List[ChatMessage] = Field(default_factory=list, max_length=40)
+    project: Optional[str] = Field(default=None, max_length=64)
+    node: Optional[str] = Field(default="server", max_length=50)
+
+
 class PasswordRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
@@ -307,9 +314,10 @@ def auth_logout(request: Request, response: Response):
 # --- CHAT & AGENTE ---
 
 @app.post("/agent/run")
-def agent_run(body: AgentRunRequest, request: Request):
+def agent_run(body: AgentRunRequest, request: Request, response: Response):
     _notify_user_active()
     auth.require_owner(request)
+    response.headers["X-Menor-Fallback"] = "stream"
     target_url = body.ollama_url or OLLAMA_SERVER_URL
     target_model = body.model or get_active_model()
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
@@ -322,6 +330,12 @@ def agent_run(body: AgentRunRequest, request: Request):
         "model_used": result.get("model_used"),
         "node_url": result.get("node_url"),
     }
+
+
+@app.post("/agent/route")
+def agent_route(_req: AgentRouteRequest, _access=Depends(require_chat_access)):
+    """Rota rápida de compatibilidade com o frontend para evitar 404 e atrasos de rede."""
+    return {"decision": "chat"}
 
 
 @app.post("/chat")
@@ -345,16 +359,50 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
     target_url = req.ollama_url or (OLLAMA_SERVER_URL if req.node != "local" else "http://localhost:11434")
     target_model = req.model or (get_active_model() if req.node != "local" else "qwen2.5:7b")
 
+    store = BrainStore()
+    sections = []
+    try:
+        from src.memory.core_memory import CoreMemoryManager
+        core_ctx = CoreMemoryManager(store).format_system_context()
+        if core_ctx:
+            sections.append(core_ctx)
+    except Exception as exc:
+        logger.debug("Core memory não carregada no chat_stream: %s", exc)
+
+    try:
+        store.initialize()
+        notes = store.list_notes()
+        prefs = []
+        for n in notes:
+            if n.startswith("identidade/") or n.startswith("preferencias/") or n.startswith("conhecimentos/"):
+                c = store.read_note(n)
+                if c and len(c.strip()) > 30:
+                    prefs.append(f"[{n}]: {c.strip()}")
+        if prefs:
+            sections.append("Memória permanente do usuário:\n" + "\n".join(prefs[:5]))
+    except Exception as exc:
+        logger.debug("Memória permanente não carregada no chat_stream: %s", exc)
+
+    base_system = (
+        "Você é o Menor v2, assistente executivo e parceiro pessoal do Isaac.\n"
+        "Compreenda perfeitamente gírias e abreviações da internet brasileira (vc, hj, eai, blz, oq, pra).\n"
+        "Responda sempre de forma natural, calorosa e fluente em português brasileiro.\n"
+        "Em conversas casuais e cumprimentos, seja descontraído e NUNCA force nem puxe assunto sobre trabalho.\n"
+        "Respeite estritamente as preferências, diretrizes e perfil do usuário salvas na memória.\n"
+        "NUNCA simule saídas de terminal ou invente pastas inexistentes (ex: ```terminal $ ls ...```).\n"
+        "Sua Âncora de Estudos oficial está no bloco [STUDY_ANCHORS] da sua Core Memory acima."
+    )
+    if sections:
+        system_content = f"{base_system}\n\n" + "\n\n".join(sections)
+    else:
+        system_content = base_system
+
     payload = {
         "model": target_model,
         "messages": [
             {
                 "role": "system",
-                "content": (
-                    "Você é o Menor v2, assistente executivo e parceiro de engenharia do Isaac. "
-                    "Compreenda perfeitamente gírias e abreviações da internet brasileira (vc, hj, eai, blz). "
-                    "Responda sempre de forma natural, calorosa e fluente em português brasileiro."
-                ),
+                "content": system_content,
             },
             *[item.model_dump() for item in req.history],
             {"role": "user", "content": req.message},
