@@ -18,12 +18,15 @@ LOGGER = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """Você é o Menor v2, parceiro de tecnologia e arquiteto de software de alto nível do Isaac.
 Você é direto, técnico, proativo, inteligente e parceiro de engenharia.
-Você tem acesso a ferramentas reais no computador: leitura e escrita de arquivos, listagem de pastas,
-execução de comandos no terminal, pesquisa web (web_search, web_read, grounded_search), criação de ferramentas
-(create_new_tool), agendamento de estudos (schedule_study_topic), consulta de relatórios (get_study_report)
-e atualização de memória de trabalho (update_core_memory).
+Você tem acesso a ferramentas reais no computador: leitura e escrita de arquivos (fs_read, fs_write, fs_patch),
+listagem de pastas (fs_list), execução de comandos no terminal (terminal_run), pesquisa web (web_search, web_read),
+criação de ferramentas (create_new_tool), agendamento de estudos (schedule_study_topic),
+consulta de relatórios (get_study_report) e atualização de memória de trabalho (update_core_memory).
 
 Regras Inegociáveis e Diretrizes de Execução:
+- Se o usuário pedir para criar, fazer, programar ou salvar um site, página web, arquivo, script ou código,
+  chame IMEDIATAMENTE a ferramenta real `fs_write` com o caminho do arquivo (ex: 'index.html') e o código funcional.
+  NUNCA apenas prometa fazer ou diga que vai criar: execute a ferramenta real `fs_write` no mesmo turno.
 - NUNCA simule saídas de terminal, prompts de shell (ex: ```terminal $ ls ...```, ```bash```) ou finja leituras de
   arquivos em blocos de texto ou markdown. Se precisar executar comandos ou ler/escrever arquivos, use
   OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
@@ -33,6 +36,7 @@ Regras Inegociáveis e Diretrizes de Execução:
 - NUNCA faça propaganda não solicitada de ferramentas ou projetos no meio de conversas comuns.
   Responda estritamente ao que foi perguntado.
 - NUNCA invente reuniões, compromissos ou presuma a rotina pessoal do Isaac.
+- NUNCA use tags <think> ou raciocínio em inglês. Responda diretamente em português brasileiro.
 - Responda sempre em português brasileiro fluente, natural e direto, sem rodeios ou formalidades vazias.
 """
 
@@ -46,9 +50,6 @@ Menor: E aí Isaac, suave? O que manda hoje?
 
 Usuário: tudo bem?
 Menor: Tudo tranquilo por aqui, mano! E com você, como estão as coisas?
-
-Usuário: consegue fazer um site pra mim?
-Menor: Consigo sim, mano! Me conta o que você tem em mente para o site que a gente já começa a estruturar agora.
 
 Responda sempre diretamente na voz do Menor v2, sem introduções em inglês e sem blocos de raciocínio interno.
 """
@@ -68,7 +69,8 @@ class Orchestrator:
         store: Optional[BrainStore] = None,
     ):
         self.ollama_url = (ollama_url or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")).rstrip("/")
-        self.default_model = default_model or os.environ.get("OLLAMA_MODEL", "qwen2.5:14b")
+        from src.agent.study import get_optimal_model
+        self.default_model = default_model or os.environ.get("OLLAMA_MODEL") or get_optimal_model(self.ollama_url)
         self.store = store or BrainStore()
 
     def _get_context_summary(self, casual: bool = False) -> str:
@@ -152,7 +154,8 @@ class Orchestrator:
         if norm_clean in casual_bypass or any(norm_clean.startswith(c) for c in greetings):
             action_words = (
                 "leia", "ler", "escreva", "escreve", "crie", "criar",
-                "rode", "rodar", "terminal", "pytest", "git", "salve"
+                "rode", "rodar", "terminal", "pytest", "git", "salve",
+                "faz", "fazer", "faça", "construir", "programar", "desenvolver", "implementar"
             )
             if not any(w in norm_clean for w in action_words):
                 return False
@@ -180,6 +183,7 @@ class Orchestrator:
             "não fique", "nao fique", "prefiro",
             "estude ", "estudar", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia",
             "noticia", "relat", "fez enquanto", "estudou", "agendar", "agende", "adicione",
+            "faz ", "fazer", "faça", "constru", "program", "desenvolv", "implement", "html", "css", "js",
         )
         return any(t in last_user for t in triggers)
 
@@ -240,10 +244,144 @@ class Orchestrator:
                 from src.tools.core import get_study_report
                 rep = get_study_report(self.store)
                 if rep.get("has_report") and rep.get("report_markdown"):
-                    full_system += f"\n\n[RELATÓRIO ATUALIZADO DE ESTUDOS DO MENOR]:\n{rep['report_markdown']}"
                     executed_tools_log.append("get_study_report")
+                    if any(w in norm_user for w in ("relat", "resumo", "o que", "oq", "aprendeu", "estudou")):
+                        return {
+                            "success": True,
+                            "reply": (
+                                "Aqui está o relatório mais recente de estudo e auto-aprimoramento do Menor:\n\n"
+                                + rep["report_markdown"]
+                            ),
+                            "tools_executed": executed_tools_log,
+                            "model_used": target_model,
+                            "node_url": target_url,
+                        }
+                    full_system += f"\n\n[RELATÓRIO ATUALIZADO DE ESTUDOS DO MENOR]:\n{rep['report_markdown']}"
             except Exception as exc:
                 LOGGER.debug("Grounding de relatório de estudos ignorado: %s", exc)
+
+        # Inspeção rápida de saúde do código via AST
+        inspect_triggers = (
+            "inspeção na saúde", "inspecione o código", "gaps de teste",
+            "inspecione o repositorio", "inspecione o repositório", "saúde do nosso código"
+        )
+        if any(t in norm_user for t in inspect_triggers):
+            try:
+                from src.tools.core import dispatch_inspect_codebase
+                insp_res = dispatch_inspect_codebase()
+                executed_tools_log.append("inspect_codebase")
+                rep_md = insp_res.get("report_markdown")
+                if rep_md:
+                    return {
+                        "success": True,
+                        "reply": (
+                            "Aqui está o diagnóstico atual da saúde e cobertura de testes do código:\n\n"
+                            + rep_md
+                        ),
+                        "tools_executed": executed_tools_log,
+                        "model_used": target_model,
+                        "node_url": target_url,
+                    }
+            except Exception as exc:
+                LOGGER.warning("Inspeção rápida de código falhou: %s", exc)
+
+        # Agendamento direto de tópico de estudo
+        schedule_triggers = ("agenda um novo tópico", "agenda tópico", "agende um novo tópico", "agendar estudo")
+        if any(t in norm_user for t in schedule_triggers):
+            try:
+                from src.tools.core import schedule_study_topic
+                topic_match = re.search(r"['\"](.*?)['\"]", last_user) or re.search(
+                    r"(?:estudar|tópico|tema):\s*(.*)", last_user, re.I
+                )
+                topic_text = topic_match.group(1).strip() if topic_match else last_user
+                schedule_study_topic(topic=topic_text)
+                executed_tools_log.append("schedule_study_topic")
+                return {
+                    "success": True,
+                    "reply": f"Tópico '{topic_text}' agendado com sucesso para o próximo ciclo de estudos do Menor!",
+                    "tools_executed": executed_tools_log,
+                    "model_used": target_model,
+                    "node_url": target_url,
+                }
+            except Exception as exc:
+                LOGGER.warning("Agendamento de estudo falhou: %s", exc)
+
+        # Salvar preferência na memória permanente
+        memory_save_triggers = (
+            "salva na sua memória permanente", "salve na sua memória", "guarde na memória", "lembre-se que"
+        )
+        if any(t in norm_user for t in memory_save_triggers):
+            try:
+                from src.memory.core_memory import CoreMemoryManager
+                pref_match = re.search(r"(?:que|de)\s+(.*)", last_user, re.I)
+                pref_text = pref_match.group(1).strip() if pref_match else last_user
+                self.store.remember_preference(pref_text)
+                CoreMemoryManager(self.store).set_block("user_preferences", pref_text, mode="append")
+                executed_tools_log.append("update_core_memory")
+                return {
+                    "success": True,
+                    "reply": f"Entendido, Isaac! Salvei na sua memória permanente e perfil: '{pref_text}'.",
+                    "tools_executed": executed_tools_log,
+                    "model_used": target_model,
+                    "node_url": target_url,
+                }
+            except Exception as exc:
+                LOGGER.warning("Salvamento de memória falhou: %s", exc)
+
+        # Identidade do Isaac
+        if any(t in norm_user for t in ("quem eu sou", "minha função", "meu perfil", "lembra quem eu sou")):
+            try:
+                from src.memory.core_memory import CoreMemoryManager
+                profile = CoreMemoryManager(self.store).get_block("user_profile")
+                if profile and len(profile.strip()) > 10:
+                    return {
+                        "success": True,
+                        "reply": f"Com certeza, mano! Você é o Isaac Werneck:\n\n{profile.strip()}",
+                        "tools_executed": executed_tools_log,
+                        "model_used": target_model,
+                        "node_url": target_url,
+                    }
+            except Exception as exc:
+                LOGGER.debug("Consulta de perfil ignorada: %s", exc)
+
+        # Setup de Hardware
+        hardware_triggers = (
+            "configuração de máquinas", "setup atual", "quais máquinas", "nossas gpus", "setup de hardware"
+        )
+        if any(t in norm_user for t in hardware_triggers):
+            try:
+                from src.memory.core_memory import CoreMemoryManager
+                env_block = CoreMemoryManager(self.store).get_block("environment")
+                if env_block:
+                    return {
+                        "success": True,
+                        "reply": f"Aqui está o nosso setup atual de infraestrutura e hardware:\n\n{env_block.strip()}",
+                        "tools_executed": executed_tools_log,
+                        "model_used": target_model,
+                        "node_url": target_url,
+                    }
+            except Exception as exc:
+                LOGGER.debug("Consulta de hardware ignorada: %s", exc)
+
+        # Listagem de arquivos salvos
+        fs_list_triggers = (
+            "onde você salvou", "onde vc salvou", "lista os arquivos", "listar arquivos", "listar os arquivos"
+        )
+        if any(t in norm_user for t in fs_list_triggers):
+            try:
+                from src.tools.core import fs_list
+                files_found = fs_list(".")
+                executed_tools_log.append("fs_list")
+                file_summary = "\n".join(f"- {f.get('name')} ({f.get('type')})" for f in files_found[:20])
+                return {
+                    "success": True,
+                    "reply": f"Aqui estão os arquivos presentes no diretório do projeto:\n\n{file_summary}",
+                    "tools_executed": executed_tools_log,
+                    "model_used": target_model,
+                    "node_url": target_url,
+                }
+            except Exception as exc:
+                LOGGER.debug("fs_list ignorado: %s", exc)
 
         coding_keywords = (
             "código", "codigo", "script", "bug", "patch", "consert", "refator", "função", "classe", "test"
@@ -276,10 +414,10 @@ class Orchestrator:
                     "temperature": 0.6 if not should_use_tools else 0.2,
                     "top_p": 0.9,
                     "repeat_penalty": 1.1,
-                    "num_predict": 120 if not should_use_tools else 250,
+                    "num_predict": 1024 if not should_use_tools else 1536,
                     "num_thread": get_optimal_threads(),
-                    "num_ctx": 2048 if not should_use_tools else 4096,
-                    "stop": ["\nThinking Process:", "Thinking Process:", "<think>", "Okay, let's", "Let's tackle"],
+                    "num_ctx": 4096,
+                    "stop": ["\nThinking Process:", "Thinking Process:", "Okay, let's", "Let's tackle"],
                 },
                 "keep_alive": "60m",
             }
@@ -293,26 +431,29 @@ class Orchestrator:
             except requests.HTTPError as http_err:
                 status_code = getattr(http_err.response, "status_code", None)
                 err_text = getattr(http_err.response, "text", "")
-                if status_code == 404 and target_model != self.default_model:
-                    LOGGER.warning(
-                        "Modelo %s não encontrado em %s (404). Tentando fallback para modelo padrão %s.",
-                        target_model,
-                        target_url,
-                        self.default_model,
-                    )
-                    target_model = self.default_model
-                    payload["model"] = target_model
-                    try:
-                        resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
-                        resp.raise_for_status()
-                        data = resp.json()
-                    except Exception as fallback_exc:
-                        LOGGER.error("Fallback para %s falhou: %s", target_model, fallback_exc)
-                        return {
-                            "success": False,
-                            "reply": f"Erro de comunicação com o modelo ({target_model}): {str(fallback_exc)}",
-                            "tools_executed": executed_tools_log,
-                        }
+                if status_code == 404:
+                    from src.agent.study import get_optimal_model
+                    discovered = get_optimal_model(target_url)
+                    if discovered and discovered != target_model:
+                        LOGGER.warning(
+                            "Modelo %s não encontrado em %s (404). Tentando fallback para modelo disponível %s.",
+                            target_model,
+                            target_url,
+                            discovered,
+                        )
+                        target_model = discovered
+                        payload["model"] = target_model
+                        try:
+                            resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
+                            resp.raise_for_status()
+                            data = resp.json()
+                        except Exception as fallback_exc:
+                            LOGGER.error("Fallback para %s falhou: %s", target_model, fallback_exc)
+                            return {
+                                "success": False,
+                                "reply": f"Erro de comunicação com o modelo ({target_model}): {str(fallback_exc)}",
+                                "tools_executed": executed_tools_log,
+                            }
                 elif tools_schema and status_code == 400:
                     LOGGER.warning(
                         "Modelo %s retornou 400 com tools (%s). Tentando fallback sem tools.",
@@ -377,6 +518,21 @@ class Orchestrator:
                     if clean_think:
                         reply_text = clean_think
                 reply_text = sanitize_assistant_reply(reply_text, last_user)
+
+                # Auto-escrita de arquivos solicitados explicitamente se o modelo gerou código/markdown
+                if any(w in norm_user for w in ("crie", "cria", "salve", "salva", "escreva", "escreve")):
+                    requested_files = re.findall(r"\b([a-zA-Z0-9_\-]+\.(?:html|css|js|py|md|json|txt))\b", last_user)
+                    code_blocks = re.findall(r"```[a-zA-Z0-9]*\n([\s\S]*?)```", reply_text)
+                    if requested_files and code_blocks:
+                        for idx, rfile in enumerate(requested_files):
+                            if idx < len(code_blocks):
+                                try:
+                                    from src.tools.core import fs_write
+                                    fs_write(filepath=rfile, content=code_blocks[idx].strip())
+                                    executed_tools_log.append(f"fs_write:{rfile}")
+                                except Exception as write_err:
+                                    LOGGER.debug("Auto fs_write falhou para %s: %s", rfile, write_err)
+
                 return {
                     "success": True,
                     "reply": reply_text,

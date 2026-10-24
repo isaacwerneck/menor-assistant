@@ -68,7 +68,15 @@ def classify_intent(message: str) -> str:
 
     norm = _normalize_text(message)
 
-    # 1. Verifica busca web explícita
+    # 1. Ações de criação e desenvolvimento local têm prioridade máxima sobre buscas
+    creation_words = (
+        "cria", "criar", "crie", "faz ", "fazer", "faça",
+        "program", "desenvolv", "constru", "implement", "escrev", "salv"
+    )
+    if any(w in norm for w in creation_words):
+        return "LOCAL_ACTION"
+
+    # 2. Verifica busca web explícita
     if any(trigger in norm for trigger in EXPLICIT_SEARCH_TRIGGERS):
         return "WEB_GROUNDING"
 

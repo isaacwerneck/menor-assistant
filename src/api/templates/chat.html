@@ -2600,7 +2600,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
         function isActionIntent(text) {
             if (!text || typeof text !== 'string') return false;
-            return /\b(leia|le\b|ler|escreva|escreve|criar?|salve?|liste?|roda|rode?|executa?|instala?|pesquise?|busca|busque|analise?|consert(a|e)|test(a|e)|terminal|comando|plano|projeto|arquivo|git|npm|python|ferramenta|diret[oó]rio|pasta|site|desenhe?|gerar? imagem|imagem)\b/i.test(text);
+            return /\b(leia|le\b|ler|escreva|escreve|criar?|cria|crie|salve?|liste?|roda|rode?|executa?|instala?|pesquise?|busca|busque|analise?|consert(a|e)|test(a|e)|terminal|comando|plano|projeto|arquivo|git|npm|python|ferramenta|diret[oó]rio|pasta|site|desenhe?|gerar? imagem|imagem|fa[çc]a|fazer|program(a|ar)?|desenvolv(a|er)?|implement(a|ar)?|constru(a|ir)?|html|css|js)\b/i.test(text);
         }
 
         function dispatchDualBrainHubTask(conv, goal) {
@@ -2637,11 +2637,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                             clearInterval(pollInterval);
                             pill.remove();
 
-                            const card = document.createElement('div');
-                            card.className = 'hub-task-card';
                             const icon = task.status === 'completed' ? '✔ 🚀' : '⚠';
+                            const title = task.status === 'completed' ? 'Servidor Hub Menor: Tarefa Concluída' : 'Servidor Hub Menor: Falha na Execução';
                             card.innerHTML = `
-                                <div class="hub-task-card-header">${icon} Servidor Hub Menor: Tarefa Concluída</div>
+                                <div class="hub-task-card-header">${icon} ${title}</div>
                                 <div style="font-size:0.9rem; line-height:1.6; white-space:pre-wrap;">${escapeHtml(task.result || 'Operação finalizada.')}</div>
                             `;
                             container.appendChild(card);
@@ -2716,10 +2715,12 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '3B'}) gerando resposta…`;
                 try {
                     let systemPrompt = 'Você é o Menor v2, assistente pessoal e executivo de software do Isaac.\n'
+                        + 'Você opera como a interface de voz ultrarrápida no PC local, conectada em tempo real ao Hub Central Menor no servidor Ubuntu.\n'
                         + 'Diretrizes OBRIGATÓRIAS:\n'
                         + '1. Responda SEMPRE em português do Brasil, de forma direta, natural e EXTREMAMENTE concisa (no máximo 1 a 3 frases curtas).\n'
-                        + '2. Sem enrolação, sem divagações filosóficas, sem introduções desnecessárias, sem gírias forçadas repetitivas.\n'
-                        + '3. NUNCA invente fatos nem simule aprendizados fictícios. Seja claro, objetivo e útil como um assistente de voz nativo de alta precisão.';
+                        + '2. Você tem total capacidade de programar, criar sites, ler/escrever arquivos e executar comandos através do Servidor Hub Menor. Se o Isaac pedir para criar, fazer, programar ou implementar algo, confirme prontamente com brevidade que você e o Servidor Hub Menor já estão executando e criando os arquivos solicitados.\n'
+                        + '3. NUNCA diga que está fora do seu alcance ou que você não tem ferramentas. Você é o Menor v2 com ferramentas reais ativas no Hub.\n'
+                        + '4. Sem enrolação, sem divagações filosóficas, sem introduções desnecessárias.';
 
                     const isStudyQuery = /\b(estud(o|ou|os|ar)|aprend(eu|e|idos?|izados?)|ciclo|relat[oó]rio|melhor(ou|as?)|ast|sandbox|diagn[oó]stico|evolu(ir|[cç][aã]o))\b/i.test(message);
                     if (isStudyQuery) {

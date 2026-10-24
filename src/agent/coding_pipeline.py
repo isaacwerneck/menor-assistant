@@ -52,7 +52,8 @@ class AutonomousCodingPipeline:
         max_attempts: int = 2,
     ):
         self.ollama_url = (ollama_url or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")).rstrip("/")
-        self.model = model or os.environ.get("OLLAMA_MODEL", "qwen2.5:14b")
+        from src.agent.study import get_optimal_model
+        self.model = model or os.environ.get("OLLAMA_MODEL") or get_optimal_model(self.ollama_url)
         self.max_attempts = max_attempts
 
     def _query_model_for_patch(

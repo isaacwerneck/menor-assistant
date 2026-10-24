@@ -86,20 +86,25 @@ _DEFAULT_QUEUE = None
 def _execute_background_task(queue: TaskQueue, task_id: int, goal: str, project_slug: Optional[str] = None):
     """Executa a tarefa no hub do servidor em segundo plano sem travar a interface."""
     from src.agent.orchestrator import Orchestrator
+    from src.agent.study import get_optimal_model
     queue.update_status(task_id, "running")
     try:
-        orchestrator = Orchestrator()
+        model = get_optimal_model()
+        orchestrator = Orchestrator(default_model=model)
         system_intro = (
-            "Você é o executor autônomo de tarefas em segundo plano do Menor v2 no Hub Central. "
-            "Execute a meta solicitada usando ferramentas reais do sistema "
-            "(fs_read, fs_write, terminal_run, save_plan) "
-            "e retorne um resumo executivo direto e claro do que foi feito em português brasileiro."
+            "Você é o executor autônomo de tarefas do Menor v2 no Hub Central. "
+            "Sua missão é atender à solicitação do Isaac utilizando ferramentas reais. "
+            "Se o usuário pediu para criar ou fazer um site, página web, arquivo, script ou código, "
+            "utilize IMEDIATAMENTE a ferramenta `fs_write` fornecendo o caminho do arquivo (ex: 'index.html') "
+            "e o código completo e funcional (HTML, CSS e JS inclusos). "
+            "NUNCA apenas prometa fazer ou diga que é texto: execute a ferramenta real fs_write agora. "
+            "Após salvar, confirme o nome do arquivo criado em português brasileiro de forma breve."
         )
         messages = [
             {"role": "system", "content": system_intro},
             {"role": "user", "content": goal},
         ]
-        result = orchestrator.run_turn(messages=messages, enable_tools=True)
+        result = orchestrator.run_turn(messages=messages, model=model, enable_tools=True)
         reply = result.get("reply", "Tarefa concluída.")
         queue.update_status(task_id, "completed", reply)
         LOGGER.info("Tarefa de segundo plano %s concluída com sucesso.", task_id)

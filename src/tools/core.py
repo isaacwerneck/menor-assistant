@@ -84,16 +84,15 @@ def fs_patch(filepath: str, search_block: str, replace_block: str) -> Dict[str, 
     Retorna erro se o bloco não for encontrado ou se houver múltiplas ocorrências ambíguas.
     """
     try:
-        if not search_block or not isinstance(search_block, str):
-            return {"success": False, "error": "Bloco de busca inválido ou vazio."}
         if replace_block is None:
             replace_block = ""
         if not isinstance(replace_block, str):
             replace_block = str(replace_block)
 
         path = _resolve_safe_path(filepath)
-        if not path.exists():
-            return {"success": False, "error": f"Arquivo não encontrado: {filepath}"}
+        if not path.exists() or not search_block or not str(search_block).strip():
+            # Criação de novo arquivo ou substituição total quando search_block é vazio
+            return fs_write(filepath, replace_block)
         if not path.is_file():
             return {"success": False, "error": f"O caminho não é um arquivo: {filepath}"}
 
