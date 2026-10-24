@@ -513,7 +513,9 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
 
                     if data.get("done"):
                         if not streamed_any and buffer:
-                            clean_buf = re.sub(r"<(?:think|thought)>.*?</(?:think|thought)>", "", buffer, flags=re.DOTALL)
+                            clean_buf = re.sub(
+                                r"<(?:think|thought)>.*?</(?:think|thought)>", "", buffer, flags=re.DOTALL
+                            )
                             clean_buf = re.sub(r"<(?:think|thought)>.*", "", clean_buf, flags=re.DOTALL).strip()
                             if clean_buf:
                                 yield clean_buf
@@ -605,9 +607,15 @@ def diagnose_error(body: DiagnoseErrorRequest, request: Request):
 
     context_details = []
     if failed_task:
-        context_details.append(f"Última tarefa falhou: Meta='{failed_task.get('goal')}', Erro='{failed_task.get('result')}'")
+        context_details.append(
+            f"Última tarefa falhou: Meta='{failed_task.get('goal')}', Erro='{failed_task.get('result')}'"
+        )
     elif last_task:
-        context_details.append(f"Última tarefa executada: Meta='{last_task.get('goal')}', Status='{last_task.get('status')}', Resultado='{str(last_task.get('result'))[:300]}'")
+        res_str = str(last_task.get('result'))[:300]
+        context_details.append(
+            f"Última tarefa executada: Meta='{last_task.get('goal')}', Status='{last_task.get('status')}', "
+            f"Resultado='{res_str}'"
+        )
 
     if body.last_bot_reply:
         context_details.append(f"Última resposta do assistente: '{body.last_bot_reply[:400]}'")
@@ -621,7 +629,7 @@ def diagnose_error(body: DiagnoseErrorRequest, request: Request):
         f"Reclamação do Isaac: {body.complaint}\n"
         + ("\n".join(context_details) if context_details else "Nenhum log de erro recente disponível.")
         + "\n\nResponda APENAS em JSON no formato:\n"
-        "{\"diagnosis\": \"explicação em 1 frase curta do erro\", \"proposed_fix\": \"plano de 1 frase de como consertar\"}"
+        "{\"diagnosis\": \"explicação em 1 frase curta do erro\", \"proposed_fix\": \"plano de 1 frase de conserto\"}"
     )
     try:
         res = orchestrator.run_turn(
@@ -636,7 +644,9 @@ def diagnose_error(body: DiagnoseErrorRequest, request: Request):
             return {
                 "success": True,
                 "diagnosis": parsed.get("diagnosis", "Falha na execução ou formato da resposta anterior."),
-                "proposed_fix": parsed.get("proposed_fix", "Reexecutar a tarefa com parâmetros corrigidos e ferramentas reais.")
+                "proposed_fix": parsed.get(
+                    "proposed_fix", "Reexecutar a tarefa com parâmetros corrigidos e ferramentas reais."
+                )
             }
     except Exception as exc:
         logger.warning("Diagnóstico automático falhou: %s", exc)
@@ -645,7 +655,9 @@ def diagnose_error(body: DiagnoseErrorRequest, request: Request):
         return {
             "success": True,
             "diagnosis": f"A tarefa '{failed_task.get('goal')}' falhou no Hub: {failed_task.get('result')}",
-            "proposed_fix": f"Reexecutar a tarefa '{failed_task.get('goal')}' corrigindo os parâmetros e aplicando as ferramentas necessárias."
+            "proposed_fix": (
+                f"Reexecutar a tarefa '{failed_task.get('goal')}' corrigindo os parâmetros e aplicando ferramentas."
+            )
         }
     return {
         "success": True,
