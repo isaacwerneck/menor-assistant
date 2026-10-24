@@ -34,6 +34,7 @@ SEED_FILES = {
     "identidade/perfil_usuario.md": "# Perfil do usuário\n\nInformações fornecidas ou confirmadas pelo usuário.\n",
     "identidade/preferencias.md": "# Preferências\n\nPreferências explícitas do usuário:\n",
     "conhecimentos/aprendizados_gerais.md": "# Aprendizados gerais\n\n",
+    "menor_refletir.md": "# Temas de Estudo e Pesquisa do Menor\n\n- [ ] Inteligência Artificial: Arquiteturas de agentes, RAG híbrido, MoE\n- [ ] Engenharia de Software: Padrões de concorrência em Python, FastAPI production\n- [ ] JavaScript: EventLoop, Web Workers, Web Audio API\n- [ ] Design e UI/UX: Design Systems modernos, micro-interações, teoria das cores\n",
     "ferramentas/catalogo.md": (
         "# Catálogo de ferramentas\n\nAs ferramentas executáveis serão registradas no código.\n"
     ),

@@ -98,7 +98,8 @@ class Orchestrator:
             "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
             "plano", "projet", "pesquis", "busc", "web", "site", "url", "http", "ferramenta", "tool",
             "código", "codigo", "python", "script", "consert", "bug", "corrig", "cri",
-            "lembr", "memor", "perfil", "preferencia"
+            "lembr", "memor", "perfil", "preferencia",
+            "estud", "reflet", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia", "noticia"
         )
         return any(t in last_user for t in triggers)
 

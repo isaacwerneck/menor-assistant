@@ -1,6 +1,7 @@
 """Pesquisa e leitura públicas; conteúdo remoto nunca concede permissões."""
 import http.client
 import ipaddress
+import json
 import logging
 import os
 import re
@@ -93,7 +94,7 @@ def _download(url, resource=False):
                 path += "?" + parsed.query
             connection.request("GET", path, headers={
                 "Host": host, "User-Agent": "MenorResearch/1.0",
-                "Accept": "text/html,text/plain,application/xhtml+xml",
+                "Accept": "text/html,text/plain,application/xhtml+xml,application/json",
                 "Accept-Encoding": "identity",
             })
             response = connection.getresponse()
@@ -245,6 +246,116 @@ def search(query):
         return {"query": query, "results": results, "provider": "bing-rss"}
     except (OSError, http.client.HTTPException, LookupError, ElementTree.ParseError) as error:
         raise WebUnavailable("Busca indisponível nos provedores públicos.") from error
+
+
+def _search_hn(query):
+    """Busca tópicos e discussões técnicas via API pública Algolia Hacker News."""
+    try:
+        url = "https://hn.algolia.com/api/v1/search?query=" + quote(query) + "&tags=story&hitsPerPage=5"
+        _, data, _ = _download(url, resource=True)
+        payload = json.loads(data)
+        results = []
+        for hit in payload.get("hits", []):
+            target = hit.get("url") or f"https://news.ycombinator.com/item?id={hit.get('objectID')}"
+            title = hit.get("title", "")
+            if target and title:
+                results.append({"url": target, "title": title[:200], "source": "hacker-news"})
+        return results
+    except Exception as exc:
+        LOGGER.debug("Busca Hacker News falhou: %s", exc)
+        return []
+
+
+def _search_github(query):
+    """Busca repositórios e documentações técnicas via API pública do GitHub."""
+    try:
+        url = "https://api.github.com/search/repositories?q=" + quote(query) + "&sort=stars&order=desc&per_page=5"
+        _, data, _ = _download(url, resource=True)
+        payload = json.loads(data)
+        results = []
+        for item in payload.get("items", []):
+            target = item.get("html_url")
+            desc = item.get("description") or ""
+            full_name = item.get("full_name") or ""
+            title = f"{full_name}: {desc}" if desc else full_name
+            if target and title:
+                results.append({"url": target, "title": title[:200], "source": "github"})
+        return results
+    except Exception as exc:
+        LOGGER.debug("Busca GitHub falhou: %s", exc)
+        return []
+
+
+def _search_searxng(query):
+    """Busca agregada via instância local SearXNG se configurada em SEARXNG_URL."""
+    searxng_url = os.environ.get("SEARXNG_URL")
+    if not searxng_url:
+        return []
+    try:
+        endpoint = searxng_url.rstrip("/") + "/search?q=" + quote(query) + "&format=json"
+        _, data, _ = _download(endpoint, resource=True)
+        payload = json.loads(data)
+        results = []
+        for item in payload.get("results", [])[:5]:
+            url = item.get("url")
+            title = item.get("title")
+            if url and title:
+                results.append({"url": url, "title": title[:200], "source": "searxng"})
+        return results
+    except Exception as exc:
+        LOGGER.debug("Busca SearXNG falhou: %s", exc)
+        return []
+
+
+def multi_search(query, category=None):
+    """Roteia pesquisa entre múltiplas fontes técnicas (HN, GitHub, SearXNG, Web) com fallback."""
+    clean_query = public_query(query)
+    all_results = []
+    sources_used = []
+
+    sx_results = _search_searxng(clean_query)
+    if sx_results:
+        all_results.extend(sx_results)
+        sources_used.append("searxng")
+
+    cat = (category or "").lower()
+    if cat in ("software", "ia", "javascript", "design", "geral") or not cat:
+        hn_results = _search_hn(clean_query)
+        if hn_results:
+            all_results.extend(hn_results[:3])
+            sources_used.append("hacker-news")
+
+    if cat in ("software", "javascript", "ferramentas", "ia") or len(all_results) < 2:
+        gh_results = _search_github(clean_query)
+        if gh_results:
+            all_results.extend(gh_results[:3])
+            sources_used.append("github")
+
+    if len(all_results) < 3:
+        try:
+            web_res = search(clean_query)
+            for r in web_res.get("results", []):
+                r_item = dict(r)
+                r_item["source"] = web_res.get("provider", "web")
+                all_results.append(r_item)
+            sources_used.append(web_res.get("provider", "web"))
+        except Exception as exc:
+            LOGGER.debug("Fallback web search falhou: %s", exc)
+
+    seen = set()
+    deduped = []
+    for item in all_results:
+        u = item.get("url")
+        if u and u not in seen:
+            seen.add(u)
+            deduped.append(item)
+
+    return {
+        "query": clean_query,
+        "results": deduped[:6],
+        "sources": sources_used or ["web"],
+        "total": len(deduped[:6]),
+    }
 
 
 def browse(url):

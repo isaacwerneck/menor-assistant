@@ -52,6 +52,24 @@ case "${1:-status}" in
         fi
         exec python3 -m ops.model_latency "$@"
         ;;
+    estudar|study)
+        shift
+        root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+        cd "$root"
+        if [[ -x "$root/.venv/bin/python" ]]; then
+            exec "$root/.venv/bin/python" -c "from src.agent.study import StudyWorker; w = StudyWorker(); res = w.study_cycle(); print(res)" "$@"
+        fi
+        exec python3 -c "from src.agent.study import StudyWorker; w = StudyWorker(); res = w.study_cycle(); print(res)" "$@"
+        ;;
+    diagnosticar|diagnostic|eval)
+        shift
+        root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+        cd "$root"
+        if [[ -x "$root/.venv/bin/python" ]]; then
+            exec "$root/.venv/bin/python" -c "from src.agent.study import DiagnosticEngine; d = DiagnosticEngine(); res = d.run_self_eval(); print(res)" "$@"
+        fi
+        exec python3 -c "from src.agent.study import DiagnosticEngine; d = DiagnosticEngine(); res = d.run_self_eval(); print(res)" "$@"
+        ;;
     refletir|reflect)
         shift
         root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -62,7 +80,7 @@ case "${1:-status}" in
         exec python3 -m src.agent.reflection "$@"
         ;;
     *)
-        echo "Uso: menor {start|stop|restart|status|monitor|benchmark|refletir}" >&2
+        echo "Uso: menor {start|stop|restart|status|monitor|benchmark|refletir|estudar|diagnosticar}" >&2
         exit 2
         ;;
 esac

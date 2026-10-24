@@ -15,6 +15,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints
 import requests
+import time
+import threading
 
 from src.agent.orchestrator import Orchestrator
 from src.agent.workers import get_task_queue
@@ -32,6 +34,40 @@ OLLAMA_SERVER_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstri
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
 KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "-1")
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+# --- IDLE STUDY & PREEMPTION STATE ---
+_last_interaction_time = time.time()
+_study_abort_event = threading.Event()
+_study_running_lock = threading.Lock()
+IDLE_STUDY_DELAY = int(os.environ.get("MENOR_IDLE_STUDY_DELAY", "1800"))
+
+
+def _notify_user_active():
+    """Registra interação humana e sinaliza interrupção imediata ao worker se ativo."""
+    global _last_interaction_time
+    _last_interaction_time = time.time()
+    if not _study_abort_event.is_set():
+        _study_abort_event.set()
+
+
+async def _idle_study_monitor():
+    """Monitor de inatividade: ativa o estudo autônomo após 30 min sem requests."""
+    await asyncio.sleep(5)
+    while True:
+        await asyncio.sleep(15)
+        idle_seconds = time.time() - _last_interaction_time
+        if idle_seconds >= IDLE_STUDY_DELAY:
+            if _study_running_lock.acquire(blocking=False):
+                try:
+                    _study_abort_event.clear()
+                    from src.agent.study import StudyWorker
+                    worker = StudyWorker(ollama_url=OLLAMA_SERVER_URL)
+                    logger.info("Iniciando estudo autônomo por inatividade (%ds)...", int(idle_seconds))
+                    await asyncio.to_thread(worker.study_cycle, max_topics=3, abort_event=_study_abort_event)
+                except Exception as exc:
+                    logger.debug("Ciclo de estudo em background: %s", exc)
+                finally:
+                    _study_running_lock.release()
 
 
 def get_active_model(preferred: Optional[str] = None) -> str:
@@ -80,6 +116,7 @@ async def _warmup_model():
 async def app_lifespan(_app):
     BrainStore().initialize()
     asyncio.create_task(_warmup_model())
+    asyncio.create_task(_idle_study_monitor())
     yield
 
 
@@ -233,6 +270,7 @@ def auth_logout(request: Request, response: Response):
 
 @app.post("/agent/run")
 def agent_run(body: AgentRunRequest, request: Request):
+    _notify_user_active()
     auth.require_owner(request)
     target_url = body.ollama_url or OLLAMA_SERVER_URL
     target_model = body.model or get_active_model()
@@ -250,6 +288,7 @@ def agent_run(body: AgentRunRequest, request: Request):
 
 @app.post("/chat")
 def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
+    _notify_user_active()
     target_url = req.ollama_url or (OLLAMA_SERVER_URL if req.node != "local" else "http://localhost:11434")
     target_model = req.model or (get_active_model() if req.node != "local" else "qwen2.5:7b")
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
@@ -264,6 +303,7 @@ def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
 
 @app.post("/chat/stream")
 def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
+    _notify_user_active()
     target_url = req.ollama_url or (OLLAMA_SERVER_URL if req.node != "local" else "http://localhost:11434")
     target_model = req.model or (get_active_model() if req.node != "local" else "qwen2.5:7b")
 
@@ -366,3 +406,44 @@ def list_tasks(request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+# --- ENDPOINTS DE ESTUDO & AUTO-DIAGNÓSTICO ---
+
+@app.get("/api/study/status")
+def study_status(request: Request):
+    auth.require_owner(request)
+    from src.agent.study import CheckpointManager, TopicManager
+    tm = TopicManager()
+    cm = CheckpointManager()
+    return {
+        "idle_seconds": int(time.time() - _last_interaction_time),
+        "idle_threshold": IDLE_STUDY_DELAY,
+        "is_studying": _study_running_lock.locked(),
+        "checkpoint": cm.load_checkpoint(),
+        "uncompleted_topics": tm.list_topics(uncompleted_only=True),
+    }
+
+
+@app.post("/api/study/trigger")
+def study_trigger(request: Request):
+    auth.require_owner(request)
+    if _study_running_lock.acquire(blocking=False):
+        try:
+            _study_abort_event.clear()
+            from src.agent.study import StudyWorker
+            worker = StudyWorker(ollama_url=OLLAMA_SERVER_URL)
+            res = worker.study_cycle(max_topics=2, abort_event=_study_abort_event)
+            return {"success": True, "result": res}
+        finally:
+            _study_running_lock.release()
+    return {"success": False, "message": "O worker de estudo já está em execução."}
+
+
+@app.post("/api/diagnostic/run")
+def diagnostic_run(request: Request):
+    auth.require_owner(request)
+    from src.agent.study import DiagnosticEngine
+    engine = DiagnosticEngine(ollama_url=OLLAMA_SERVER_URL)
+    result = engine.run_self_eval()
+    return {"success": True, "diagnostic": result}

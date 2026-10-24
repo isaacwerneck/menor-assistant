@@ -169,6 +169,23 @@ def update_core_memory(
         return {"success": False, "error": str(exc)}
 
 
+def schedule_study_topic(
+    topic: str,
+    category: str = "geral",
+    priority: str = "normal",
+    user_note: str = "",
+    store: Optional[BrainStore] = None,
+) -> Dict[str, Any]:
+    """Agenda um tópico para estudo e pesquisa autônoma na próxima reflexão/inatividade."""
+    try:
+        from src.agent.study import TopicManager
+        tm = TopicManager(store=store)
+        res = tm.save_topic(topic=topic, category=category, priority=priority, user_note=user_note)
+        return res
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
 def web_search(query: str) -> Dict[str, Any]:
     """Pesquisa na web por termos públicos e retorna os resultados mais relevantes com URLs e títulos."""
     try:
@@ -471,6 +488,43 @@ CORE_TOOLS_SCHEMA = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "schedule_study_topic",
+            "description": (
+                "Agenda um tópico técnico para estudo ativo e pesquisa web pelo Menor "
+                "durante inatividade ou reflexão noturna."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "description": (
+                            "O assunto ou tecnologia para estudar "
+                            "(ex: 'Web Audio API', 'Server-Sent Events no FastAPI')."
+                        ),
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": ["ia", "software", "javascript", "design", "geral"],
+                        "description": "Categoria do tema de estudo.",
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": ["high", "normal"],
+                        "description": "'high' para estudar com prioridade máxima ou 'normal'.",
+                    },
+                    "user_note": {
+                        "type": "string",
+                        "description": "Observações ou instruções específicas fornecidas pelo usuário.",
+                    },
+                },
+                "required": ["topic"],
+            },
+        },
+    },
 ]
 
 TOOL_DISPATCHER = {
@@ -484,4 +538,5 @@ TOOL_DISPATCHER = {
     "create_new_tool": create_new_tool,
     "update_core_memory": update_core_memory,
     "grounded_search": grounded_search,
+    "schedule_study_topic": schedule_study_topic,
 }
