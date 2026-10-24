@@ -22,6 +22,7 @@ class TestApiV2(unittest.TestCase):
             cls.temp_dir.cleanup()
         except Exception:
             pass
+        os.environ.pop("MENOR_DATA_DIR", None)
 
     def test_health_check(self):
         resp = self.client.get("/health")
@@ -79,7 +80,7 @@ class TestApiV2(unittest.TestCase):
         # Enfileirar tarefa
         resp_enqueue = self.client.post(
             "/api/tasks/enqueue",
-            json={"goal": "Criar componente de header", "project_slug": "site-app"},
+            json={"goal": "Criar componente de header", "project_slug": "site-app", "auto_start": False},
             cookies={"menor_session": session_cookie} if session_cookie else {},
         )
         self.assertEqual(resp_enqueue.status_code, 200)

@@ -71,6 +71,21 @@ def get_optimal_model(ollama_url: str = "http://127.0.0.1:11434") -> str:
     return "qwen2.5:14b"
 
 
+def normalize_topic_key(text: str) -> str:
+    """Normaliza o texto do tópico para chave canônica de deduplicação sem tags, prefixos ou datas."""
+    if not text or not isinstance(text, str):
+        return ""
+    clean = re.sub(r"^-\s*\[[ xX]\]\s*", "", text)
+    clean = re.sub(r"\(conclu[íi]do:\s*[^)]+\)", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"\[Alta Prioridade\]", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"\[Auto-gerado\]", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"\(\d{4}-\d{2}-\d{2}\)", "", clean)
+    clean = re.sub(r"-\s*Nota:\s*.*$", "", clean)
+    clean = re.sub(r"[^\w\s]", " ", clean)
+    clean = re.sub(r"\s+", " ", clean).strip().lower()
+    return clean
+
+
 class TopicManager:
     """Gerencia a lista viva de tópicos em menor_refletir.md."""
 
@@ -100,13 +115,14 @@ class TopicManager:
             raw_text = re.sub(r"^-\s*\[[ xX]\]\s*", "", line_str)
             priority = "high" if "[Alta Prioridade]" in raw_text or "[high]" in raw_text.lower() else "normal"
             category = "geral"
-            for cat in ("ia", "software", "javascript", "design"):
+            for cat in ("ia", "software", "javascript", "design", "python", "sqlite", "fastapi"):
                 if cat in raw_text.lower():
                     category = cat
                     break
             topics.append({
                 "raw": line_str,
                 "text": raw_text,
+                "canonical_key": normalize_topic_key(raw_text),
                 "completed": is_done,
                 "priority": priority,
                 "category": category,
@@ -155,15 +171,18 @@ class TopicManager:
     def mark_completed(self, topic_text: str, summary_card: str = "") -> bool:
         self._ensure_file()
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        target_key = normalize_topic_key(topic_text)
         with _FILE_LOCK:
             content = self.file_path.read_text(encoding="utf-8")
             lines = content.splitlines()
             updated = False
             for idx, line in enumerate(lines):
-                if line.startswith("- [ ]") and topic_text in line:
-                    lines[idx] = line.replace("- [ ]", f"- [x] (concluído: {now})")
-                    updated = True
-                    break
+                if line.startswith("- [ ]"):
+                    line_key = normalize_topic_key(line)
+                    if topic_text in line or (target_key and target_key == line_key):
+                        lines[idx] = line.replace("- [ ]", f"- [x] (concluído: {now})")
+                        updated = True
+                        break
             if updated:
                 self.file_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return updated
@@ -174,7 +193,7 @@ class TopicManager:
         ollama_url: Optional[str] = None,
         model: Optional[str] = None,
     ) -> List[str]:
-        """Gera novos tópicos alinhados aos domínios do Isaac quando a fila estiver vazia."""
+        """Gera novos tópicos alinhados aos domínios do Isaac quando a fila estiver vazia com rotação estrita."""
         active = self.list_topics(uncompleted_only=True)
         if len(active) >= 6:
             return []
@@ -185,15 +204,19 @@ class TopicManager:
             line.strip() for line in core_anchors.splitlines() if line.strip()
         ] if core_anchors else DOMAIN_ANCHORS
 
-        existing_all = [t["text"].lower() for t in self.list_topics(uncompleted_only=False)]
+        existing_keys = {
+            t.get("canonical_key") or normalize_topic_key(t["text"])
+            for t in self.list_topics(uncompleted_only=False)
+        }
 
+        # 1. Tentativa via LLM estruturado
         if ollama_url and model:
             prompt = (
                 "Você é o planejador de estudos do Menor v2. "
-                f"Gere {count} novos tópicos de estudo avançados e extremamente práticos para engenharia.\n"
+                f"Gere {count} novos tópicos de estudo avançados e extremamente práticos para engenharia de software.\n"
                 "Âncoras estritas de domínio:\n"
                 + "\n".join(f"- {d}" for d in anchors_list)
-                + "\nProibido: culinária, curiosidades genéricas, assuntos não relacionados a código ou UI/UX.\n"
+                + "\nProibido: culinária, curiosidades genéricas, assuntos não relacionados a código, bancos de dados ou UI/UX.\n"
                 "Responda estritamente em JSON: {\"topics\": [\"Tópico 1\", \"Tópico 2\"]}"
             )
             try:
@@ -220,29 +243,45 @@ class TopicManager:
                         for item in raw_topics:
                             if isinstance(item, str) and len(item.strip()) >= 6:
                                 clean_t = item.strip()
-                                if not any(clean_t.lower() == e for e in existing_all):
+                                cand_key = normalize_topic_key(clean_t)
+                                if cand_key and cand_key not in existing_keys:
                                     generated.append(clean_t)
-                                    existing_all.append(clean_t.lower())
+                                    existing_keys.add(cand_key)
             except Exception as exc:
                 LOGGER.debug("Falha na geração LLM de tópicos: %s", exc)
 
-        # Gerador Procedural Inesgotável ancorado na Core Memory (Voyager / STORM pattern)
+        # 2. Gerador Procedural Inesgotável com Rotação Dinâmica de Domínios
         if len(generated) < count:
-            concepts = []
+            domain_concepts_map: Dict[str, List[str]] = {}
             for line in anchors_list:
                 clean = re.sub(r"^\d+[\.\)]\s*", "", line.strip())
                 if not clean:
                     continue
                 paren_match = re.search(r"\((.*?)\)", clean)
                 if paren_match:
-                    title = clean[:paren_match.start()].strip()
-                    if title:
-                        concepts.append(title)
+                    domain_title = clean[:paren_match.start()].strip()
                     sub = [s.strip() for s in paren_match.group(1).split(",") if s.strip()]
-                    concepts.extend(sub)
+                    domain_concepts_map[domain_title] = [domain_title] + sub
                 else:
                     parts = [p.strip() for p in clean.split(",") if p.strip()]
-                    concepts.extend(parts)
+                    domain_title = parts[0] if parts else clean
+                    domain_concepts_map[domain_title] = parts
+
+            # Contabiliza quantos tópicos de cada domínio já foram concluídos
+            all_topics_text = [
+                (t.get("canonical_key") or normalize_topic_key(t["text"]))
+                for t in self.list_topics(uncompleted_only=False)
+            ]
+            domain_usage = {}
+            for d_name in domain_concepts_map:
+                usage = sum(
+                    1 for t_txt in all_topics_text
+                    if any(normalize_topic_key(k) in t_txt for k in domain_concepts_map[d_name])
+                )
+                domain_usage[d_name] = usage
+
+            # Ordena domínios do menos explorado para o mais explorado
+            sorted_domains = sorted(domain_concepts_map.keys(), key=lambda d: domain_usage.get(d, 0))
 
             perspectives = [
                 "Padrões de implementação e código limpo em",
@@ -252,20 +291,31 @@ class TopicManager:
                 "Casos reais de produção e resiliência em",
                 "Técnicas avançadas de",
             ]
-            candidates = []
-            for concept in concepts:
-                candidates.append(concept)
-                for p in perspectives:
-                    candidates.append(f"{p} {concept}")
-            candidates.extend(FALLBACK_DISCOVERY_TOPICS)
 
-            for candidate in candidates:
-                cand_lower = candidate.lower()
-                if not any(cand_lower == e for e in existing_all):
-                    generated.append(candidate)
-                    existing_all.append(cand_lower)
+            for d_name in sorted_domains:
+                if len(generated) >= count:
+                    break
+                d_concepts = domain_concepts_map[d_name]
+                for concept in d_concepts:
+                    for p in perspectives:
+                        candidate = f"{p} {concept}"
+                        cand_key = normalize_topic_key(candidate)
+                        if cand_key and cand_key not in existing_keys:
+                            generated.append(candidate)
+                            existing_keys.add(cand_key)
+                            break
                     if len(generated) >= count:
                         break
+
+            # Fallback seguro com discovery topics
+            if len(generated) < count:
+                for fallback_cand in FALLBACK_DISCOVERY_TOPICS:
+                    cand_key = normalize_topic_key(fallback_cand)
+                    if cand_key and cand_key not in existing_keys:
+                        generated.append(fallback_cand)
+                        existing_keys.add(cand_key)
+                        if len(generated) >= count:
+                            break
 
         for item in generated:
             self.save_topic(f"[Auto-gerado] {item}", category="geral", priority="normal")
@@ -787,11 +837,38 @@ def run_autonomous_cycle(
                 from src.agent.sandbox_refactor import SandboxRefactorEngine
                 engine = SandboxRefactorEngine(store=st)
                 if engine.is_tree_clean():
-                    # Prioriza gaps em ferramentas reais (src/tools/)
+                    # Prioriza gaps em ferramentas reais (src/tools/) com rotação persistente
                     tool_gaps = [g for g in uncovered_items if "tools" in g.get("module", "")]
-                    target_gap = tool_gaps[0] if tool_gaps else uncovered_items[0]
+                    candidate_pool = tool_gaps if tool_gaps else uncovered_items
+
+                    # Carrega histórico de gaps já tentados para rotação contínua
+                    audit_dir = st.brain_dir / "audit"
+                    audit_dir.mkdir(parents=True, exist_ok=True)
+                    attempted_file = audit_dir / "attempted_gaps.json"
+                    attempted_set = set()
+                    if attempted_file.exists():
+                        try:
+                            attempted_set = set(json.loads(attempted_file.read_text(encoding="utf-8")))
+                        except Exception:
+                            attempted_set = set()
+
+                    remaining_pool = [
+                        g for g in candidate_pool
+                        if f"{g.get('module')}:{g.get('function') or g.get('class')}" not in attempted_set
+                    ]
+                    if not remaining_pool:
+                        attempted_set = set()
+                        remaining_pool = candidate_pool
+
+                    target_gap = remaining_pool[0]
                     target_sym = target_gap.get("function") or target_gap.get("class")
                     target_mod = target_gap.get("module")
+                    gap_key = f"{target_mod}:{target_sym}"
+                    attempted_set.add(gap_key)
+                    try:
+                        attempted_file.write_text(json.dumps(list(attempted_set), indent=2), encoding="utf-8")
+                    except Exception:
+                        pass
                     if target_sym and target_mod:
                         cycle_mon.log(
                             f"[SANDBOX] Validando teste sintético para '{target_sym}' ({target_mod})...",
@@ -838,7 +915,29 @@ def run_autonomous_cycle(
         print("[4/5] [AUTO-CRITICA] Executando auto-diagnostico e refinamento (Reflexion)...")
         cycle_mon.set_phase(4, "Executando auto-diagnóstico crítico e refinamento (Reflexion)...")
         de = DiagnosticEngine(store=st, ollama_url=url, model=mdl)
-        cycle_report["diagnostic"] = de.run_self_eval(abort_event=abort_event)
+
+        # Desafio dinâmico: se estudou tópicos na Fase 2, avalia sobre o tópico estudado; senão rotaciona desafios sênior
+        eval_question = None
+        studied_topics_phase2 = (cycle_report["study"] or {}).get("topics", [])
+        if studied_topics_phase2:
+            clean_stud_title = normalize_topic_key(studied_topics_phase2[0])
+            eval_question = (
+                f"Explique a arquitetura técnica recomendada, boas práticas e armadilhas ao implementar: "
+                f"{studied_topics_phase2[0]}."
+            )
+        else:
+            senior_challenges = [
+                "Como tratar concorrência em FastAPI com operações assíncronas e I/O bloqueante sem travar o EventLoop no Python?",
+                "Como estruturar índices FTS5 com busca vetorial híbrida e BM25 em SQLite no Python?",
+                "Como implementar preempção atômica e cancelamento limpo de threads e processos em segundo plano?",
+                "Como garantir consistência de cache e evitar vazamento de memória em microsserviços Python assíncronos?",
+                "Como otimizar a inferência de LLMs locais via llama.cpp ajustando contagem de threads e num_ctx?",
+            ]
+            import time
+            diag_idx = int(time.time() / 3600) % len(senior_challenges)
+            eval_question = senior_challenges[diag_idx]
+
+        cycle_report["diagnostic"] = de.run_self_eval(custom_question=eval_question, abort_event=abort_event)
         sc = (cycle_report["diagnostic"] or {}).get("score", "N/A")
         gold = (cycle_report["diagnostic"] or {}).get("golden_example_created", False)
         gold_tag = " (+1 Exemplo de Ouro gerado)" if gold else ""

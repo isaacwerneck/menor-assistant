@@ -2586,13 +2586,15 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                                 const token = parsed.message?.content || '';
                                 if (token) {
                                     fullText += token;
-                                    content.textContent = fullText;
+                                    content.textContent = cleanAssistantText(fullText) || fullText;
                                     scrollToBottom();
                                 }
                             } catch (_) {}
                         }
                     }
                     assertLiveTurn(conv);
+                    const finalLocal = cleanAssistantText(fullText) || 'E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?';
+                    content.textContent = finalLocal;
                     const wallMs = activeGeneration ? Date.now() - activeGeneration.started : 0;
                     const secs = (wallMs / 1000).toFixed(1) + 's';
                     const avatar = content.parentElement?.querySelector?.('.avatar.bot-avatar');
@@ -2601,12 +2603,12 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
                         avatar.title = `Gerado em ${secs}`;
                     }
-                    conv.messages.push({ role: 'bot', content: fullText, timing: { browser_request_wall_ms: wallMs } });
+                    conv.messages.push({ role: 'bot', content: finalLocal, timing: { browser_request_wall_ms: wallMs } });
                     save();
 
                     // Modo de Voz Contínua: Falar e voltar a ouvir
-                    if (handsFreeVoiceEnabled && fullText) {
-                        speakText(fullText, () => {
+                    if (handsFreeVoiceEnabled && finalLocal) {
+                        speakText(finalLocal, () => {
                             if (handsFreeVoiceEnabled) resumeListening();
                         });
                     }
@@ -2832,9 +2834,27 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             return data;
         }
 
+        function cleanAssistantText(txt) {
+            if (!txt || typeof txt !== 'string') return '';
+            let cleaned = txt.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, '');
+            cleaned = cleaned.replace(/<(?:think|thought)>[\s\S]*/gi, '');
+            if (/^\s*(?:Thinking Process|Thought Process|Thinking):/i.test(cleaned) || /^\s*Okay,?\s+let's/i.test(cleaned) || /^\s*Wait,\s+the user/i.test(cleaned)) {
+                const parts = cleaned.split(/\n\s*(?:Resposta|Response|Final Answer|Assistant|Menor):\s*/i);
+                if (parts.length > 1 && parts[parts.length - 1].trim()) {
+                    return parts[parts.length - 1].trim();
+                }
+                return '';
+            }
+            return cleaned.trim();
+        }
+
         function imageReply(conv, content, message, imageUrl = '', artifact = null, approval = null,
                             timing = null) {
             assertLiveTurn(conv);
+            message = cleanAssistantText(message);
+            if (!message && !imageUrl && !artifact && !approval) {
+                message = 'E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?';
+            }
             content.textContent = message;
             if (approval) {
                 content.textContent = '';
@@ -3434,14 +3454,16 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                             'Primeiro texto recebido em ' + elapsed + 's.';
                     }
                     fullReply += chunk;
-                    botContent.textContent = routeNotice + fullReply;
+                    const displayChunk = cleanAssistantText(fullReply);
+                    botContent.textContent = routeNotice + (displayChunk || fullReply);
                     scrollToBottom();
                 }
 
                 fullReply += decoder.decode();
                 generation.reader = null;
-                botContent.textContent = routeNotice + fullReply;
-                if (!fullReply.trim()) throw new Error('O modelo retornou uma resposta vazia.');
+                const finalReply = cleanAssistantText(fullReply) || 'E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?';
+                botContent.textContent = routeNotice + finalReply;
+                if (!finalReply.trim()) throw new Error('O modelo retornou uma resposta vazia.');
                 const wallMs = Date.now() - generation.started;
                 const secs = (wallMs / 1000).toFixed(1) + 's';
                 const avatar = botContent.parentElement?.querySelector?.('.avatar.bot-avatar');
@@ -3452,7 +3474,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 }
                 conv.messages.push({
                     role: 'bot',
-                    content: routeNotice + fullReply,
+                    content: routeNotice + finalReply,
                     timing: { browser_request_wall_ms: wallMs },
                 });
                 save();

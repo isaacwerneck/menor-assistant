@@ -15,10 +15,12 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints
 import requests
+import re
 import time
 import threading
 
 from src.agent.orchestrator import Orchestrator
+from src.agent.cleaner import sanitize_assistant_reply, _fallback_casual_reply
 from src.agent.workers import get_task_queue
 from src.memory.search import KnowledgeIndex
 from src.memory.store import BrainStore
@@ -220,6 +222,7 @@ class KnowledgeSearchRequest(BaseModel):
 class TaskEnqueueRequest(BaseModel):
     goal: str = Field(min_length=5, max_length=2000)
     project_slug: Optional[str] = Field(default=None, max_length=64)
+    auto_start: bool = True
 
 
 def require_chat_access(request: Request):
@@ -329,9 +332,7 @@ def agent_run(body: AgentRunRequest, request: Request, response: Response):
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
     messages = [item.model_dump() for item in body.history] + [{"role": "user", "content": body.message}]
     result = orchestrator.run_turn(messages=messages, model=target_model, ollama_url=target_url)
-    reply_text = str(result.get("reply", "") or "").strip()
-    if not reply_text and not result.get("tools_executed"):
-        reply_text = "E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?"
+    reply_text = sanitize_assistant_reply(result.get("reply", ""), body.message)
     return {
         "handled": True,
         "reply": reply_text,
@@ -355,8 +356,9 @@ def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
     messages = [item.model_dump() for item in req.history] + [{"role": "user", "content": req.message}]
     result = orchestrator.run_turn(messages=messages, model=target_model, ollama_url=target_url)
+    reply_text = sanitize_assistant_reply(result.get("reply", ""), req.message)
     return {
-        "reply": result.get("reply", ""),
+        "reply": reply_text,
         "model": target_model,
         "tools_executed": result.get("tools_executed", []),
     }
@@ -424,6 +426,7 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
             "repeat_penalty": 1.1,
             "num_thread": get_optimal_threads(),
             "num_ctx": 4096,
+            "stop": ["\nThinking Process:", "Thinking Process:", "<think>", "Okay, let's", "Let's tackle"],
         },
     }
 
@@ -431,14 +434,58 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
         try:
             with requests.post(f"{target_url}/api/chat", json=payload, stream=True, timeout=(15, 600)) as resp:
                 resp.raise_for_status()
+                buffer = ""
+                in_thought = False
+                streamed_any = False
                 for line in resp.iter_lines():
                     if not line:
                         continue
                     data = json.loads(line)
                     token = data.get("message", {}).get("content", "")
-                    if token:
-                        yield token
+                    if not token and not data.get("done"):
+                        continue
+
+                    if not streamed_any:
+                        buffer += token
+                        # Acumula primeiros tokens para detectar scratchpad
+                        if len(buffer) < 40 and not data.get("done") and "\n" not in buffer:
+                            continue
+
+                        buf_lower = buffer.lower()
+                        if (
+                            "thinking process" in buf_lower
+                            or "<think>" in buf_lower
+                            or buf_lower.startswith("okay, let's")
+                            or buf_lower.startswith("let's tackle")
+                        ):
+                            in_thought = True
+                            buffer = ""
+                            continue
+                        else:
+                            if buffer:
+                                yield buffer
+                                streamed_any = True
+                                buffer = ""
+                    elif in_thought:
+                        buffer += token
+                        parts = re.split(
+                            r"\n\s*(?:Resposta|Response|Final Answer|Assistant|Menor):\s*",
+                            buffer,
+                            flags=re.IGNORECASE,
+                        )
+                        if len(parts) > 1 and parts[-1].strip():
+                            in_thought = False
+                            yield parts[-1].lstrip()
+                            streamed_any = True
+                            buffer = ""
+                    else:
+                        if token:
+                            yield token
+                            streamed_any = True
+
                     if data.get("done"):
+                        if not streamed_any:
+                            yield _fallback_casual_reply(req.message)
                         return
         except Exception as exc:
             logger.error("Erro no streaming do Ollama: %s", exc)
@@ -489,7 +536,7 @@ def memory_remember(body: RememberRequest, request: Request):
 def enqueue_task(body: TaskEnqueueRequest, request: Request):
     auth.require_owner(request)
     queue = get_task_queue()
-    task_id = queue.enqueue(goal=body.goal, project_slug=body.project_slug)
+    task_id = queue.enqueue(goal=body.goal, project_slug=body.project_slug, auto_start=body.auto_start)
     return {"task_id": task_id, "status": "pending", "goal": body.goal}
 
 

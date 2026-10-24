@@ -21,7 +21,7 @@ class TestTaskQueue(unittest.TestCase):
             pass
 
     def test_enqueue_and_get(self):
-        task_id = self.queue.enqueue("Construir API de notas", "notas-app")
+        task_id = self.queue.enqueue("Construir API de notas", "notas-app", auto_start=False)
         self.assertTrue(task_id > 0)
 
         task = self.queue.get_task(task_id)
@@ -30,7 +30,7 @@ class TestTaskQueue(unittest.TestCase):
         self.assertEqual(task["status"], "pending")
 
     def test_update_status(self):
-        task_id = self.queue.enqueue("Criar testes", "teste-proj")
+        task_id = self.queue.enqueue("Criar testes", "teste-proj", auto_start=False)
         self.queue.update_status(task_id, "completed", result="Testes passaram")
 
         task = self.queue.get_task(task_id)

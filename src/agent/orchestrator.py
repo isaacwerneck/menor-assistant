@@ -12,6 +12,7 @@ import requests
 
 from src.tools.core import CORE_TOOLS_SCHEMA, TOOL_DISPATCHER
 from src.memory.store import BrainStore
+from src.agent.cleaner import sanitize_assistant_reply
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,12 +36,20 @@ Regras Inegociáveis e Diretrizes de Execução:
 - Responda sempre em português brasileiro fluente, natural e direto, sem rodeios ou formalidades vazias.
 """
 
-CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, o assistente inteligente e parceiro de tecnologia do Isaac.
-Diretrizes Rigorosas de Conversação:
-1. Responda sempre de forma curta, natural e amigável em pt-BR (use gírias leves como mano, suave, blz).
-2. Em saudações ("e aí", "oi", "fala"), responda em 1 frase acolhedora sem puxar assuntos técnicos.
-3. Se o Isaac não pedir código ou ferramentas, apenas converse com ele amigavelmente.
-4. NUNCA gere blocos de pensamento interno, tags <think> ou explicações de raciocínio. Responda diretamente.
+CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, assistente pessoal e parceiro de tecnologia do Isaac.
+Converse diretamente em português brasileiro, de forma natural, amigável e descontraída (usando gírias leves como mano, suave, blz).
+
+Exemplos de como você responde:
+Usuário: eai menor
+Menor: E aí Isaac, suave? O que manda hoje?
+
+Usuário: tudo bem?
+Menor: Tudo tranquilo por aqui, mano! E com você, como estão as coisas?
+
+Usuário: consegue fazer um site pra mim?
+Menor: Consigo sim, mano! Me conta o que você tem em mente para o site que a gente já começa a estruturar agora.
+
+Responda sempre diretamente na voz do Menor v2, sem introduções em inglês e sem blocos de raciocínio interno.
 """
 
 
@@ -269,6 +278,7 @@ class Orchestrator:
                     "num_predict": 120 if not should_use_tools else 250,
                     "num_thread": get_optimal_threads(),
                     "num_ctx": 2048 if not should_use_tools else 4096,
+                    "stop": ["\nThinking Process:", "Thinking Process:", "<think>", "Okay, let's", "Let's tackle"],
                 },
                 "keep_alive": "60m",
             }
@@ -347,9 +357,7 @@ class Orchestrator:
                     clean_think = re.sub(r"<think>.*?</think>", "", thinking, flags=re.DOTALL).strip()
                     if clean_think:
                         reply_text = clean_think
-                if not reply_text:
-                    LOGGER.warning("Modelo %s retornou resposta vazia. Aplicando fallback casual.", target_model)
-                    reply_text = "E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?"
+                reply_text = sanitize_assistant_reply(reply_text, last_user)
                 return {
                     "success": True,
                     "reply": reply_text,
@@ -391,8 +399,11 @@ class Orchestrator:
                     "content": json.dumps(result, ensure_ascii=False),
                 })
 
-        # Retorna a última mensagem do histórico
-        last_content = chat_history[-1].get("content", "Operação concluída com ferramentas.")
+        # Retorna a última mensagem do histórico devidamente sanitizada
+        last_content = sanitize_assistant_reply(
+            chat_history[-1].get("content", "Operação concluída com ferramentas."),
+            last_user,
+        )
         return {
             "success": True,
             "reply": last_content,
