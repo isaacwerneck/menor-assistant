@@ -118,7 +118,7 @@ def health_check():
         "status": "online",
         "service": "Menor API",
         "version": app.version,
-        "api_contract": 2,
+        "api_contract": 1,
         "ollama_status": ollama_status,
         "default_model": DEFAULT_MODEL,
         "server_ollama_url": OLLAMA_SERVER_URL,

@@ -4,4 +4,5 @@ requests>=2.32.0
 pydantic>=2.8.0
 pillow>=11.0.0
 python-multipart>=0.0.20
+httpx>=0.27.0
 -r requirements-file-analysis.txt

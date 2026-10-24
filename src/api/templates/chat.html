@@ -1511,7 +1511,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 const response = await fetch('/health');
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 const health = await response.json();
-                apiCompatible = health.api_contract === 1;
+                apiCompatible = health.api_contract === 1 || health.api_contract === 2;
                 if (!apiCompatible) {
                     status.className = 'input-footer connection-indicator is-warning';
                     status.textContent = "API desatualizada para esta interface. Aguarde o deploy e reinício do servidor.";

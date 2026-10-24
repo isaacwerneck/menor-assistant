@@ -29,7 +29,7 @@ class TestApiV2(unittest.TestCase):
         data = resp.json()
         self.assertEqual(data["status"], "online")
         self.assertEqual(data["service"], "Menor API")
-        self.assertEqual(data["api_contract"], 2)
+        self.assertEqual(data["api_contract"], 1)
 
     def test_list_nodes(self):
         resp = self.client.get("/api/nodes")
