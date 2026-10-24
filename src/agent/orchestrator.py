@@ -58,6 +58,26 @@ class Orchestrator:
             LOGGER.warning("Não foi possível carregar memória permanente: %s", exc)
         return ""
 
+    @staticmethod
+    def _needs_tools(messages: List[Dict[str, Any]]) -> bool:
+        """Determina se a mensagem exige tools para evitar overhead de 2000 tokens de schema na CPU."""
+        if not messages:
+            return False
+        if any(m.get("role") == "tool" for m in messages):
+            return True
+        last_user = ""
+        for m in reversed(messages):
+            if m.get("role") == "user":
+                last_user = str(m.get("content", "")).lower()
+                break
+        triggers = (
+            "arquivo", "file", "ler", "leia", "le ", "lê", "escrev", "salv", "list", "pasta", "dir",
+            "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
+            "plano", "projet", "pesquis", "busc", "web", "site", "url", "http", "ferramenta", "tool",
+            "código", "codigo", "python", "script", "consert", "bug", "corrig", "cri"
+        )
+        return any(t in last_user for t in triggers)
+
     def run_turn(
         self,
         messages: List[Dict[str, Any]],
@@ -77,7 +97,8 @@ class Orchestrator:
         for m in messages:
             chat_history.append({"role": m["role"], "content": m["content"]})
 
-        tools_schema = CORE_TOOLS_SCHEMA if enable_tools else None
+        should_use_tools = enable_tools and self._needs_tools(messages)
+        tools_schema = CORE_TOOLS_SCHEMA if should_use_tools else None
         steps_taken = 0
         executed_tools_log = []
 

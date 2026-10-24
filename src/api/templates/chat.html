@@ -841,7 +841,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             </div>
             <div class="topbar-actions" role="group" aria-label="Ações da conversa">
                 <select id="nodeSelector" class="toggle-sidebar-btn" style="font-size: 13px; font-weight: 500; padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Escolha onde processar a inteligência">
-                    <option value="server">Servidor (Qwen 14B)</option>
+                    <option value="server">Servidor (Qwen 7B CPU)</option>
                     <option value="local">PC Local (Qwen 7B GPU)</option>
                 </select>
                 <button type="button" class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
@@ -1145,6 +1145,17 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         checkAuth();
         refreshHealth();
         setInterval(refreshHealth, 30000);
+
+        const nodeSelectorEl = document.getElementById('nodeSelector');
+        if (nodeSelectorEl && typeof nodeSelectorEl.addEventListener === 'function') {
+            const savedNode = (typeof localStorage !== 'undefined' && localStorage.getItem('menor_selected_node')) || 'server';
+            nodeSelectorEl.value = savedNode;
+            nodeSelectorEl.addEventListener('change', (e) => {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('menor_selected_node', e.target.value);
+                }
+            });
+        }
 
         // ========== AUTENTICACAO DO PROPRIETARIO ==========
         async function checkAuth() {
@@ -1858,6 +1869,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             return !!earlier && earlier.distance <= 8
                 && /\b(cade|onde|mostra|mostrar|manda|mandar|envia|enviar|ver|reenvia)\b/.test(text)
                 && /\b(imagem|img|foto|arquivo|resultado|que voce gerou|que vc gerou)\b/.test(text);
+        }
+
+        function isActionIntent(text) {
+            if (!text || typeof text !== 'string') return false;
+            return /\b(leia|le\b|ler|escreva|escreve|criar?|salve?|liste?|roda|rode?|executa?|instala?|pesquise?|busca|busque|analise?|consert(a|e)|test(a|e)|terminal|comando|plano|projeto|arquivo|git|npm|python|ferramenta|diret[oó]rio|pasta)\b/i.test(text);
         }
 
         async function handleAgentTurn(conv, message, history, project, content) {

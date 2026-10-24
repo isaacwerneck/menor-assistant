@@ -29,9 +29,31 @@ from src.api.workspace import router as workspace_router
 logger = logging.getLogger(__name__)
 
 OLLAMA_SERVER_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:14b")
+DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
 KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "24h")
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+
+def get_active_model(preferred: Optional[str] = None) -> str:
+    """Detecta o modelo disponível no Ollama do servidor, com fallback seguro para qwen2.5:7b."""
+    if preferred:
+        return preferred
+    configured = os.environ.get("OLLAMA_MODEL")
+    if configured:
+        return configured
+    try:
+        resp = requests.get(f"{OLLAMA_SERVER_URL}/api/tags", timeout=2)
+        if resp.status_code == 200:
+            installed = [m.get("name", "") for m in resp.json().get("models", [])]
+            for candidate in ["qwen2.5:7b", "qwen2.5:latest", "qwen2.5:14b", "qwen2.5"]:
+                for m in installed:
+                    if candidate in m:
+                        return m
+            if installed:
+                return installed[0]
+    except Exception:
+        pass
+    return DEFAULT_MODEL
 
 
 @asynccontextmanager
@@ -107,20 +129,24 @@ def serve_chat_ui():
 @app.get("/health")
 def health_check():
     ollama_status = "offline"
+    models_available = []
     try:
         with requests.get(f"{OLLAMA_SERVER_URL}/api/tags", timeout=(2, 2)) as resp:
             if resp.status_code == 200:
                 ollama_status = "online"
+                models_available = [m.get("name", "") for m in resp.json().get("models", [])]
     except Exception:
         pass
 
+    active_model = get_active_model()
     return {
         "status": "online",
         "service": "Menor API",
         "version": app.version,
         "api_contract": 1,
         "ollama_status": ollama_status,
-        "default_model": DEFAULT_MODEL,
+        "default_model": active_model,
+        "installed_models": models_available,
         "server_ollama_url": OLLAMA_SERVER_URL,
     }
 
@@ -128,11 +154,12 @@ def health_check():
 @app.get("/api/nodes")
 def list_nodes():
     """Retorna os nós de computação configurados (Servidor e PC Local)."""
+    active_model = get_active_model()
     return {
         "server": {
-            "name": "Servidor Ubuntu (Cérebro Central)",
+            "name": f"Servidor Ubuntu ({active_model})",
             "ollama_url": OLLAMA_SERVER_URL,
-            "recommended_model": DEFAULT_MODEL,
+            "recommended_model": active_model,
             "type": "server",
         },
         "local": {
@@ -187,10 +214,10 @@ def auth_logout(request: Request, response: Response):
 def agent_run(body: AgentRunRequest, request: Request):
     auth.require_owner(request)
     target_url = body.ollama_url or OLLAMA_SERVER_URL
-    target_model = body.model or DEFAULT_MODEL
+    target_model = body.model or get_active_model()
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
     messages = [item.model_dump() for item in body.history] + [{"role": "user", "content": body.message}]
-    result = orchestrator.run_turn(messages=messages, model=body.model, ollama_url=body.ollama_url)
+    result = orchestrator.run_turn(messages=messages, model=target_model, ollama_url=target_url)
     return {
         "handled": True,
         "reply": result.get("reply", ""),
@@ -203,7 +230,7 @@ def agent_run(body: AgentRunRequest, request: Request):
 @app.post("/chat")
 def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
     target_url = req.ollama_url or (OLLAMA_SERVER_URL if req.node != "local" else "http://localhost:11434")
-    target_model = req.model or (DEFAULT_MODEL if req.node != "local" else "qwen2.5:7b")
+    target_model = req.model or (get_active_model() if req.node != "local" else "qwen2.5:7b")
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
     messages = [item.model_dump() for item in req.history] + [{"role": "user", "content": req.message}]
     result = orchestrator.run_turn(messages=messages, model=target_model, ollama_url=target_url)
@@ -217,7 +244,7 @@ def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
 @app.post("/chat/stream")
 def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
     target_url = req.ollama_url or (OLLAMA_SERVER_URL if req.node != "local" else "http://localhost:11434")
-    target_model = req.model or (DEFAULT_MODEL if req.node != "local" else "qwen2.5:7b")
+    target_model = req.model or (get_active_model() if req.node != "local" else "qwen2.5:7b")
 
     payload = {
         "model": target_model,
