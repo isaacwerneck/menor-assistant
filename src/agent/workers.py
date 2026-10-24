@@ -94,18 +94,21 @@ def _execute_background_task(queue: TaskQueue, task_id: int, goal: str, project_
         system_intro = (
             "Você é o executor autônomo de tarefas do Menor v2 no Hub Central. "
             "Sua missão é atender à solicitação do Isaac utilizando ferramentas reais. "
-            "Se o usuário pediu para criar ou fazer um site, página web, arquivo, script ou código, "
-            "utilize IMEDIATAMENTE a ferramenta `fs_write` fornecendo o caminho do arquivo (ex: 'index.html') "
-            "e o código completo e funcional (HTML, CSS e JS inclusos). "
-            "NUNCA apenas prometa fazer ou diga que é texto: execute a ferramenta real fs_write agora. "
-            "Após salvar, confirme o nome do arquivo criado em português brasileiro de forma breve."
+            "Para criar, salvar ou programar qualquer site, página web ou arquivo: "
+            "Chame OBRIGATORIAMENTE a ferramenta `fs_write` com 'filepath' (ex: 'index.html') e 'content'. "
+            "NÃO chame web_read nem web_search para criar arquivos locais. Execute fs_write imediatamente. "
+            "Após salvar, confirme o arquivo criado de forma breve em português brasileiro."
         )
         messages = [
             {"role": "system", "content": system_intro},
             {"role": "user", "content": goal},
         ]
         result = orchestrator.run_turn(messages=messages, model=model, enable_tools=True)
+        tools_executed = result.get("tools_executed", [])
         reply = result.get("reply", "Tarefa concluída.")
+        if tools_executed:
+            tool_names = [t.get("tool") if isinstance(t, dict) else str(t) for t in tools_executed]
+            reply = f"Execução concluída com sucesso via {', '.join(tool_names)}!\n{reply}"
         queue.update_status(task_id, "completed", reply)
         LOGGER.info("Tarefa de segundo plano %s concluída com sucesso.", task_id)
     except Exception as exc:
