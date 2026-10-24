@@ -1271,44 +1271,125 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         let handsFreeVoiceEnabled = false;
         let isSpeakingTTS = false;
         let speechSilenceTimer = null;
+        let availableVoices = [];
 
-        function speakText(text, onComplete) {
-            if (!window.speechSynthesis) {
+        function refreshVoices() {
+            if (!window.speechSynthesis) return;
+            availableVoices = window.speechSynthesis.getVoices();
+        }
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            refreshVoices();
+            window.speechSynthesis.onvoiceschanged = refreshVoices;
+        }
+
+        function getBestNaturalVoice() {
+            if (!availableVoices || availableVoices.length === 0) {
+                refreshVoices();
+            }
+            if (!availableVoices || availableVoices.length === 0) return null;
+
+            // 1. Prioridade: Vozes Naturais/Neurais em português do Brasil (Edge / Windows / Chrome)
+            const naturalPtBr = availableVoices.find(v => (v.lang === 'pt-BR' || v.lang.startsWith('pt')) && (
+                v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Online')
+            ));
+            if (naturalPtBr) return naturalPtBr;
+
+            // 2. Vozes do Google (alta qualidade no Chrome)
+            const googlePt = availableVoices.find(v => v.name.toLowerCase().includes('google') && (v.lang === 'pt-BR' || v.lang.startsWith('pt')));
+            if (googlePt) return googlePt;
+
+            // 3. Vozes personalizadas conhecidas com boa dicção
+            const named = availableVoices.find(v => (v.lang === 'pt-BR' || v.lang.startsWith('pt')) && (
+                v.name.includes('Francisca') || v.name.includes('Antonio') || v.name.includes('Daniel') || v.name.includes('Thalita') || v.name.includes('Luciana')
+            ));
+            if (named) return named;
+
+            // 4. Qualquer voz pt-BR
+            const anyPtBr = availableVoices.find(v => v.lang === 'pt-BR');
+            if (anyPtBr) return anyPtBr;
+
+            return availableVoices.find(v => v.lang.startsWith('pt')) || null;
+        }
+
+        let speechQueue = [];
+        let isProcessingQueue = false;
+
+        function clearSpeechQueue() {
+            speechQueue = [];
+            isProcessingQueue = false;
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            isSpeakingTTS = false;
+        }
+
+        function enqueueSpeech(text, onComplete = null) {
+            if (!text || !text.trim()) {
                 if (onComplete) onComplete();
                 return;
             }
-            window.speechSynthesis.cancel();
-            const clean = text
+            speechQueue.push({ text: text.trim(), onComplete });
+            processSpeechQueue();
+        }
+
+        function processSpeechQueue() {
+            if (isProcessingQueue || speechQueue.length === 0) return;
+            const item = speechQueue.shift();
+            isProcessingQueue = true;
+            isSpeakingTTS = true;
+
+            const clean = item.text
                 .replace(/```[\s\S]*?```/g, 'Bloco de código omitido na fala.')
                 .replace(/`([^`]+)`/g, '$1')
                 .replace(/https?:\/\/\S+/g, 'link')
                 .replace(/[*#_~>]/g, '')
                 .trim();
+
             if (!clean) {
-                if (onComplete) onComplete();
+                isProcessingQueue = false;
+                if (item.onComplete) item.onComplete();
+                processSpeechQueue();
                 return;
             }
+
             const utterance = new SpeechSynthesisUtterance(clean);
+            const bestVoice = getBestNaturalVoice();
+            if (bestVoice) {
+                utterance.voice = bestVoice;
+            }
             utterance.lang = 'pt-BR';
-            utterance.rate = 1.05;
+            utterance.rate = 1.08;
             utterance.pitch = 1.0;
-            isSpeakingTTS = true;
+
             utterance.onend = function() {
-                isSpeakingTTS = false;
-                if (onComplete) onComplete();
+                isProcessingQueue = false;
+                if (item.onComplete) item.onComplete();
+                if (speechQueue.length > 0) {
+                    processSpeechQueue();
+                } else {
+                    isSpeakingTTS = false;
+                }
             };
             utterance.onerror = function() {
-                isSpeakingTTS = false;
-                if (onComplete) onComplete();
+                isProcessingQueue = false;
+                if (item.onComplete) item.onComplete();
+                if (speechQueue.length > 0) {
+                    processSpeechQueue();
+                } else {
+                    isSpeakingTTS = false;
+                }
             };
+
             window.speechSynthesis.speak(utterance);
         }
 
+        function speakText(text, onComplete) {
+            clearSpeechQueue();
+            enqueueSpeech(text, onComplete);
+        }
+
         function stopTTS() {
-            if (window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-            }
-            isSpeakingTTS = false;
+            clearSpeechQueue();
         }
 
         function initSpeechRecognition() {
@@ -1356,7 +1437,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         if (!isGenerating && input.value.trim()) {
                             sendMsg();
                         }
-                    }, 1400);
+                    }, 750);
                 }
             };
 
@@ -2104,16 +2185,20 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     if (!name) continue;
                     const opt = document.createElement('option');
                     opt.value = 'local:' + name;
-                    opt.textContent = '⚡ PC Local (' + name + ' GPU)';
+                    let label = '⚡ PC Local (' + name + ' GPU)';
+                    if (name.includes('qwen2.5:3b')) {
+                        label = '🚀 PC Local Instantâneo (Qwen 2.5 3B GPU - Ultra-Rápido)';
+                    }
+                    opt.textContent = label;
                     localGroup.appendChild(opt);
                 }
                 const optionsList = Array.from(selector.options || []);
                 if (optionsList.some(o => o.value === currentVal)) {
                     selector.value = currentVal;
                 } else if (currentVal && currentVal.startsWith('local')) {
-                    const pref4b = optionsList.find(o => o.value.includes('qwen3.5:4b'));
-                    if (pref4b) {
-                        selector.value = pref4b.value;
+                    const pref3b = optionsList.find(o => o.value.includes('qwen2.5:3b'));
+                    if (pref3b) {
+                        selector.value = pref3b.value;
                     } else if (localGroup.firstChild) {
                         selector.value = localGroup.firstChild.value;
                     }
@@ -2603,18 +2688,26 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             let fallbackToServer = false;
             if (target.node === 'local') {
                 content.textContent = '';
-                document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '4B'}) gerando resposta…`;
+                document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '3B'}) gerando resposta…`;
                 try {
                     const localResp = await fetch('http://localhost:11434/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            model: target.model || 'qwen3.5:4b',
+                            model: target.model || 'qwen2.5:3b',
                             messages: [
-                                { role: 'system', content: 'Você é o Menor v2 rodando na GPU local. Responda com agilidade, precisão e clareza em pt-BR.' },
+                                {
+                                    role: 'system',
+                                    content: 'Você é o Menor v2, assistente do Isaac. Responda em português brasileiro de forma direta, amigável e descontraída (usando gírias leves como mano, suave, blz). Nunca use inglês nem pense em voz alta.'
+                                },
                                 ...history,
                                 { role: 'user', content: message }
                             ],
+                            options: {
+                                temperature: 0.6,
+                                num_predict: 120,
+                                stop: ['\nThinking Process:', 'Thinking Process:', '<think>', 'Okay, let\'s']
+                            },
                             stream: true
                         }),
                         signal: activeGeneration?.controller?.signal
@@ -2623,6 +2716,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     const reader = localResp.body.getReader();
                     const decoder = new TextDecoder();
                     let fullText = '';
+                    let spokenIndex = 0;
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
@@ -2635,8 +2729,20 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                                 const token = parsed.message?.content || '';
                                 if (token) {
                                     fullText += token;
-                                    content.textContent = cleanAssistantText(fullText) || fullText;
+                                    const cleanSoFar = cleanAssistantText(fullText) || fullText;
+                                    content.textContent = cleanSoFar;
                                     scrollToBottom();
+
+                                    // Streaming de Fala (ChatGPT-style): enfileira sentença assim que finaliza pontuação
+                                    if (handsFreeVoiceEnabled && cleanSoFar) {
+                                        const remaining = cleanSoFar.substring(spokenIndex);
+                                        const sentenceMatch = remaining.match(/^(.*?[\.\!\?\n]+)\s*/);
+                                        if (sentenceMatch && sentenceMatch[1].trim().length >= 4) {
+                                            const sentenceToSpeak = sentenceMatch[1].trim();
+                                            spokenIndex += sentenceMatch[0].length;
+                                            enqueueSpeech(sentenceToSpeak);
+                                        }
+                                    }
                                 }
                             } catch (_) {}
                         }
@@ -2655,11 +2761,16 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     conv.messages.push({ role: 'bot', content: finalLocal, timing: { browser_request_wall_ms: wallMs } });
                     save();
 
-                    // Modo de Voz Contínua: Falar e voltar a ouvir
+                    // Modo de Voz Contínua: Falar qualquer sentença restante que não tenha terminado com pontuação
                     if (handsFreeVoiceEnabled && finalLocal) {
-                        speakText(finalLocal, () => {
-                            if (handsFreeVoiceEnabled) resumeListening();
-                        });
+                        const leftover = finalLocal.substring(spokenIndex).trim();
+                        if (leftover) {
+                            enqueueSpeech(leftover, () => {
+                                if (handsFreeVoiceEnabled) resumeListening();
+                            });
+                        } else {
+                            if (handsFreeVoiceEnabled && !isSpeakingTTS) resumeListening();
+                        }
                     }
 
                     // Dual-Brain: Se o usuário pediu ações complexas, despachar em paralelo ao Hub do Servidor
@@ -3492,6 +3603,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 generation.reader = reader;
                 const decoder = new TextDecoder('utf-8');
                 let fullReply = '';
+                let streamSpokenIdx = 0;
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -3507,6 +3619,16 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     const displayChunk = cleanAssistantText(fullReply);
                     botContent.textContent = routeNotice + (displayChunk || fullReply);
                     scrollToBottom();
+
+                    // Streaming de fala para o fluxo do servidor
+                    if (handsFreeVoiceEnabled && displayChunk) {
+                        const remaining = displayChunk.substring(streamSpokenIdx);
+                        const match = remaining.match(/^(.*?[\.\!\?\n]+)\s*/);
+                        if (match && match[1].trim().length >= 4) {
+                            streamSpokenIdx += match[0].length;
+                            enqueueSpeech(match[1].trim());
+                        }
+                    }
                 }
 
                 fullReply += decoder.decode();
@@ -3514,6 +3636,17 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 const finalReply = cleanAssistantText(fullReply) || 'E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?';
                 botContent.textContent = routeNotice + finalReply;
                 if (!finalReply.trim()) throw new Error('O modelo retornou uma resposta vazia.');
+
+                if (handsFreeVoiceEnabled && finalReply) {
+                    const leftover = finalReply.substring(streamSpokenIdx).trim();
+                    if (leftover) {
+                        enqueueSpeech(leftover, () => {
+                            if (handsFreeVoiceEnabled) resumeListening();
+                        });
+                    } else {
+                        if (handsFreeVoiceEnabled && !isSpeakingTTS) resumeListening();
+                    }
+                }
                 const wallMs = Date.now() - generation.started;
                 const secs = (wallMs / 1000).toFixed(1) + 's';
                 const avatar = botContent.parentElement?.querySelector?.('.avatar.bot-avatar');
