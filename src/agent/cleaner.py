@@ -89,7 +89,13 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
         "according to the guidelines",
     ))
 
-    if not cleaned.strip() or is_still_english_scratchpad:
+    has_false_refusal = any(phrase in cleaned_lower for phrase in (
+        "não posso criar", "não posso programar", "não consigo criar", "não consigo programar",
+        "não sou capaz de criar", "não sou capaz de programar", "como um modelo de linguagem",
+        "como modelo de ia", "não tenho a capacidade de programar", "não posso criar ou programar",
+    ))
+
+    if not cleaned.strip() or is_still_english_scratchpad or has_false_refusal:
         return _fallback_casual_reply(last_user_msg)
 
     return cleaned.strip()
@@ -100,7 +106,8 @@ def _fallback_casual_reply(user_msg: str) -> str:
     norm_user = (user_msg or "").lower()
     site_prompts = (
         "consegue fazer um site", "pode fazer um site", "faz um site", "fazer um site",
-        "fazer site", "site", "landing page"
+        "fazer site", "site", "landing page", "programar um site", "criar um site",
+        "desenvolver um site", "cria um site"
     )
     if any(w in norm_user for w in site_prompts):
         if any(w in norm_user for w in ("implement", "cria", "bora", "com fundo", "escrito", "faça", "faz")):

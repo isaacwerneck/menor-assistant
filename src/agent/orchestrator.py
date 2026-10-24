@@ -24,8 +24,8 @@ criação de ferramentas (create_new_tool), agendamento de estudos (schedule_stu
 consulta de relatórios (get_study_report) e atualização de memória de trabalho (update_core_memory).
 
 Regras Inegociáveis e Diretrizes de Execução:
-- Se o usuário pedir para criar, fazer, programar, desenvolver ou salvar um site, página web, arquivo, script ou código:
-  Chame OBRIGATORIAMENTE a ferramenta `fs_write` com 'filepath' (ex: 'index.html') e 'content' (o código HTML/CSS/JS completo).
+- Se o usuário pedir para criar, fazer, programar, desenvolver ou salvar um site, página ou arquivo:
+  Chame OBRIGATORIAMENTE a ferramenta `fs_write` com 'filepath' (ex: 'index.html') e 'content'.
   NUNCA use web_read nem web_search para pedidos de criar ou programar sites/arquivos locais.
   Execute `fs_write` imediatamente no primeiro turno.
 - NUNCA simule saídas de terminal, prompts de shell (ex: ```terminal $ ls ...```, ```bash```) ou finja leituras de
@@ -181,7 +181,7 @@ class Orchestrator:
             "patch", "alterar", "substituir", "simbolo", "símbolo", "mapa", "repo_map", "onde fica", "onde está",
             "declaração", "declaracao", "refator",
             "lembr", "memor", "perfil", "preferencia", "não precisa", "nao precisa",
-            "não fique", "nao fique", "prefiro",
+            "não fique", "nao fique", "prefiro", "favorit", "odeio", "acabei de", "cor ",
             "estude ", "estudar", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia",
             "noticia", "relat", "fez enquanto", "estudou", "agendar", "agende", "adicione",
             "faz ", "fazer", "faça", "constru", "program", "desenvolv", "implement", "html", "css", "js",
@@ -328,6 +328,26 @@ class Orchestrator:
                 }
             except Exception as exc:
                 LOGGER.warning("Salvamento de memória falhou: %s", exc)
+
+        # Consulta de preferências salvas
+        pref_recall_triggers = (
+            "cor favorita", "minha cor", "o que eu odeio", "o que odeio",
+            "minha preferência", "minhas preferências", "o que eu prefiro"
+        )
+        if any(t in norm_user for t in pref_recall_triggers):
+            try:
+                from src.memory.core_memory import CoreMemoryManager
+                prefs = CoreMemoryManager(self.store).get_block("user_preferences")
+                if prefs and len(prefs.strip()) > 3:
+                    return {
+                        "success": True,
+                        "reply": f"Lembro perfeitamente, Isaac! Você me disse que {prefs.strip()}.",
+                        "tools_executed": executed_tools_log,
+                        "model_used": target_model,
+                        "node_url": target_url,
+                    }
+            except Exception as exc:
+                LOGGER.debug("Consulta de preferências ignorada: %s", exc)
 
         # Identidade do Isaac
         if any(t in norm_user for t in ("quem eu sou", "minha função", "meu perfil", "lembra quem eu sou")):
