@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 OLLAMA_SERVER_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
-KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "24h")
+KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "-1")
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
@@ -60,9 +60,26 @@ def get_active_model(preferred: Optional[str] = None) -> str:
     return DEFAULT_MODEL
 
 
+async def _warmup_model():
+    """Pré-aquece o modelo na RAM em background para eliminar o cold start de 20s na primeira mensagem."""
+    await asyncio.sleep(0.5)
+    target_model = get_active_model()
+    try:
+        # Envia requisição com keep_alive: -1 para manter os pesos carregados na RAM
+        requests.post(
+            f"{OLLAMA_SERVER_URL}/api/generate",
+            json={"model": target_model, "prompt": "", "keep_alive": -1},
+            timeout=40,
+        )
+        logger.info("Modelo %s carregado previamente na RAM com sucesso.", target_model)
+    except Exception as exc:
+        logger.debug("Warmup em background: %s", exc)
+
+
 @asynccontextmanager
 async def app_lifespan(_app):
     BrainStore().initialize()
+    asyncio.create_task(_warmup_model())
     yield
 
 

@@ -109,6 +109,7 @@ class Orchestrator:
                 "messages": chat_history,
                 "stream": False,
                 "options": {"temperature": 0.3},
+                "keep_alive": -1,
             }
             if tools_schema:
                 payload["tools"] = tools_schema
