@@ -443,9 +443,9 @@ class Orchestrator:
                     "temperature": 0.6 if not should_use_tools else 0.2,
                     "top_p": 0.9,
                     "repeat_penalty": 1.1,
-                    "num_predict": 1024 if not should_use_tools else 1536,
+                    "num_predict": 1024,
                     "num_thread": get_optimal_threads(),
-                    "num_ctx": 4096 if not should_use_tools else 8192,
+                    "num_ctx": 4096,
                     "stop": ["\nThinking Process:", "Thinking Process:", "Okay, let's", "Let's tackle"],
                 },
                 "keep_alive": "60m",
@@ -483,10 +483,11 @@ class Orchestrator:
                                 "reply": f"Erro de comunicação com o modelo ({target_model}): {str(fallback_exc)}",
                                 "tools_executed": executed_tools_log,
                             }
-                elif tools_schema and status_code == 400:
+                elif status_code in (400, 500):
                     LOGGER.warning(
-                        "Modelo %s retornou 400 com tools (%s). Tentando fallback sem tools.",
+                        "Modelo %s retornou %s (%s). Tentando fallback sem tools e com num_ctx 2048.",
                         target_model,
+                        status_code,
                         err_text[:80],
                     )
                     payload.pop("tools", None)
