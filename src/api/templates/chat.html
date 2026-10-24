@@ -2265,7 +2265,14 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         }
                     }
                     assertLiveTurn(conv);
-                    conv.messages.push({ role: 'bot', content: fullText });
+                    const wallMs = activeGeneration ? Date.now() - activeGeneration.started : 0;
+                    const secs = (wallMs / 1000).toFixed(1) + 's';
+                    const avatar = content.parentElement?.querySelector?.('.avatar.bot-avatar');
+                    if (avatar && wallMs > 0) {
+                        avatar.dataset.time = secs;
+                        avatar.title = `Gerado em ${secs}`;
+                    }
+                    conv.messages.push({ role: 'bot', content: fullText, timing: { browser_request_wall_ms: wallMs } });
                     save();
                     return true;
                 } catch (err) {
@@ -2275,12 +2282,6 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         + 'Dica: Verifique se o Ollama está em execução no seu computador com a variável OLLAMA_ORIGINS="*".\n'
                         + 'Redirecionando a tarefa para o Servidor Ubuntu...\n\n';
                 }
-            }
-
-            // Se for conversa comum, consulta ou pergunta (não for ação no SO/ferramentas),
-            // pula direto para /chat/stream em tempo real (1-2s) sem bloquear no /agent/run
-            if (!isActionIntent(message)) {
-                return false;
             }
 
             const previous = conv.pendingAgentRequest;
@@ -2824,13 +2825,6 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 conv: null, content: null,
             };
             activeGeneration = generation;
-            generation.timer = setInterval(() => {
-                if (activeGeneration === generation) {
-                    const seconds = Math.floor((Date.now() - generation.started) / 1000);
-                    document.getElementById('generationStatus').textContent =
-                        'Menor está processando há ' + seconds + 's. Você pode parar ou trocar de chat.';
-                }
-            }, 1000);
             document.getElementById('cancelBtn').hidden = false;
             document.getElementById('generationStatus').hidden = false;
             document.getElementById('generationStatus').textContent = 'Processando mensagem…';
@@ -2843,7 +2837,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             showMessages();
             document.getElementById('messagesContainer').replaceChildren();
             getActiveConv().messages.forEach((m, i, all) =>
-                appendMessage(m.role, m.content, false, m.image, m.artifact, m.approval, i === all.length - 1));
+                appendMessage(m.role, m.content, false, m.image, m.artifact, m.approval, i === all.length - 1, m.timing, m.activity));
 
             const conv = getActiveConv();
             const history = buildHistory(conv.messages, msg);
@@ -2855,6 +2849,63 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const botContent = appendMessage('bot', '', true);
             generation.conv = conv;
             generation.content = botContent;
+
+            const activity = {
+                steps: ['Interpretando mensagem e contexto...'],
+                started: Date.now(),
+                box: null,
+                addStep(step) {
+                    if (!this.steps.includes(step)) {
+                        this.steps.push(step);
+                        this.render();
+                    }
+                },
+                render() {
+                    if (typeof HTMLElement === 'undefined' || !(botContent instanceof HTMLElement)) return;
+                    if (!this.box) {
+                        this.box = document.createElement('div');
+                        this.box.className = 'activity-live-box';
+                        botContent.innerHTML = '';
+                        botContent.appendChild(this.box);
+                    }
+                    const elapsed = ((Date.now() - this.started) / 1000).toFixed(1);
+                    let html = `<div class="activity-live-header">`
+                        + `<span class="activity-live-spinner"></span>`
+                        + `<span>Pensando com o Menor...</span>`
+                        + `<span class="activity-live-timer">${elapsed}s</span>`
+                        + `</div><div class="activity-steps-container">`;
+                    this.steps.forEach((s, idx) => {
+                        const isLast = idx === this.steps.length - 1;
+                        if (isLast) {
+                            html += `<div class="activity-step-row active"><span class="step-dot"></span><span>${s}</span></div>`;
+                        } else {
+                            html += `<div class="activity-step-row done"><span class="step-check">✓</span><span>${s}</span></div>`;
+                        }
+                    });
+                    html += `</div>`;
+                    this.box.innerHTML = html;
+                    scrollToBottom();
+                }
+            };
+            generation.activity = activity;
+            activity.render();
+
+            generation.timer = setInterval(() => {
+                if (activeGeneration === generation) {
+                    const seconds = Math.floor((Date.now() - generation.started) / 1000);
+                    document.getElementById('generationStatus').textContent =
+                        'Menor está processando há ' + seconds + 's. Você pode parar ou trocar de chat.';
+                    if (seconds >= 2 && seconds < 4) {
+                        activity.addStep('Consultando Core Memory e preferências...');
+                    } else if (seconds >= 4 && seconds < 10) {
+                        const target = getSelectedComputeTarget();
+                        activity.addStep(target.node === 'local' ? 'Raciocinando na GPU Local (GTX 1650)...' : 'Raciocinando com modelo no Servidor Ubuntu...');
+                    } else if (seconds >= 10) {
+                        activity.addStep('Sintetizando resposta...');
+                    }
+                    activity.render();
+                }
+            }, 500);
 
             try {
                 const recent = recentImage(conv);
@@ -3048,7 +3099,19 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 generation.reader = null;
                 botContent.textContent = routeNotice + fullReply;
                 if (!fullReply.trim()) throw new Error('O modelo retornou uma resposta vazia.');
-                conv.messages.push({ role: 'bot', content: routeNotice + fullReply });
+                const wallMs = Date.now() - generation.started;
+                const secs = (wallMs / 1000).toFixed(1) + 's';
+                const avatar = botContent.parentElement?.querySelector?.('.avatar.bot-avatar');
+                if (avatar) {
+                    avatar.dataset.time = secs;
+                    avatar.title = `Gerado em ${secs}`;
+                }
+                conv.messages.push({
+                    role: 'bot',
+                    content: routeNotice + fullReply,
+                    timing: { browser_request_wall_ms: wallMs },
+                    activity: generation.activity?.steps || null,
+                });
                 save();
             } catch (err) {
                 if (activeGeneration === generation && err.name !== 'AbortError') {
