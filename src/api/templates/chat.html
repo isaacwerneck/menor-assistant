@@ -1516,6 +1516,67 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             }
         }
 
+        function getSelectedComputeTarget() {
+            const selector = document.getElementById('nodeSelector');
+            const raw = (selector && selector.value) || 'server';
+            if (raw.startsWith('local')) {
+                const parts = raw.split(':');
+                return {
+                    node: 'local',
+                    model: parts.length > 1 ? parts[1] : 'qwen2.5:7b',
+                    url: 'http://localhost:11434',
+                };
+            }
+            if (raw.startsWith('server')) {
+                const parts = raw.split(':');
+                return {
+                    node: 'server',
+                    model: parts.length > 1 ? parts.slice(1).join(':') : null,
+                    url: null,
+                };
+            }
+            return { node: 'server', model: null, url: null };
+        }
+
+        function populateModelSelector(serverModels, defaultModel) {
+            const selector = document.getElementById('nodeSelector');
+            if (!selector || typeof selector.appendChild !== 'function') return;
+            const currentVal = (typeof localStorage !== 'undefined' && localStorage.getItem('menor_selected_node')) || selector.value;
+
+            try {
+                selector.innerHTML = '';
+
+                const serverGroup = document.createElement('optgroup');
+                serverGroup.label = 'Servidor (Notebook CPU)';
+                serverModels.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = 'server:' + m;
+                    let label = m;
+                    if (m.includes('qwen-fast')) label = '⚡ ' + m + ' (Otimizado)';
+                    else if (m.includes('coder')) label = '💻 ' + m + ' (Programador)';
+                    else if (m.includes('q3_K')) label = '🚀 ' + m + ' (3-bit)';
+                    opt.textContent = label;
+                    serverGroup.appendChild(opt);
+                });
+                selector.appendChild(serverGroup);
+
+                const localGroup = document.createElement('optgroup');
+                localGroup.label = 'PC Local (GPU GTX 1650)';
+                const localOpt = document.createElement('option');
+                localOpt.value = 'local:qwen2.5:7b';
+                localOpt.textContent = '🚀 PC Local (Qwen 7B GPU - Tempo Real)';
+                localGroup.appendChild(localOpt);
+                selector.appendChild(localGroup);
+
+                const optionsList = Array.from(selector.options || []);
+                if (currentVal && optionsList.some(o => o.value === currentVal)) {
+                    selector.value = currentVal;
+                } else if (defaultModel && optionsList.some(o => o.value === 'server:' + defaultModel)) {
+                    selector.value = 'server:' + defaultModel;
+                }
+            } catch (_) {}
+        }
+
         async function refreshHealth() {
             const status = document.getElementById('connectionStatus');
             try {
@@ -1529,6 +1590,9 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     return;
                 }
                 document.getElementById('modelName').textContent = health.default_model;
+                if (Array.isArray(health.installed_models) && health.installed_models.length > 0) {
+                    populateModelSelector(health.installed_models, health.default_model);
+                }
                 status.className = 'input-footer connection-indicator '
                     + (health.ollama_status === 'online' ? 'is-online' : 'is-warning');
                 status.textContent = health.ollama_status === 'online'
@@ -1919,16 +1983,16 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             if (conv.pendingImage || conv.activeMission ||
                 conv.pendingCapabilityOffer || selectedImageFile) return false;
 
-            const selectedNode = document.getElementById('nodeSelector')?.value || 'server';
-            if (selectedNode === 'local') {
+            const target = getSelectedComputeTarget();
+            if (target.node === 'local') {
                 content.textContent = '';
-                document.getElementById('generationStatus').textContent = 'Qwen 7B (GPU Local) gerando resposta…';
+                document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '7B'}) gerando resposta…`;
                 try {
                     const localResp = await fetch('http://localhost:11434/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            model: 'qwen2.5:7b',
+                            model: target.model || 'qwen2.5:7b',
                             messages: [
                                 { role: 'system', content: 'Você é o Menor v2 rodando na GPU local. Responda com agilidade, precisão e clareza em pt-BR.' },
                                 ...history,
@@ -1976,9 +2040,9 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const previous = conv.pendingAgentRequest;
             const payload = previous && previous.message === message ? previous : {
                 session_id: conv.id, turn_id: genId(), message, history, project,
-                node: selectedNode,
-                model: selectedNode === 'local' ? 'qwen2.5:7b' : null,
-                ollama_url: selectedNode === 'local' ? 'http://localhost:11434' : null,
+                node: target.node,
+                model: target.model,
+                ollama_url: target.url,
             };
             conv.pendingAgentRequest = payload;
             save();
@@ -2654,6 +2718,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 }
                 }
                 assertLiveTurn(conv);
+                const streamTarget = getSelectedComputeTarget();
                 const response = await turnFetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2661,7 +2726,8 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         message: msg,
                         history,
                         project,
-                        node: document.getElementById('nodeSelector')?.value || 'server'
+                        node: streamTarget.node,
+                        model: streamTarget.model,
                     })
                 });
 
