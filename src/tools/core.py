@@ -4,6 +4,7 @@ Permite leitura/escrita de arquivos, execução de comandos no terminal e gestã
 de planos de projeto de maneira real e verificável.
 """
 from pathlib import Path
+import json
 import subprocess
 from typing import Any, Dict, Optional
 
@@ -167,6 +168,34 @@ def update_core_memory(
         }
     except Exception as exc:
         return {"success": False, "error": str(exc)}
+
+
+def get_study_report(store: Optional[BrainStore] = None) -> Dict[str, Any]:
+    """Retorna o resumo da última sessão de estudo, reflexão e auto-diagnóstico realizada pelo Menor."""
+    st = store or BrainStore()
+    rep_file = st.brain_dir / "relatorios" / "ultimo_estudo.md"
+    json_file = st.brain_dir / "relatorios" / "ultimo_estudo.json"
+    if not rep_file.exists():
+        return {
+            "success": True,
+            "has_report": False,
+            "message": (
+                "Ainda não há relatório de estudos registrado. O Menor executará o primeiro ciclo "
+                "quando ficar 30 minutos inativo ou via 'menor ciclo'."
+            ),
+        }
+    try:
+        raw_md = rep_file.read_text(encoding="utf-8")
+        data = json.loads(json_file.read_text(encoding="utf-8")) if json_file.exists() else {}
+        return {
+            "success": True,
+            "has_report": True,
+            "report_markdown": raw_md,
+            "timestamp": data.get("timestamp"),
+            "data": data,
+        }
+    except Exception as exc:
+        return {"success": False, "error": f"Falha ao ler relatório: {str(exc)}"}
 
 
 def schedule_study_topic(
@@ -525,6 +554,20 @@ CORE_TOOLS_SCHEMA = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_study_report",
+            "description": (
+                "Obtém o relatório consolidado da última sessão de estudo, reflexão e auto-diagnóstico "
+                "realizada em segundo plano pelo Menor."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
 ]
 
 TOOL_DISPATCHER = {
@@ -539,4 +582,5 @@ TOOL_DISPATCHER = {
     "update_core_memory": update_core_memory,
     "grounded_search": grounded_search,
     "schedule_study_topic": schedule_study_topic,
+    "get_study_report": get_study_report,
 }

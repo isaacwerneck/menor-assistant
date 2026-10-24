@@ -60,10 +60,14 @@ async def _idle_study_monitor():
             if _study_running_lock.acquire(blocking=False):
                 try:
                     _study_abort_event.clear()
-                    from src.agent.study import StudyWorker
-                    worker = StudyWorker(ollama_url=OLLAMA_SERVER_URL)
-                    logger.info("Iniciando estudo autônomo por inatividade (%ds)...", int(idle_seconds))
-                    await asyncio.to_thread(worker.study_cycle, max_topics=3, abort_event=_study_abort_event)
+                    from src.agent.study import run_autonomous_cycle
+                    logger.info(
+                        "Iniciando ciclo autônomo (Refletir -> Estudar -> Diagnosticar) por inatividade (%ds)...",
+                        int(idle_seconds),
+                    )
+                    await asyncio.to_thread(
+                        run_autonomous_cycle, ollama_url=OLLAMA_SERVER_URL, abort_event=_study_abort_event
+                    )
                 except Exception as exc:
                     logger.debug("Ciclo de estudo em background: %s", exc)
                 finally:
@@ -431,9 +435,8 @@ def study_trigger(request: Request):
     if _study_running_lock.acquire(blocking=False):
         try:
             _study_abort_event.clear()
-            from src.agent.study import StudyWorker
-            worker = StudyWorker(ollama_url=OLLAMA_SERVER_URL)
-            res = worker.study_cycle(max_topics=2, abort_event=_study_abort_event)
+            from src.agent.study import run_autonomous_cycle
+            res = run_autonomous_cycle(ollama_url=OLLAMA_SERVER_URL, abort_event=_study_abort_event)
             return {"success": True, "result": res}
         finally:
             _study_running_lock.release()
@@ -447,3 +450,10 @@ def diagnostic_run(request: Request):
     engine = DiagnosticEngine(ollama_url=OLLAMA_SERVER_URL)
     result = engine.run_self_eval()
     return {"success": True, "diagnostic": result}
+
+
+@app.get("/api/study/report")
+def study_report(request: Request):
+    auth.require_owner(request)
+    from src.tools.core import get_study_report
+    return get_study_report()

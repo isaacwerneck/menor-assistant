@@ -194,6 +194,53 @@ class TestStudyEngine(unittest.TestCase):
         self.assertIsInstance(res["results"], list)
         self.assertGreaterEqual(len(res["results"]), 2)
 
+    def test_tool_get_study_report(self):
+        from src.tools.core import get_study_report
+        # Inicialmente sem relatório
+        r1 = get_study_report(store=self.store)
+        self.assertTrue(r1["success"])
+        self.assertFalse(r1["has_report"])
+
+        # Cria relatório simulado
+        rep_dir = self.store.brain_dir / "relatorios"
+        rep_dir.mkdir(parents=True, exist_ok=True)
+        (rep_dir / "ultimo_estudo.md").write_text("# Resumo de teste", encoding="utf-8")
+        (rep_dir / "ultimo_estudo.json").write_text('{"timestamp": "2026-10-24T00:00:00Z"}', encoding="utf-8")
+
+        r2 = get_study_report(store=self.store)
+        self.assertTrue(r2["success"])
+        self.assertTrue(r2["has_report"])
+        self.assertIn("# Resumo de teste", r2["report_markdown"])
+
+    @patch("src.agent.study.DiagnosticEngine.run_self_eval")
+    @patch("src.agent.study.StudyWorker.study_cycle")
+    @patch("src.agent.reflection.ReflectionWorker.reflect")
+    def test_run_autonomous_cycle(self, mock_refl, mock_study, mock_diag):
+        from src.agent.study import run_autonomous_cycle
+        mock_refl.return_value = {"learnings_added": 2, "anti_patterns_added": 1}
+        mock_study.return_value = {"topics": ["Web Audio API"], "studied": 1}
+        mock_diag.return_value = {"score": 8.5, "gap_identified": ""}
+
+        res = run_autonomous_cycle(store=self.store)
+        self.assertIsNotNone(res)
+        self.assertIn("report_markdown", res)
+        self.assertIn("Web Audio API", res["report_markdown"])
+        self.assertIn("8.5/10", res["report_markdown"])
+
+        # Verifica se gravou arquivos em relatorios/
+        rep_file = self.store.brain_dir / "relatorios" / "ultimo_estudo.md"
+        self.assertTrue(rep_file.exists())
+
+    def test_dynamic_study_anchors_from_core_memory(self):
+        from src.memory.core_memory import CoreMemoryManager
+        cm = CoreMemoryManager(store=self.store)
+        cm.set_block("study_anchors", "Game Development em C++ e Unreal Engine 5\nShaders GLSL")
+
+        tm = TopicManager(store=self.store)
+        tm.file_path.write_text("# Temas\n\n", encoding="utf-8")
+        generated = tm.auto_generate_topics(count=1)
+        self.assertGreaterEqual(len(generated), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

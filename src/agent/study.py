@@ -150,12 +150,17 @@ class TopicManager:
     ) -> List[str]:
         """Gera novos tópicos alinhados aos domínios do Isaac quando a fila estiver vazia."""
         generated = []
+        core_anchors = CoreMemoryManager(store=self.store).get_block("study_anchors")
+        anchors_list = [
+            line.strip() for line in core_anchors.splitlines() if line.strip()
+        ] if core_anchors else DOMAIN_ANCHORS
+
         if ollama_url and model:
             prompt = (
                 "Você é o planejador de estudos do Menor v2. "
                 "Gere 2 novos tópicos de estudo avançados e extremamente práticos para um engenheiro de software.\n"
                 "Âncoras estritas de domínio:\n"
-                + "\n".join(f"- {d}" for d in DOMAIN_ANCHORS)
+                + "\n".join(f"- {d}" for d in anchors_list)
                 + "\nProibido: culinária, curiosidades genéricas, assuntos não relacionados a código ou UI/UX.\n"
                 "Responda estritamente em JSON: {\"topics\": [\"Tópico 1\", \"Tópico 2\"]}"
             )
@@ -519,3 +524,85 @@ class DiagnosticEngine:
             "gap_scheduled": gap_scheduled,
             "report_path": str(report_file),
         }
+
+
+def run_autonomous_cycle(
+    store: Optional[BrainStore] = None,
+    ollama_url: Optional[str] = None,
+    model: Optional[str] = None,
+    abort_event: Optional[threading.Event] = None,
+) -> Dict[str, Any]:
+    """Executa o ciclo cognitivo completo e encadeado: Refletir -> Estudar -> Diagnosticar -> Relatório."""
+    st = store or BrainStore()
+    url = (ollama_url or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")).rstrip("/")
+    mdl = model or os.environ.get("OLLAMA_MODEL", "qwen-fast:latest")
+
+    cycle_report = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "reflection": None,
+        "study": None,
+        "diagnostic": None,
+        "interrupted": False,
+    }
+
+    if abort_event and abort_event.is_set():
+        cycle_report["interrupted"] = True
+        return cycle_report
+
+    try:
+        from src.agent.reflection import ReflectionWorker
+        rw = ReflectionWorker(store=st, ollama_url=url, model=mdl)
+        cycle_report["reflection"] = rw.reflect()
+    except Exception as exc:
+        LOGGER.debug("Erro na reflexão do ciclo: %s", exc)
+
+    if abort_event and abort_event.is_set():
+        cycle_report["interrupted"] = True
+        return cycle_report
+
+    try:
+        sw = StudyWorker(store=st, ollama_url=url, model=mdl)
+        cycle_report["study"] = sw.study_cycle(max_topics=2, abort_event=abort_event)
+    except Exception as exc:
+        LOGGER.debug("Erro no estudo do ciclo: %s", exc)
+
+    if abort_event and abort_event.is_set():
+        cycle_report["interrupted"] = True
+        return cycle_report
+
+    try:
+        de = DiagnosticEngine(store=st, ollama_url=url, model=mdl)
+        cycle_report["diagnostic"] = de.run_self_eval(abort_event=abort_event)
+    except Exception as exc:
+        LOGGER.debug("Erro no diagnóstico do ciclo: %s", exc)
+
+    rep_dir = st.brain_dir / "relatorios"
+    rep_dir.mkdir(parents=True, exist_ok=True)
+    json_path = rep_dir / "ultimo_estudo.json"
+    md_path = rep_dir / "ultimo_estudo.md"
+
+    json_path.write_text(json.dumps(cycle_report, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    ref_learns = (cycle_report["reflection"] or {}).get("learnings_added", 0)
+    ref_antis = (cycle_report["reflection"] or {}).get("anti_patterns_added", 0)
+    stud_topics = (cycle_report["study"] or {}).get("topics", [])
+    diag_score = (cycle_report["diagnostic"] or {}).get("score", "N/A")
+    diag_gap = (cycle_report["diagnostic"] or {}).get("gap_identified") or "Nenhum"
+
+    now_human = datetime.now(timezone.utc).strftime("%d/%m/%Y às %H:%M UTC")
+    md_content = (
+        f"# Relatório da Última Sessão de Estudo e Reflexão\n"
+        f"**Concluído em:** {now_human}\n\n"
+        f"### 1. Reflexão das Ações Recentes\n"
+        f"- Aprendizados verificados consolidados: {ref_learns}\n"
+        f"- Anti-padrões e armadilhas mapeadas: {ref_antis}\n\n"
+        f"### 2. Tópicos Estudados na Web\n"
+        + ("\n".join(f"- {t}" for t in stud_topics) if stud_topics else "- Nenhum tópico novo pendente.")
+        + f"\n\n### 3. Auto-Diagnóstico Crítico\n"
+        f"- Nota de Auto-Avaliação: {diag_score}/10\n"
+        f"- Ponto Fraco / Gap Identificado: {diag_gap}\n"
+    )
+    md_path.write_text(md_content, encoding="utf-8")
+    cycle_report["report_markdown"] = md_content
+
+    return cycle_report

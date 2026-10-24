@@ -33,6 +33,12 @@ DEFAULT_BLOCKS = {
         "Menor v2: Assistente de engenharia local distribuído (PC cliente + Servidor Notebook).\n"
         "Foco atual: Cérebro SOTA (Core Memory Letta, Busca Híbrida Mem0, Worker de Reflexão Stanford)."
     ),
+    "study_anchors": (
+        "1. Inteligência Artificial e Agentes (RAG, Agentes Autônomos, Embeddings, MoE, Fine-tuning)\n"
+        "2. Engenharia de Software e Backend (Python assíncrono, FastAPI, Concorrência, SQLite, Arquitetura)\n"
+        "3. Frontend e JavaScript (EventLoop, WebSockets, Web Workers, Web Audio API, DOM Performance)\n"
+        "4. Design e UI/UX (Design Systems, Micro-interações, Teoria das Cores, Acessibilidade)"
+    ),
 }
 
 
@@ -105,7 +111,11 @@ class CoreMemoryManager:
             if mode == "append" and clean_key in blocks:
                 existing = blocks[clean_key].strip()
                 if clean_content not in existing:
-                    blocks[clean_key] = f"{existing}\n{clean_content}"
+                    merged = f"{existing}\n{clean_content}"
+                    if len(merged) > 1600:
+                        lines = merged.splitlines()
+                        merged = "\n".join(lines[-15:])
+                    blocks[clean_key] = merged
             else:
                 blocks[clean_key] = clean_content
 

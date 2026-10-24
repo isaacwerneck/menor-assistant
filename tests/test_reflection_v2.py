@@ -65,6 +65,30 @@ class TestReflectionWorker(unittest.TestCase):
         profile = core_mem.get_block("user_profile")
         self.assertIn("Isaac prefere código direto sem boilerplate", profile)
 
+    @patch("requests.post")
+    def test_reflect_anti_pattern_separation(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "message": {
+                "content": (
+                    '{"learnings": [], "anti_patterns": ["Usar time.sleep no async loop"], '
+                    '"profile_updates": []}'
+                )
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        events = [
+            "Projeto [menor]: Adicionar sleep síncrono -> FALHOU / BUG ENCONTRADO: EventLoop bloqueado",
+        ]
+        res = self.worker.reflect(events=events)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["anti_patterns_added"], 1)
+        self.assertEqual(res["learnings_added"], 0)
+        note = self.store.read_note("conhecimentos/aprendizados_gerais.md")
+        self.assertIn("[ANTI-PADRÃO - EVITAR]", note)
+
     @patch("requests.post", side_effect=Exception("Connection refused"))
     def test_reflect_fallback_when_offline(self, mock_post):
         # Quando Ollama estiver offline ou der timeout, deve acionar fallback heurístico

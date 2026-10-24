@@ -18,18 +18,22 @@ from src.memory.store import BrainStore
 
 LOGGER = logging.getLogger(__name__)
 
-REFLECTION_PROMPT = """Você é o módulo de síntese e reflexão cognitiva do Menor v2 (Stanford Generative Agents).
-Sua função é analisar as ações, decisões e tarefas executadas recentemente e sintetizar lições técnicas permanentes
-ou atualizações para a Core Memory.
+REFLECTION_PROMPT = """Você é o módulo de síntese e reflexão cognitiva do Menor v2.
+Sua função é analisar as ações, decisões e tarefas executadas recentemente e sintetizar lições técnicas permanentes.
+
+REGRAS DE VERIFICAÇÃO CONTRA ERROS E ALUCINAÇÕES:
+1. NUNCA transforme códigos ou abordagens de tarefas que falharam ou deram erro em lições de sucesso.
+2. Ações com 'FALHOU' ou 'BUG' devem ser sintetizadas estritamente no campo "anti_patterns" (o que NÃO fazer).
+3. Apenas tarefas com 'VERIFICADO' ou concluídas com sucesso podem gerar "learnings".
 
 Responda estritamente em formato JSON válido:
 {
-  "learnings": ["Lição técnica permanente 1", "Lição 2"],
-  "profile_updates": ["Atualização ou nova preferência permanente do usuário"]
+  "learnings": ["Lição técnica verificada 1"],
+  "anti_patterns": ["Abordagem com erro ou bug a ser evitada 1"],
+  "profile_updates": ["Atualização confirmada do usuário"]
 }
 
-Se não houver aprendizados relevantes ou novas preferências, retorne:
-{"learnings": [], "profile_updates": []}.
+Se não houver aprendizados ou preferências, retorne listas vazias.
 Não adicione explicações fora do JSON.
 """
 
@@ -61,8 +65,11 @@ class ReflectionWorker:
                 result = t.get("result", "")
                 status = t.get("status", "")
                 slug = t.get("project_slug") or "geral"
-                if status == "completed" and result:
-                    events.append(f"Projeto [{slug}]: {goal} -> Concluído com sucesso: {result[:200]}")
+                is_fail = status == "failed" or "erro" in result.lower() or "exception" in result.lower()
+                if status == "completed" and result and not is_fail:
+                    events.append(f"Projeto [{slug}]: {goal} -> Concluído com sucesso (VERIFICADO): {result[:200]}")
+                elif is_fail or status == "failed":
+                    events.append(f"Projeto [{slug}]: {goal} -> FALHOU / BUG ENCONTRADO: {result[:200]}")
                 elif goal:
                     events.append(f"Projeto [{slug}]: {goal} (status: {status})")
         except Exception as exc:
@@ -115,12 +122,22 @@ class ReflectionWorker:
                     clean = re.sub(r"^Projeto \[[^\]]+\]:\s*", "", e)
                     learnings.append(clean[:200])
 
+        anti_patterns = parsed.get("anti_patterns", []) if 'parsed' in locals() else []
         added_learnings = 0
         for l_item in learnings:
             if isinstance(l_item, str) and len(l_item.strip()) >= 5:
-                res = self.index.deduplicate_and_store(l_item.strip())
+                clean_l = l_item.strip()[:270]
+                res = self.index.deduplicate_and_store(clean_l)
                 if res.get("action") in ("inserted", "updated"):
                     added_learnings += 1
+
+        added_antis = 0
+        for a_item in anti_patterns:
+            if isinstance(a_item, str) and len(a_item.strip()) >= 5:
+                anti_fmt = f"[ANTI-PADRÃO - EVITAR]: {a_item.strip()}"[:270]
+                res = self.index.deduplicate_and_store(anti_fmt)
+                if res.get("action") in ("inserted", "updated"):
+                    added_antis += 1
 
         added_profile = 0
         for p_item in profile_updates:
@@ -131,9 +148,11 @@ class ReflectionWorker:
         return {
             "success": True,
             "learnings_added": added_learnings,
+            "anti_patterns_added": added_antis,
             "profile_updates": added_profile,
             "events_analyzed": len(target_events),
             "learnings": learnings,
+            "anti_patterns": anti_patterns,
             "profile_updates_list": profile_updates,
         }
 
