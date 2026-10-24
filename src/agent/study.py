@@ -45,6 +45,32 @@ FALLBACK_DISCOVERY_TOPICS = [
 ]
 
 
+def get_optimal_threads() -> int:
+    """Calcula threads físicas ideais para evitar colisão de HyperThreading no llama.cpp."""
+    count = os.cpu_count() or 4
+    return max(2, count // 2 if count >= 4 else count)
+
+
+def get_optimal_model(ollama_url: str = "http://127.0.0.1:11434") -> str:
+    """Detecta automaticamente o melhor modelo instalado no Ollama local."""
+    configured = os.environ.get("OLLAMA_MODEL")
+    if configured:
+        return configured
+    try:
+        resp = requests.get(f"{ollama_url.rstrip('/')}/api/tags", timeout=2)
+        if resp.status_code == 200:
+            installed = [m.get("name", "") for m in resp.json().get("models", [])]
+            for candidate in ("qwen-fast", "qwen2.5:7b", "qwen2.5:14b-instruct-q3_K_M", "qwen2.5:14b", "qwen2.5"):
+                for m in installed:
+                    if candidate in m:
+                        return m
+            if installed:
+                return installed[0]
+    except Exception:
+        pass
+    return "qwen2.5:14b"
+
+
 class TopicManager:
     """Gerencia a lista viva de tópicos em menor_refletir.md."""
 
@@ -288,6 +314,12 @@ class StudyWorker:
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
                     "stream": False,
+                    "options": {
+                        "temperature": 0.2,
+                        "num_predict": 180,
+                        "num_thread": get_optimal_threads(),
+                        "num_ctx": 2048,
+                    },
                 },
                 timeout=(5, 45),
             )
@@ -310,6 +342,7 @@ class StudyWorker:
         self,
         max_topics: int = 3,
         abort_event: Optional[threading.Event] = None,
+        verbose: bool = False,
     ) -> Dict[str, Any]:
         """Executa ciclo de estudo com suporte a preempção atômica via abort_event."""
         studied_count = 0
@@ -343,7 +376,7 @@ class StudyWorker:
             if not pending_topic_name or t["text"] != pending_topic_name:
                 topic_queue.append(t)
 
-        for item in topic_queue[:max_topics]:
+        for idx, item in enumerate(topic_queue[:max_topics]):
             if abort_event and abort_event.is_set():
                 LOGGER.info("Ciclo de estudo interrompido por requisição prioritária do usuário.")
                 break
@@ -377,8 +410,13 @@ class StudyWorker:
             if abort_event and abort_event.is_set():
                 break
 
+            if verbose:
+                print(f"      -> [{idx+1}/{len(topics)}] Estudando: {topic_text}...")
+                print("         -> Fontes web consultadas, destilando Fact Card...")
             # Destila Fact Card e armazena cada fato atômico com deduplicação Mem0
             card = self.distill_fact_card(topic_text, passages)
+            if verbose:
+                print("         -> Fact Card destilado e integrado a memoria permanente.")
             for line in card.splitlines():
                 clean_fact = line.strip().lstrip("-*# ")
                 if len(clean_fact) >= 10:
@@ -482,6 +520,12 @@ class DiagnosticEngine:
                     "messages": [{"role": "user", "content": judge_prompt}],
                     "stream": False,
                     "format": "json",
+                    "options": {
+                        "temperature": 0.2,
+                        "num_predict": 150,
+                        "num_thread": get_optimal_threads(),
+                        "num_ctx": 2048,
+                    },
                 },
                 timeout=(5, 45),
             )
@@ -541,7 +585,7 @@ def run_autonomous_cycle(
     """Executa o ciclo cognitivo completo e encadeado: Refletir -> Estudar -> Diagnosticar -> Relatório."""
     st = store or BrainStore()
     url = (ollama_url or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")).rstrip("/")
-    mdl = model or os.environ.get("OLLAMA_MODEL", "qwen-fast:latest")
+    mdl = model or get_optimal_model(url)
 
     cycle_report = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -556,9 +600,13 @@ def run_autonomous_cycle(
         return cycle_report
 
     try:
+        print("[1/4] [REFLEXAO] Analisando tarefas recentes e separando anti-padroes...")
         from src.agent.reflection import ReflectionWorker
         rw = ReflectionWorker(store=st, ollama_url=url, model=mdl)
         cycle_report["reflection"] = rw.reflect()
+        learns = (cycle_report["reflection"] or {}).get("learnings_added", 0)
+        antis = (cycle_report["reflection"] or {}).get("anti_patterns_added", 0)
+        print(f"      OK: Reflexao concluida (+{learns} aprendizados, {antis} anti-padroes)")
     except Exception as exc:
         LOGGER.debug("Erro na reflexão do ciclo: %s", exc)
 
@@ -567,8 +615,11 @@ def run_autonomous_cycle(
         return cycle_report
 
     try:
+        print(f"[2/4] [ESTUDO] Pesquisando e assimilando novos topicos de estudo ({mdl})...")
         sw = StudyWorker(store=st, ollama_url=url, model=mdl)
-        cycle_report["study"] = sw.study_cycle(max_topics=2, abort_event=abort_event)
+        cycle_report["study"] = sw.study_cycle(max_topics=2, abort_event=abort_event, verbose=True)
+        studied = (cycle_report["study"] or {}).get("studied", 0)
+        print(f"      OK: Estudo concluido ({studied} topicos assimilados no cerebro)")
     except Exception as exc:
         LOGGER.debug("Erro no estudo do ciclo: %s", exc)
 
@@ -577,8 +628,11 @@ def run_autonomous_cycle(
         return cycle_report
 
     try:
+        print("[3/4] [DIAGNOSTICO] Executando auto-diagnostico critico (DSPy / Voyager)...")
         de = DiagnosticEngine(store=st, ollama_url=url, model=mdl)
         cycle_report["diagnostic"] = de.run_self_eval(abort_event=abort_event)
+        sc = (cycle_report["diagnostic"] or {}).get("score", "N/A")
+        print(f"      OK: Auto-diagnostico concluido (Nota do Juiz: {sc}/10)")
     except Exception as exc:
         LOGGER.debug("Erro no diagnóstico do ciclo: %s", exc)
 
@@ -588,6 +642,8 @@ def run_autonomous_cycle(
     md_path = rep_dir / "ultimo_estudo.md"
 
     json_path.write_text(json.dumps(cycle_report, indent=2, ensure_ascii=False), encoding="utf-8")
+    print("[4/4] [RELATORIO] Relatorio final gerado com sucesso!")
+    print(f"      Salvo em: {md_path}")
 
     ref_learns = (cycle_report["reflection"] or {}).get("learnings_added", 0)
     ref_antis = (cycle_report["reflection"] or {}).get("anti_patterns_added", 0)
