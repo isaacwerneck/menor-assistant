@@ -110,6 +110,18 @@ class Orchestrator:
         except Exception:
             pass
 
+        # Consultas de relatório de estudo já têm o briefing injetado diretamente no system prompt
+        study_report_triggers = (
+            "estudou", "o que você estudou", "o que vc estudou", "oq vc estudou",
+            "oq estudou", "o que estudou", "relatório de estudo", "relatorio de estudo",
+            "último estudo", "ultimo estudo", "briefing de estudo", "o que aprendeu",
+            "oq aprendeu", "fez enquanto", "estudou essa noite", "estudou hoje",
+        )
+        if any(t in last_user for t in study_report_triggers):
+            action_triggers = ("agendar", "agende", "adicione", "execute", "crie", "salve", "escreva", "rode")
+            if not any(a in last_user for a in action_triggers):
+                return False
+
         triggers = (
             "arquivo", "file", "ler", "leia", "le ", "lê", "escrev", "salv", "list", "pasta", "dir",
             "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
@@ -155,6 +167,24 @@ class Orchestrator:
                     executed_tools_log.append("grounded_search")
         except Exception as exc:
             LOGGER.warning("Grounding em tempo real indisponível: %s", exc)
+
+        # Grounding de Relatório de Estudos (evita cascata de 2 turnos pesados de 14B na CPU)
+        norm_user = last_user.lower()
+        study_report_triggers = (
+            "estudou", "o que você estudou", "o que vc estudou", "oq vc estudou",
+            "oq estudou", "o que estudou", "relatório de estudo", "relatorio de estudo",
+            "último estudo", "ultimo estudo", "briefing de estudo", "o que aprendeu",
+            "oq aprendeu", "fez enquanto", "estudou essa noite", "estudou hoje",
+        )
+        if any(t in norm_user for t in study_report_triggers):
+            try:
+                from src.tools.core import get_study_report
+                rep = get_study_report(self.store)
+                if rep.get("has_report") and rep.get("report_markdown"):
+                    full_system += f"\n\n[RELATÓRIO ATUALIZADO DE ESTUDOS DO MENOR]:\n{rep['report_markdown']}"
+                    executed_tools_log.append("get_study_report")
+            except Exception as exc:
+                LOGGER.debug("Grounding de relatório de estudos ignorado: %s", exc)
 
         chat_history = [{"role": "system", "content": full_system}]
         for m in messages:

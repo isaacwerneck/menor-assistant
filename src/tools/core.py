@@ -176,6 +176,27 @@ def get_study_report(store: Optional[BrainStore] = None) -> Dict[str, Any]:
     rep_file = st.brain_dir / "relatorios" / "ultimo_estudo.md"
     json_file = st.brain_dir / "relatorios" / "ultimo_estudo.json"
     if not rep_file.exists():
+        try:
+            from src.agent.study import TopicManager
+            completed = [
+                t["text"] for t in TopicManager(st).list_topics(uncompleted_only=False) if t.get("completed")
+            ]
+            if completed:
+                summary_md = (
+                    "# Acervo de Estudos do Menor\n\n"
+                    "### Tópicos Concluídos Recentemente:\n"
+                    + "\n".join(f"- [x] {t}" for t in reversed(completed[-10:]))
+                )
+                return {
+                    "success": True,
+                    "has_report": True,
+                    "report_markdown": summary_md,
+                    "timestamp": None,
+                    "data": {"completed_topics": completed},
+                }
+        except Exception:
+            pass
+
         return {
             "success": True,
             "has_report": False,

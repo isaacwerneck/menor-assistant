@@ -185,10 +185,12 @@ class TopicManager:
             line.strip() for line in core_anchors.splitlines() if line.strip()
         ] if core_anchors else DOMAIN_ANCHORS
 
+        existing_all = [t["text"].lower() for t in self.list_topics(uncompleted_only=False)]
+
         if ollama_url and model:
             prompt = (
                 "Você é o planejador de estudos do Menor v2. "
-                "Gere 2 novos tópicos de estudo avançados e extremamente práticos para um engenheiro de software.\n"
+                f"Gere {count} novos tópicos de estudo avançados e extremamente práticos para engenharia.\n"
                 "Âncoras estritas de domínio:\n"
                 + "\n".join(f"- {d}" for d in anchors_list)
                 + "\nProibido: culinária, curiosidades genéricas, assuntos não relacionados a código ou UI/UX.\n"
@@ -202,22 +204,68 @@ class TopicManager:
                         "messages": [{"role": "user", "content": prompt}],
                         "stream": False,
                         "format": "json",
+                        "options": {
+                            "temperature": 0.7,
+                            "num_predict": 120,
+                            "num_thread": get_optimal_threads(),
+                            "num_ctx": 2048,
+                        },
                     },
-                    timeout=(5, 30),
+                    timeout=(5, 90),
                 )
                 if resp.status_code == 200:
                     payload = json.loads(resp.json().get("message", {}).get("content", "{}"))
-                    generated = payload.get("topics", [])
+                    raw_topics = payload.get("topics", [])
+                    if isinstance(raw_topics, list):
+                        for item in raw_topics:
+                            if isinstance(item, str) and len(item.strip()) >= 6:
+                                clean_t = item.strip()
+                                if not any(clean_t.lower() == e for e in existing_all):
+                                    generated.append(clean_t)
+                                    existing_all.append(clean_t.lower())
             except Exception as exc:
                 LOGGER.debug("Falha na geração LLM de tópicos: %s", exc)
 
-        if not generated:
-            existing = [t["text"] for t in self.list_topics(uncompleted_only=False)]
-            for candidate in FALLBACK_DISCOVERY_TOPICS:
-                if not any(candidate.lower() in e.lower() for e in existing):
+        # Gerador Procedural Inesgotável ancorado na Core Memory (Voyager / STORM pattern)
+        if len(generated) < count:
+            concepts = []
+            for line in anchors_list:
+                clean = re.sub(r"^\d+[\.\)]\s*", "", line.strip())
+                if not clean:
+                    continue
+                paren_match = re.search(r"\((.*?)\)", clean)
+                if paren_match:
+                    title = clean[:paren_match.start()].strip()
+                    if title:
+                        concepts.append(title)
+                    sub = [s.strip() for s in paren_match.group(1).split(",") if s.strip()]
+                    concepts.extend(sub)
+                else:
+                    parts = [p.strip() for p in clean.split(",") if p.strip()]
+                    concepts.extend(parts)
+
+            perspectives = [
+                "Padrões de implementação e código limpo em",
+                "Otimização de performance e benchmarks para",
+                "Armadilhas comuns e como evitar bugs em",
+                "Arquitetura moderna e boas práticas com",
+                "Casos reais de produção e resiliência em",
+                "Técnicas avançadas de",
+            ]
+            candidates = []
+            for concept in concepts:
+                candidates.append(concept)
+                for p in perspectives:
+                    candidates.append(f"{p} {concept}")
+            candidates.extend(FALLBACK_DISCOVERY_TOPICS)
+
+            for candidate in candidates:
+                cand_lower = candidate.lower()
+                if not any(cand_lower == e for e in existing_all):
                     generated.append(candidate)
-                if len(generated) >= count:
-                    break
+                    existing_all.append(cand_lower)
+                    if len(generated) >= count:
+                        break
 
         for item in generated:
             self.save_topic(f"[Auto-gerado] {item}", category="geral", priority="normal")
@@ -352,11 +400,11 @@ class StudyWorker:
         ckpt = self.ckpt_mgr.load_checkpoint()
         pending_topic_name = ckpt.get("topic") if ckpt else None
 
-        # 2. Carrega lista de tópicos
+        # 2. Carrega lista de tópicos (reabastece proativamente se houver menos de 3)
         topics = self.topic_mgr.list_topics(uncompleted_only=True)
-        if not topics and not pending_topic_name:
+        if len(topics) < 3 and not pending_topic_name:
             new_generated = self.topic_mgr.auto_generate_topics(
-                count=2, ollama_url=self.ollama_url, model=self.model,
+                count=3, ollama_url=self.ollama_url, model=self.model,
             )
             if new_generated:
                 topics = self.topic_mgr.list_topics(uncompleted_only=True)
@@ -652,17 +700,56 @@ def run_autonomous_cycle(
     diag_gap = (cycle_report["diagnostic"] or {}).get("gap_identified") or "Nenhum"
 
     now_human = datetime.now(timezone.utc).strftime("%d/%m/%Y às %H:%M UTC")
+
+    # Histórico consolidado de tópicos concluídos para nunca zerar o relatório do usuário
+    completed_topics = [
+        t["text"] for t in TopicManager(st).list_topics(uncompleted_only=False) if t.get("completed")
+    ]
+    recent_completed = completed_topics[-8:] if completed_topics else []
+
+    # Leitura dos últimos conhecimentos verificados
+    recent_facts = []
+    try:
+        learned_file = st.brain_dir / "conhecimentos" / "aprendizados_gerais.md"
+        if learned_file.exists():
+            for line in reversed(learned_file.read_text(encoding="utf-8").splitlines()):
+                clean_l = line.strip().lstrip("-*# ")
+                if len(clean_l) >= 15 and not clean_l.startswith("Aprendizados gerais"):
+                    recent_facts.append(clean_l[:110])
+                    if len(recent_facts) >= 4:
+                        break
+    except Exception:
+        pass
+
+    if stud_topics:
+        study_block = "\n".join(f"- {t}" for t in stud_topics)
+    elif recent_completed:
+        study_block = (
+            "- Nenhum tópico novo pendente nesta rodada.\n\n"
+            "**Últimos tópicos estudados e assimilados:**\n"
+            + "\n".join(f"- [x] {t}" for t in reversed(recent_completed))
+        )
+    else:
+        study_block = "- Nenhum tópico novo pendente."
+
+    facts_block = ""
+    if recent_facts:
+        facts_block = "\n\n### 4. Últimos Conhecimentos e Fact Cards no Cérebro\n" + "\n".join(
+            f"- {f}" for f in recent_facts
+        )
+
     md_content = (
-        f"# Relatório da Última Sessão de Estudo e Reflexão\n"
+        f"# Relatório da Sessão de Estudo e Reflexão do Menor\n"
         f"**Concluído em:** {now_human}\n\n"
         f"### 1. Reflexão das Ações Recentes\n"
         f"- Aprendizados verificados consolidados: {ref_learns}\n"
         f"- Anti-padrões e armadilhas mapeadas: {ref_antis}\n\n"
         f"### 2. Tópicos Estudados na Web\n"
-        + ("\n".join(f"- {t}" for t in stud_topics) if stud_topics else "- Nenhum tópico novo pendente.")
-        + f"\n\n### 3. Auto-Diagnóstico Crítico\n"
+        f"{study_block}\n\n"
+        f"### 3. Auto-Diagnóstico Crítico\n"
         f"- Nota de Auto-Avaliação: {diag_score}/10\n"
-        f"- Ponto Fraco / Gap Identificado: {diag_gap}\n"
+        f"- Ponto Fraco / Gap Identificado: {diag_gap}"
+        f"{facts_block}\n"
     )
     md_path.write_text(md_content, encoding="utf-8")
     cycle_report["report_markdown"] = md_content
