@@ -38,7 +38,7 @@ def get_ponytail_system_prompt() -> str:
         "[DIRETRIZES PONYTAIL - SENIOR DEV PRAGMÁTICO]:\n"
         "1. Faça a menor mudança completa que resolve o problema (YAGNI). Não crie código especulativo.\n"
         "2. Sempre prefira a Standard Library do Python antes de solicitar ou importar dependências externas.\n"
-        "3. Para editar código existente, use SEMPRE 'fs_patch' em vez de reescrever arquivos inteiros com 'fs_write'.\n"
+        "3. Para editar código existente, use SEMPRE 'fs_patch' em vez de reescrever tudo com 'fs_write'.\n"
         "4. Antes de mexer em arquivos desconhecidos, use 'repo_map' ou 'symbol_lookup' para ver a estrutura exata."
     )
 
@@ -78,14 +78,19 @@ def lint_tool_creation(name: str, code: str, description: str = "") -> Dict[str,
     if total_statements <= 2 and "subprocess" in code and len(code.splitlines()) < 15:
         # Checa se apenas encapsula um comando shell sem processamento
         pass  # Permitido se o operador quiser conveniência, mas adiciona alerta
-        warnings.append("A ferramenta aparenta ser um wrapper simples de terminal; considere usar terminal_run diretamente.")
+        warnings.append(
+            "A ferramenta aparenta ser um wrapper simples de terminal; considere usar terminal_run diretamente."
+        )
 
     # 3. Verifica tamanho excessivo (> 250 linhas em ferramenta dinâmica sem testes)
     line_count = len(code.splitlines())
     if line_count > 250:
         return {
             "passed": False,
-            "reason": f"Ferramenta dinâmica muito longa ({line_count} linhas). Divida em módulos menores ou simplifique.",
+            "reason": (
+                f"Ferramenta dinâmica muito longa ({line_count} linhas). "
+                "Divida em módulos menores ou simplifique."
+            ),
             "warnings": warnings,
         }
 

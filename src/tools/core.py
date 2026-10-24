@@ -145,7 +145,6 @@ def fs_patch(filepath: str, search_block: str, replace_block: str) -> Dict[str, 
         return {"success": False, "error": str(exc)}
 
 
-
 def fs_list(dirpath: str = ".") -> Dict[str, Any]:
     """Lista arquivos e subdiretórios em um caminho."""
     try:
@@ -477,6 +476,39 @@ def create_new_tool(
         return {"success": False, "error": str(exc)}
 
 
+def improve_knowledge(
+    domain: str,
+    topic: str,
+    content: str,
+    mode: str = "append",
+    store: Optional[BrainStore] = None,
+) -> Dict[str, Any]:
+    """Aprimora ou expande o conhecimento em uma das 5 bases padrão.
+
+    Domínios: design, programacao, engenharia_software, musica, game_design.
+    """
+    try:
+        st = store or BrainStore()
+        st.initialize()
+        return st.improve_knowledge(domain=domain, topic=topic, content=content, mode=mode)
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+def get_knowledge(
+    domain: str,
+    store: Optional[BrainStore] = None,
+) -> Dict[str, Any]:
+    """Recupera notas e preferências consolidadas de um dos 5 domínios padrão do Isaac."""
+    try:
+        st = store or BrainStore()
+        st.initialize()
+        notes = st.list_domain_knowledge(domain=domain)
+        return {"success": True, "domain": domain, "notes": notes, "total_notes": len(notes)}
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
 # Schemas para o Tool Calling oficial do Ollama / OpenAI
 CORE_TOOLS_SCHEMA = [
     {
@@ -708,7 +740,9 @@ CORE_TOOLS_SCHEMA = [
                     "filepath": {"type": "string", "description": "Caminho do arquivo a alterar."},
                     "search_block": {
                         "type": "string",
-                        "description": "Trecho de código original exato que será substituído (com linhas de contexto).",
+                        "description": (
+                            "Trecho de código original exato que será substituído (com linhas de contexto)."
+                        ),
                     },
                     "replace_block": {
                         "type": "string",
@@ -748,15 +782,177 @@ CORE_TOOLS_SCHEMA = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "symbol_name": {"type": "string", "description": "Nome da classe, função ou variável a localizar."},
-                    "file_hint": {"type": "string", "description": "Caminho opcional do arquivo para acelerar a busca."},
+                    "symbol_name": {
+                        "type": "string",
+                        "description": "Nome da classe, função ou variável a localizar.",
+                    },
+                    "file_hint": {
+                        "type": "string",
+                        "description": "Caminho opcional do arquivo para acelerar a busca.",
+                    },
                     "root_dir": {"type": "string", "description": "Diretório de busca (padrão '.')."},
                 },
                 "required": ["symbol_name"],
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "improve_knowledge",
+            "description": (
+                "Aprimora ou expande o conhecimento em uma das 5 bases padrão do Isaac: "
+                "design, programacao, engenharia_software, musica, game_design."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "domain": {
+                        "type": "string",
+                        "enum": ["design", "programacao", "engenharia_software", "musica", "game_design"],
+                        "description": "Domínio da base de conhecimento a ser atualizada.",
+                    },
+                    "topic": {"type": "string", "description": "Título ou nome do tema específico."},
+                    "content": {"type": "string", "description": "Conteúdo, regras ou diretrizes a registrar."},
+                    "mode": {
+                        "type": "string",
+                        "enum": ["append", "overwrite"],
+                        "description": "Modo de gravação ('append' para adicionar ou 'overwrite' para recriar).",
+                    },
+                },
+                "required": ["domain", "topic", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_knowledge",
+            "description": (
+                "Recupera todas as notas e preferências salvas de um domínio padrão "
+                "(design, programacao, musica, etc)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "domain": {
+                        "type": "string",
+                        "enum": ["design", "programacao", "engenharia_software", "musica", "game_design"],
+                        "description": "Domínio a consultar.",
+                    },
+                },
+                "required": ["domain"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "curate_visual_references",
+            "description": (
+                "Curador visual autônomo: busca referências no Pinterest/Web/galerias, "
+                "avalia com modelo multimodal (Qwen 2.5-VL/Llava), ranqueia o TOP 20 "
+                "e salva regras estéticas em conhecimentos/design/."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Termo de busca visual (ex: dark UI glassmorphism)."},
+                    "domain": {
+                        "type": "string",
+                        "enum": ["design", "game_design"],
+                        "description": "Domínio onde salvar o aprendizado visual (padrão 'design').",
+                    },
+                    "max_selection": {
+                        "type": "integer",
+                        "description": "Quantidade máxima de imagens no TOP selecionado (padrão 20).",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "inspect_codebase",
+            "description": (
+                "Audita o repositório do Menor via AST: mede arquivos, funções, classes, "
+                "cruza com os testes existentes e mapeia gaps para criação de novos testes."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "root_dir": {"type": "string", "description": "Diretório raiz a inspecionar (padrão '.')."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "trial_code_refactoring",
+            "description": (
+                "Testa uma refatoração em branch temporária isolada com suíte completa de testes. "
+                "Se algum teste quebrar, faz rollback atômico instantâneo. Se passar 100%, gera proposta com diff."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "target_file": {"type": "string", "description": "Caminho do arquivo de código a refatorar."},
+                    "description": {"type": "string", "description": "Descrição clara da refatoração."},
+                    "search_block": {"type": "string", "description": "Bloco exato de código a ser substituído."},
+                    "replace_block": {"type": "string", "description": "Novo bloco de código otimizado."},
+                },
+                "required": ["target_file", "description", "search_block", "replace_block"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "dispatch_specialized_subagent",
+            "description": (
+                "Roteia tarefas de alta especialidade para subagentes de nicho "
+                "(design, programacao, engenharia_software, musica, game_design) "
+                "com injeção cirúrgica de conhecimento das pastas do Isaac."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "domain": {
+                        "type": "string",
+                        "enum": ["design", "programacao", "engenharia_software", "musica", "game_design"],
+                        "description": "Domínio do subagente especializado.",
+                    },
+                    "prompt": {"type": "string", "description": "Instrução ou briefing para o subagente resolver."},
+                },
+                "required": ["domain", "prompt"],
+            },
+        },
+    },
 ]
+
+
+def dispatch_curate_visual_references(**kw):
+    from src.agent.visual_curator import curate_visual_references as _c
+    return _c(**kw)
+
+
+def dispatch_inspect_codebase(**kw):
+    from src.agent.inspector import inspect_codebase as _i
+    return _i(**kw)
+
+
+def dispatch_trial_code_refactoring(**kw):
+    from src.agent.sandbox_refactor import trial_code_refactoring as _t
+    return _t(**kw)
+
+
+def dispatch_subagent_tool(**kw):
+    from src.agent.subagents import dispatch_specialized_subagent as _d
+    return _d(**kw)
+
 
 TOOL_DISPATCHER = {
     "fs_read": fs_read,
@@ -774,4 +970,10 @@ TOOL_DISPATCHER = {
     "get_study_report": get_study_report,
     "repo_map": repo_map,
     "symbol_lookup": symbol_lookup,
+    "improve_knowledge": improve_knowledge,
+    "get_knowledge": get_knowledge,
+    "curate_visual_references": dispatch_curate_visual_references,
+    "inspect_codebase": dispatch_inspect_codebase,
+    "trial_code_refactoring": dispatch_trial_code_refactoring,
+    "dispatch_specialized_subagent": dispatch_subagent_tool,
 }

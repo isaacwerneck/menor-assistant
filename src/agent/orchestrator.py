@@ -45,6 +45,12 @@ Regras Inegociáveis e Diretrizes de Execução:
 - Responda sempre em português brasileiro fluente, sem rodeios ou formalidades vazias.
 """
 
+CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, assistente executivo e parceiro pessoal do Isaac.
+Compreenda perfeitamente gírias e abreviações da internet brasileira (vc, hj, eai, blz, oq, pra).
+Responda sempre de forma natural, calorosa, fluente e direta em português brasileiro.
+Em conversas casuais e cumprimentos, seja descontraído, amigável e parceiro, sem rodeios ou formalidades vazias.
+"""
+
 
 def get_optimal_threads() -> int:
     """Calcula threads físicas ideais para evitar colisão de HyperThreading no llama.cpp."""
@@ -196,7 +202,9 @@ class Orchestrator:
             except Exception as exc:
                 LOGGER.debug("Grounding de relatório de estudos ignorado: %s", exc)
 
-        coding_keywords = ("código", "codigo", "script", "bug", "patch", "consert", "refator", "função", "classe", "test")
+        coding_keywords = (
+            "código", "codigo", "script", "bug", "patch", "consert", "refator", "função", "classe", "test"
+        )
         if any(k in norm_user for k in coding_keywords):
             try:
                 from src.agent.ponytail import get_ponytail_system_prompt

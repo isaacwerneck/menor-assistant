@@ -5,7 +5,6 @@ em regras concisas e demonstrações few-shot sem adicionar latência ao chat em
 """
 import json
 import logging
-import os
 import sqlite3
 from typing import Any, Dict, List, Optional
 

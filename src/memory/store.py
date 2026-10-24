@@ -19,7 +19,11 @@ _write_lock = threading.RLock()
 
 FOLDERS = (
     "identidade",
+    "conhecimentos/design",
     "conhecimentos/programacao",
+    "conhecimentos/engenharia_software",
+    "conhecimentos/musica",
+    "conhecimentos/game_design",
     "conhecimentos/game-design",
     "conhecimentos/comunicacao",
     "ferramentas/programacao",
@@ -34,6 +38,46 @@ SEED_FILES = {
     "identidade/perfil_usuario.md": "# Perfil do usuário\n\nInformações fornecidas ou confirmadas pelo usuário.\n",
     "identidade/preferencias.md": "# Preferências\n\nPreferências explícitas do usuário:\n",
     "conhecimentos/aprendizados_gerais.md": "# Aprendizados gerais\n\n",
+    "conhecimentos/design/estilo_visual.md": (
+        "# Estilo Visual e Design do Isaac\n\n"
+        "## Diretrizes de Interface\n"
+        "- Tema dark minimalista com alto contraste e elegância.\n"
+        "- Tipografia moderna, legível e hierarquia clara.\n"
+        "- Micro-interações táteis e responsivas sem animações pesadas.\n"
+        "- Componentes modulares, cantos suavemente arredondados e bordas sutis.\n"
+    ),
+    "conhecimentos/programacao/estilo_isaac.md": (
+        "# Estilo de Programação do Isaac\n\n"
+        "## Convenções e Filosofia de Código\n"
+        "- Código limpo, modular e direto ao ponto (princípio YAGNI).\n"
+        "- Preferência por recursos nativos da linguagem/stdlib antes de instalar dependências.\n"
+        "- Tipagem estrita com dataclasses / Pydantic e funções coesas de responsabilidade única.\n"
+        "- Testes unitários para validar todo comportamento crítico antes do commit.\n"
+    ),
+    "conhecimentos/engenharia_software/arquitetura.md": (
+        "# Engenharia de Software e Arquitetura do Menor\n\n"
+        "## Padrões de Produção\n"
+        "- FastAPI assíncrono com ciclo de vida (lifespan) estruturado.\n"
+        "- Concorrência segura com locks (RLock) e isolamento temporal.\n"
+        "- Armazenamento durável em SQLite FTS5 híbrido fora da árvore Git.\n"
+        "- Preempção atômica em processos demorados para liberar a CPU do operador imediatamente.\n"
+    ),
+    "conhecimentos/musica/producao_e_sintese.md": (
+        "# Conhecimentos Musicais e Produção de Áudio\n\n"
+        "## Sound Design e Composição\n"
+        "- Teoria musical moderna, escalas, harmonia funcional e progressões de acordes.\n"
+        "- Síntese sonora subtrativa, aditiva, FM e modelagem física.\n"
+        "- Processamento de áudio digital (DSP), envelopes ADSR, filtros e efeitos temporais.\n"
+        "- Preferências sonoras do Isaac para beats, trilhas e texturas imersivas.\n"
+    ),
+    "conhecimentos/game_design/filosofia_jogos.md": (
+        "# Game Design e Desenvolvimento de Jogos\n\n"
+        "## Filosofia de Gameplay e Gráficos\n"
+        "- Mecânicas de jogo responsivas, loop de gameplay viciante e curva de aprendizado justa.\n"
+        "- Shaders GLSL / HLSL modernos (iluminação dinâmica, pós-processamento, partículas).\n"
+        "- Desenvolvimento em C++ e Unreal Engine 5 com arquitetura ECS / UObject limpa.\n"
+        "- Otimização de framerate, draw calls e profiling de GPU/CPU.\n"
+    ),
     "menor_refletir.md": (
         "# Temas de Estudo e Pesquisa do Menor\n\n"
         "- [ ] Inteligência Artificial: Arquiteturas de agentes, RAG híbrido, MoE\n"
@@ -243,6 +287,42 @@ class BrainStore:
             selected.append(line)
             length += len(line) + 1
         return "\n".join(selected)
+
+    def list_domains(self):
+        """Lista os domínios de conhecimento padrão."""
+        return ["design", "programacao", "engenharia_software", "musica", "game_design"]
+
+    def list_domain_knowledge(self, domain):
+        """Retorna todas as notas de um domínio específico."""
+        domain_clean = str(domain).lower().strip().replace("-", "_")
+        folder = f"conhecimentos/{domain_clean}"
+        results = {}
+        for note_rel in self.list_notes(folder):
+            content = self.read_note(note_rel)
+            results[note_rel] = content
+        return results
+
+    def improve_knowledge(self, domain, topic, content, mode="append"):
+        """Atualiza ou expande uma nota de conhecimento em um domínio padrão."""
+        domain_clean = str(domain).lower().strip().replace("-", "_")
+        valid_domains = self.list_domains()
+        if domain_clean not in valid_domains:
+            domain_clean = "geral"
+
+        safe_topic = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in topic.lower().strip())[:50]
+        if not safe_topic:
+            safe_topic = "nota"
+
+        rel_path = f"conhecimentos/{domain_clean}/{safe_topic}.md"
+        with _write_lock:
+            existing = self.read_note(rel_path)
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+            if mode == "append" and existing:
+                updated = existing.rstrip() + f"\n\n### Atualização [{now_str}]\n{content.strip()}\n"
+            else:
+                updated = f"# {topic.title()}\n\n*Última melhoria em: {now_str}*\n\n{content.strip()}\n"
+            self.write_note(rel_path, updated)
+        return {"success": True, "path": rel_path, "domain": domain_clean, "mode": mode}
 
 
 def main():

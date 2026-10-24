@@ -10,14 +10,11 @@ import unittest
 
 from src.tools.core import (
     fs_patch,
-    fs_read,
-    fs_write,
     repo_map,
     symbol_lookup,
     CORE_TOOLS_SCHEMA,
     TOOL_DISPATCHER,
 )
-from src.tools.code_intel import repo_map as code_intel_repo_map, symbol_lookup as code_intel_symbol_lookup
 from src.agent.ponytail import lint_tool_creation, get_ponytail_system_prompt
 from src.agent.coding_pipeline import AutonomousCodingPipeline
 from src.agent.prompt_optimizer import PromptOptimizer
@@ -119,7 +116,10 @@ class TestAdvancedSkillsV2(unittest.TestCase):
         target.write_text("def solve():\n    return False\n", encoding="utf-8")
 
         # Teste que falha inicialmente se o retorno for False
-        test_script = f'python -c "import sys; sys.path.insert(0, r\'{self.base}\'); import algo; assert algo.solve() is True"'
+        test_script = (
+            f'python -c "import sys; sys.path.insert(0, r\'{self.base}\'); '
+            'import algo; assert algo.solve() is True"'
+        )
 
         pipeline = AutonomousCodingPipeline(max_attempts=2)
         res = pipeline.run_task(
@@ -142,6 +142,7 @@ class TestAdvancedSkillsV2(unittest.TestCase):
 
         # Fornece gerador para segunda tentativa que também falha no teste
         gen_call_count = [0]
+
         def dummy_patch_gen(f, c, i, e):
             gen_call_count[0] += 1
             return {"search_block": "val = 2\n", "replace_block": "val = 3\n"}

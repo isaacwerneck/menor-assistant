@@ -103,6 +103,16 @@ else:
         fi
         exec python3 -c "from src.tools.core import get_study_report; r = get_study_report(); print(r.get('report_markdown', r.get('message')))" "$@"
         ;;
+    auditar|audit|inspecionar)
+        shift
+        root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+        cd "$root"
+        runner="python3"
+        if [[ -x "$root/.venv/bin/python" ]]; then
+            runner="$root/.venv/bin/python"
+        fi
+        exec "$runner" -c "from src.agent.inspector import CodebaseInspector; insp = CodebaseInspector(); r = insp.audit(); print(r['report_markdown'])" "$@"
+        ;;
     estudar|study)
         shift
         root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"

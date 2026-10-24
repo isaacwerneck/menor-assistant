@@ -91,7 +91,9 @@ def _extract_js_ts_outline(filepath: Path) -> List[str]:
 
     lines: List[str] = []
     pattern = re.compile(
-        r"^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s+([a-zA-Z0-9_$]+)|class\s+([a-zA-Z0-9_$]+)|(?:const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*(?:async\s*)?\()",
+        r"^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:"
+        r"function\s+([a-zA-Z0-9_$]+)|class\s+([a-zA-Z0-9_$]+)|"
+        r"(?:const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*(?:async\s*)?\()",
         re.MULTILINE,
     )
     for match in pattern.finditer(content):
@@ -258,10 +260,11 @@ def symbol_lookup(
                 if matched:
                     start_line = getattr(node, "lineno", 1)
                     end_line = getattr(node, "end_lineno", start_line)
-                    doc = ast.get_docstring(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) else None
+                    is_docable = isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                    doc = ast.get_docstring(node) if is_docable else None
 
                     # Extrai até 5 linhas de snippet de código da definição
-                    snippet_lines = lines[start_line - 1 : min(end_line, start_line + 4)]
+                    snippet_lines = lines[start_line - 1: min(end_line, start_line + 4)]
                     snippet = "\n".join(snippet_lines)
 
                     matches.append({
