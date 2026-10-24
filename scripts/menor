@@ -140,8 +140,17 @@ else:
         fi
         exec python3 -m src.agent.reflection "$@"
         ;;
+    tunel|tunnel)
+        shift
+        if ! command -v cloudflared >/dev/null 2>&1; then
+            echo "cloudflared não encontrado no sistema. Instale com: sudo apt install cloudflared" >&2
+            exit 1
+        fi
+        echo "Abrindo túnel seguro para http://127.0.0.1:8000..."
+        exec cloudflared tunnel --url http://127.0.0.1:8000
+        ;;
     *)
-        echo "Uso: menor {start|stop|restart|status|monitor|benchmark|refletir|estudar|diagnosticar|ciclo|relatorio}" >&2
+        echo "Uso: menor {start|stop|restart|status|monitor|benchmark|refletir|estudar|diagnosticar|ciclo|relatorio|auditar|tunel}" >&2
         exit 2
         ;;
 esac

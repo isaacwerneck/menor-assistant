@@ -497,17 +497,13 @@ def list_tasks(request: Request):
     return {"tasks": queue.list_tasks()}
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000, reload=True)
-
-
 # --- ENDPOINTS DE ESTUDO & AUTO-DIAGNÓSTICO ---
 
 @app.get("/api/study/status")
 def study_status(request: Request):
     auth.require_owner(request)
     from src.agent.study import CheckpointManager, TopicManager
+    from src.agent.cycle_monitor import get_cycle_monitor
     tm = TopicManager()
     cm = CheckpointManager()
     return {
@@ -516,21 +512,65 @@ def study_status(request: Request):
         "is_studying": _study_running_lock.locked(),
         "checkpoint": cm.load_checkpoint(),
         "uncompleted_topics": tm.list_topics(uncompleted_only=True),
+        "cycle_telemetry": get_cycle_monitor().snapshot(),
     }
 
 
+@app.get("/api/study/live")
+def study_live(request: Request):
+    """Snapshot completo para a tela de monitoramento em tempo real do ciclo cognitivo."""
+    auth.require_owner(request)
+    from src.agent.cycle_monitor import get_cycle_monitor
+    snap = get_cycle_monitor().snapshot()
+    snap["is_studying_locked"] = _study_running_lock.locked()
+    snap["idle_seconds"] = int(time.time() - _last_interaction_time)
+    snap["idle_threshold"] = IDLE_STUDY_DELAY
+    return snap
+
+
 @app.post("/api/study/trigger")
-def study_trigger(request: Request):
+def study_trigger(request: Request, sync: bool = False):
+    """Inicia o ciclo cognitivo. Se sync=False (padrão), roda em segundo plano e libera a UI."""
     auth.require_owner(request)
     if _study_running_lock.acquire(blocking=False):
-        try:
-            _study_abort_event.clear()
-            from src.agent.study import run_autonomous_cycle
-            res = run_autonomous_cycle(ollama_url=OLLAMA_SERVER_URL, abort_event=_study_abort_event)
-            return {"success": True, "result": res}
-        finally:
-            _study_running_lock.release()
-    return {"success": False, "message": "O worker de estudo já está em execução."}
+        if sync:
+            try:
+                _study_abort_event.clear()
+                from src.agent.study import run_autonomous_cycle
+                res = run_autonomous_cycle(ollama_url=OLLAMA_SERVER_URL, abort_event=_study_abort_event)
+                return {"success": True, "result": res}
+            finally:
+                _study_running_lock.release()
+        else:
+            def _runner():
+                try:
+                    _study_abort_event.clear()
+                    from src.agent.study import run_autonomous_cycle
+                    run_autonomous_cycle(ollama_url=OLLAMA_SERVER_URL, abort_event=_study_abort_event)
+                finally:
+                    _study_running_lock.release()
+            t = threading.Thread(target=_runner, daemon=True)
+            t.start()
+            return {"success": True, "message": "Ciclo cognitivo autônomo iniciado com sucesso."}
+    return {"success": False, "message": "O ciclo cognitivo já está em execução no momento."}
+
+
+@app.post("/api/study/abort")
+def study_abort(request: Request):
+    """Envia sinal de interrupção (preempção) para o ciclo de estudo ativo."""
+    auth.require_owner(request)
+    if _study_running_lock.locked():
+        _study_abort_event.set()
+        return {"success": True, "message": "Sinal de interrupção enviado ao ciclo autônomo."}
+    return {"success": False, "message": "Nenhum ciclo autônomo em execução no momento."}
+
+
+@app.post("/api/study/clear-logs")
+def study_clear_logs(request: Request):
+    auth.require_owner(request)
+    from src.agent.cycle_monitor import get_cycle_monitor
+    get_cycle_monitor().clear_logs()
+    return {"success": True}
 
 
 @app.post("/api/diagnostic/run")
@@ -547,3 +587,8 @@ def study_report(request: Request):
     auth.require_owner(request)
     from src.tools.core import get_study_report
     return get_study_report()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000, reload=True)

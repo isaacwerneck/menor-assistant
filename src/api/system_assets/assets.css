@@ -108,3 +108,48 @@ button:disabled{cursor:not-allowed;opacity:.52}
 .process-list .record{padding:13px}
 .process-list .record h3{font-size:.9rem;margin-bottom:6px}
 .process-list .record .state{margin-bottom:0}
+
+/* Monitor de Ciclos Cognitivos e Auto-Evolução */
+.hidden{display:none!important}
+.cycle-header-flex{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
+.cycle-actions{display:flex;gap:10px;align-items:center}
+.btn-primary{background:linear-gradient(135deg,#6d5bbd,#4c3f8f);border-color:var(--accent);color:#fff;font-weight:600}
+.btn-danger{background:#3b1822;border-color:#f87171;color:#fecaca}
+.btn-xs{padding:5px 12px;font-size:.76rem;min-height:32px;border-radius:8px}
+.cycle-status-card{margin-bottom:14px}
+.cycle-status-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.cycle-badge-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cycle-badge{margin-bottom:0}
+.cycle-badge.running{border-color:#34d399;color:#34d399;background:rgba(52,211,153,.12);animation:pulse-badge 2s infinite}
+.cycle-badge.idle{color:var(--secondary)}
+.cycle-badge.completed{border-color:#a78bfa;color:#c4b5fd;background:rgba(167,139,250,.12)}
+.cycle-badge.interrupted{border-color:#fbbf24;color:#fde68a;background:rgba(251,191,36,.12)}
+@keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:.65}}
+.cycle-phase-pill{font-size:.74rem;padding:3px 10px;border-radius:999px;background:var(--raised);border:1px solid var(--border);color:var(--secondary)}
+.cycle-duration-text{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.cycle-progress-wrapper{margin-bottom:8px}
+.cycle-steps-labels{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:.73rem;color:var(--muted);text-align:center;margin-bottom:6px}
+.step-lbl{padding:4px 2px;border-radius:6px;transition:all .2s ease}
+.step-lbl.active{color:var(--accent);font-weight:700;background:rgba(178,162,245,.12)}
+.step-lbl.done{color:#34d399}
+#cycle-progress-bar{width:100%;height:10px;accent-color:var(--accent)}
+.cycle-action-note{font-size:.84rem;color:var(--secondary);margin-top:6px}
+.cycle-metrics-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
+@media(max-width:980px){.cycle-metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.cycle-metrics-grid{grid-template-columns:1fr}}
+.cycle-console-panel{display:flex;flex-direction:column;padding:14px;background:#0d0e17}
+.cycle-console-header{display:flex;justify-content:space-between;align-items:center;font-size:.88rem;font-weight:600;margin-bottom:10px;color:var(--secondary);flex-wrap:wrap;gap:8px}
+.console-ctrls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.autoscroll-toggle{font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer}
+.cycle-terminal-box{background:#07080e;border:1px solid #232233;border-radius:10px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:.8rem;line-height:1.6;max-height:260px;overflow-y:auto}
+.term-line{word-break:break-word;display:flex;gap:8px;margin-bottom:4px}
+.term-time{color:var(--muted);font-size:.74rem;flex-shrink:0}
+.term-line.step{color:#93c5fd;font-weight:600}
+.term-line.ok{color:#86efac}
+.term-line.warn{color:#fde047}
+.term-line.error{color:#fca5a5}
+.term-line.info{color:#cbd5e1}
+.report-drawer{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.78);display:flex;justify-content:center;align-items:center;z-index:999;backdrop-filter:blur(5px)}
+.report-drawer-content{width:min(92vw,860px);max-height:85vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px}
+.report-drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.report-markdown-box{flex:1;overflow-y:auto;background:#0c0d14;border:1px solid var(--border);border-radius:10px;padding:16px;font-family:ui-monospace,monospace;font-size:.82rem;white-space:pre-wrap;color:var(--text);line-height:1.55}

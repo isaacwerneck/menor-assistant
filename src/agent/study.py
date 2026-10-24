@@ -461,10 +461,24 @@ class StudyWorker:
             if verbose:
                 print(f"      -> [{idx+1}/{len(topics)}] Estudando: {topic_text}...")
                 print("         -> Fontes web consultadas, destilando Fact Card...")
+            try:
+                from src.agent.cycle_monitor import get_cycle_monitor
+                get_cycle_monitor().log(
+                    f"Estudando tópico [{idx+1}/{len(topics)}]: {topic_text}", level="info", phase=2
+                )
+            except Exception:
+                pass
             # Destila Fact Card e armazena cada fato atômico com deduplicação Mem0
             card = self.distill_fact_card(topic_text, passages)
             if verbose:
                 print("         -> Fact Card destilado e integrado a memoria permanente.")
+            try:
+                from src.agent.cycle_monitor import get_cycle_monitor
+                get_cycle_monitor().log(
+                    f"Fact Card destilado e integrado à memória: {topic_text}", level="ok", phase=2
+                )
+            except Exception:
+                pass
             for line in card.splitlines():
                 clean_fact = line.strip().lstrip("-*# ")
                 if len(clean_fact) >= 10:
@@ -677,6 +691,10 @@ def run_autonomous_cycle(
     abort_event: Optional[threading.Event] = None,
 ) -> Dict[str, Any]:
     """Executa o ciclo cognitivo completo e encadeado: Refletir -> Estudar -> Diagnosticar -> Relatório."""
+    from src.agent.cycle_monitor import get_cycle_monitor
+    cycle_mon = get_cycle_monitor()
+    cycle_mon.start("Iniciando ciclo autônomo de auto-evolução do Menor v2...")
+
     st = store or BrainStore()
     url = (ollama_url or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")).rstrip("/")
     mdl = model or get_optimal_model(url)
@@ -692,61 +710,82 @@ def run_autonomous_cycle(
 
     if abort_event and abort_event.is_set():
         cycle_report["interrupted"] = True
+        cycle_mon.finish(interrupted=True)
         return cycle_report
 
     try:
         print("[1/5] [REFLEXAO] Analisando tarefas recentes e separando anti-padroes...")
+        cycle_mon.set_phase(1, "Analisando tarefas recentes e separando anti-padrões...")
         from src.agent.reflection import ReflectionWorker
         rw = ReflectionWorker(store=st, ollama_url=url, model=mdl)
         cycle_report["reflection"] = rw.reflect()
         learns = (cycle_report["reflection"] or {}).get("learnings_added", 0)
         antis = (cycle_report["reflection"] or {}).get("anti_patterns_added", 0)
+        cycle_mon.update_metrics(learnings_count=learns, anti_patterns_count=antis)
+        cycle_mon.log(f"Reflexão concluída (+{learns} aprendizados, {antis} anti-padrões)", level="ok", phase=1)
         print(f"      OK: Reflexao concluida (+{learns} aprendizados, {antis} anti-padroes)")
     except Exception as exc:
         LOGGER.debug("Erro na reflexão do ciclo: %s", exc)
+        cycle_mon.log(f"Erro na reflexão: {exc}", level="warn", phase=1)
 
     if abort_event and abort_event.is_set():
         cycle_report["interrupted"] = True
+        cycle_mon.finish(interrupted=True)
         return cycle_report
 
     try:
         print(f"[2/5] [ESTUDO] Pesquisando e assimilando novos topicos de estudo ({mdl})...")
+        cycle_mon.set_phase(2, f"Pesquisando e assimilando novos tópicos de estudo ({mdl})...")
         sw = StudyWorker(store=st, ollama_url=url, model=mdl)
         cycle_report["study"] = sw.study_cycle(max_topics=2, abort_event=abort_event, verbose=True)
         studied = (cycle_report["study"] or {}).get("studied", 0)
+        stud_topics = (cycle_report["study"] or {}).get("topics", [])
+        cycle_mon.update_metrics(topics_studied=stud_topics)
+        cycle_mon.log(f"Estudo concluído ({studied} tópicos assimilados no cérebro)", level="ok", phase=2)
         print(f"      OK: Estudo concluido ({studied} topicos assimilados no cerebro)")
     except Exception as exc:
         LOGGER.debug("Erro no estudo do ciclo: %s", exc)
+        cycle_mon.log(f"Erro no estudo: {exc}", level="warn", phase=2)
 
     if abort_event and abort_event.is_set():
         cycle_report["interrupted"] = True
+        cycle_mon.finish(interrupted=True)
         return cycle_report
 
     try:
         print("[3/5] [INSPECAO] Inspecionando saude do codigo e cobertura de testes (AST)...")
+        cycle_mon.set_phase(3, "Inspecionando saúde do código e cobertura de testes (AST)...")
         from src.agent.inspector import CodebaseInspector
         inspector = CodebaseInspector()
         cycle_report["inspection"] = inspector.audit()
         cov = (cycle_report["inspection"] or {}).get("coverage_percentage", "N/A")
         gaps = (cycle_report["inspection"] or {}).get("uncovered_count", 0)
+        cycle_mon.update_metrics(coverage_percentage=cov, uncovered_gaps=gaps)
+        cycle_mon.log(f"Inspeção AST concluída: Cobertura {cov}%, {gaps} gaps mapeados", level="ok", phase=3)
         print(f"      OK: Inspeção concluida (Cobertura: {cov}%, {gaps} gaps mapeados)")
     except Exception as exc:
         LOGGER.debug("Erro na inspeção do ciclo: %s", exc)
+        cycle_mon.log(f"Erro na inspeção: {exc}", level="warn", phase=3)
 
     if abort_event and abort_event.is_set():
         cycle_report["interrupted"] = True
+        cycle_mon.finish(interrupted=True)
         return cycle_report
 
     try:
         print("[4/5] [AUTO-CRITICA] Executando auto-diagnostico e refinamento (Reflexion)...")
+        cycle_mon.set_phase(4, "Executando auto-diagnóstico crítico e refinamento (Reflexion)...")
         de = DiagnosticEngine(store=st, ollama_url=url, model=mdl)
         cycle_report["diagnostic"] = de.run_self_eval(abort_event=abort_event)
         sc = (cycle_report["diagnostic"] or {}).get("score", "N/A")
         gold = (cycle_report["diagnostic"] or {}).get("golden_example_created", False)
         gold_tag = " (+1 Exemplo de Ouro gerado)" if gold else ""
+        cycle_mon.update_metrics(judge_score=sc, golden_example_created=gold)
+        cycle_mon.log(f"Auto-crítica concluída: Nota {sc}/10{gold_tag}", level="ok", phase=4)
         print(f"      OK: Auto-critica concluida (Nota: {sc}/10{gold_tag})")
     except Exception as exc:
         LOGGER.debug("Erro no diagnóstico do ciclo: %s", exc)
+        cycle_mon.log(f"Erro no diagnóstico: {exc}", level="warn", phase=4)
 
     rep_dir = st.brain_dir / "relatorios"
     rep_dir.mkdir(parents=True, exist_ok=True)
@@ -754,6 +793,8 @@ def run_autonomous_cycle(
     md_path = rep_dir / "ultimo_estudo.md"
 
     json_path.write_text(json.dumps(cycle_report, indent=2, ensure_ascii=False), encoding="utf-8")
+    cycle_mon.set_phase(5, "Relatório final integrado gerado com sucesso!")
+    cycle_mon.log(f"Relatório final gravado em {md_path.name}", level="ok", phase=5)
     print("[5/5] [RELATORIO] Relatorio final integrado gerado com sucesso!")
     print(f"      Salvo em: {md_path}")
 
@@ -825,6 +866,7 @@ def run_autonomous_cycle(
     )
     md_path.write_text(md_content, encoding="utf-8")
     cycle_report["report_markdown"] = md_content
+    cycle_mon.finish(report=cycle_report)
 
     # Limpeza defensiva de relatórios antigos (mantém últimos 20)
     diag_dir = st.brain_dir / "diagnosticos"

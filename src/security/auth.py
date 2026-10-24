@@ -110,7 +110,11 @@ def check_origin(request):
             raise HTTPException(403, "Acesso local indisponível.")
     if origin:
         expected = f"{request.url.scheme}://{host}"
-        if origin.rstrip("/") != expected:
+        is_cf_try = (
+            (host.endswith(".trycloudflare.com") or host.endswith(".loca.lt"))
+            and origin == f"https://{host}"
+        )
+        if origin.rstrip("/") != expected and not is_cf_try:
             raise HTTPException(403, "Origem não autorizada.")
 
 
@@ -207,10 +211,16 @@ def require_owner(request):
 
 
 def set_session_cookie(response, request, token):
+    host = request.headers.get("host", "")
+    is_cf_try = host.endswith(".trycloudflare.com") or host.endswith(".loca.lt")
+    is_secure = (
+        request.url.scheme == "https"
+        or is_cf_try
+        or (public_origin() is not None and host == urlsplit(public_origin()).hostname)
+    )
+    samesite = "lax" if is_cf_try else "strict"
     response.set_cookie(
         COOKIE_NAME, token, max_age=SESSION_SECONDS, httponly=True,
-        secure=(request.url.scheme == "https" or
-                (public_origin() is not None and
-                 request.headers.get("host") == urlsplit(public_origin()).hostname)),
-        samesite="strict", path="/",
+        secure=is_secure,
+        samesite=samesite, path="/",
     )

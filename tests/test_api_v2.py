@@ -51,6 +51,24 @@ class TestApiV2(unittest.TestCase):
         resp_login = self.client.post("/auth/login", json={"password": "minhasenhadeproprietario123"})
         self.assertEqual(resp_login.status_code, 200)
 
+    def test_auth_via_trycloudflare_tunnel(self):
+        # Garante setup prévio
+        self.client.post("/auth/setup", json={"password": "minhasenhadeproprietario123"})
+
+        # Simula acesso mobile externo vindo de túnel Cloudflare HTTPS
+        headers = {
+            "Host": "swift-ocean-42.trycloudflare.com",
+            "Origin": "https://swift-ocean-42.trycloudflare.com",
+        }
+        resp = self.client.post(
+            "/auth/login",
+            json={"password": "minhasenhadeproprietario123"},
+            headers=headers,
+        )
+        self.assertEqual(resp.status_code, 200)
+        cookie = resp.cookies.get("menor_session")
+        self.assertIsNotNone(cookie)
+
     def test_task_queue_endpoints(self):
         # Autenticar no client
         self.client.post("/auth/setup", json={"password": "minhasenhadeproprietario123"})

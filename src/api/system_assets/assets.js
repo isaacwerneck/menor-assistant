@@ -234,9 +234,214 @@ async function refreshProcesses() {
     processPending = false;
   }
 }
-ui.refresh.addEventListener("click", () => { refresh(); refreshLive(); refreshProcesses(); });
+ui.refresh.addEventListener("click", () => { refresh(); refreshLive(); refreshProcesses(); refreshCycleLive(); });
 refresh();
 refreshLive();
 refreshProcesses();
 setInterval(refreshLive, 3000);
 setInterval(refreshProcesses, 15000);
+
+// ========== MONITOR DE CICLOS COGNITIVOS AO VIVO ==========
+let lastLogCount = 0;
+let cyclePending = false;
+
+const cycleElements = {
+  triggerBtn: document.getElementById("cycle-trigger-btn"),
+  abortBtn: document.getElementById("cycle-abort-btn"),
+  clearBtn: document.getElementById("clear-cycle-logs-btn"),
+  viewReportBtn: document.getElementById("view-report-btn"),
+  closeReportBtn: document.getElementById("close-report-btn"),
+  badge: document.getElementById("cycle-badge"),
+  phaseBadge: document.getElementById("cycle-phase-badge"),
+  duration: document.getElementById("cycle-duration"),
+  progressBar: document.getElementById("cycle-progress-bar"),
+  currentAction: document.getElementById("cycle-current-action"),
+  metricLearnings: document.getElementById("metric-learnings"),
+  metricAnti: document.getElementById("metric-antipatterns"),
+  metricCov: document.getElementById("metric-coverage"),
+  metricGaps: document.getElementById("metric-gaps-detail"),
+  metricScore: document.getElementById("metric-judge-score"),
+  metricGold: document.getElementById("metric-gold-detail"),
+  terminal: document.getElementById("cycle-terminal"),
+  autoscrollChk: document.getElementById("autoscroll-chk"),
+  reportModal: document.getElementById("report-modal"),
+  reportMarkdownView: document.getElementById("report-markdown-view"),
+};
+
+async function refreshCycleLive() {
+  if (cyclePending || (typeof document.hidden === "boolean" && document.hidden)) return;
+  cyclePending = true;
+  try {
+    const data = await get("/api/study/live");
+    if (!data || typeof data !== "object") return;
+
+    // Status Badge & Ações
+    const isRunning = data.is_running === true;
+    if (cycleElements.badge) {
+      cycleElements.badge.className = "state cycle-badge " +
+        (isRunning ? "running" : data.interrupted ? "interrupted" : (data.current_phase === 5 || data.finished_at) ? "completed" : "idle");
+      cycleElements.badge.textContent = isRunning ? "Em Execução (Ciclo Ativo)" :
+        data.interrupted ? "Interrompido (Preempção)" :
+        (data.current_phase === 5 || data.finished_at) ? "Concluído" : "Inativo (Aguardando Ociosidade)";
+    }
+
+    if (cycleElements.triggerBtn) {
+      cycleElements.triggerBtn.disabled = isRunning;
+      cycleElements.triggerBtn.textContent = isRunning ? "Executando Ciclo..." : "Disparar Ciclo Agora";
+    }
+
+    if (cycleElements.abortBtn) {
+      if (isRunning) {
+        cycleElements.abortBtn.classList.remove("hidden");
+      } else {
+        cycleElements.abortBtn.classList.add("hidden");
+      }
+    }
+
+    if (cycleElements.phaseBadge) {
+      cycleElements.phaseBadge.textContent = "Fase " + (data.current_phase || 0) + "/5";
+    }
+
+    if (cycleElements.duration) {
+      cycleElements.duration.textContent = "Duração: " + (data.duration_seconds || 0) + "s";
+    }
+
+    if (cycleElements.progressBar) {
+      cycleElements.progressBar.value = data.progress_percent || 0;
+    }
+
+    if (cycleElements.currentAction) {
+      cycleElements.currentAction.textContent = data.phase_desc || "Aguardando início de novo ciclo...";
+    }
+
+    // Step labels
+    for (let step = 1; step <= 5; step++) {
+      const lbl = document.getElementById("step-lbl-" + step);
+      if (lbl) {
+        lbl.className = "step-lbl" +
+          (step < data.current_phase ? " done" : step === data.current_phase ? " active" : "");
+      }
+    }
+
+    // Métricas
+    const m = data.metrics || {};
+    if (cycleElements.metricLearnings) {
+      cycleElements.metricLearnings.textContent = "+" + (m.learnings_count || 0);
+    }
+    if (cycleElements.metricAnti) {
+      cycleElements.metricAnti.textContent = String(m.anti_patterns_count || 0);
+    }
+    if (cycleElements.metricCov) {
+      cycleElements.metricCov.textContent = (typeof m.coverage_percentage === "number") ?
+        m.coverage_percentage.toFixed(1) + "%" : String(m.coverage_percentage || "—");
+    }
+    if (cycleElements.metricGaps) {
+      cycleElements.metricGaps.textContent = (m.uncovered_gaps || 0) + " gaps mapeados";
+    }
+    if (cycleElements.metricScore) {
+      cycleElements.metricScore.textContent = (m.judge_score !== undefined && m.judge_score !== "N/A") ?
+        m.judge_score + "/10" : "—";
+    }
+    if (cycleElements.metricGold) {
+      cycleElements.metricGold.textContent = m.golden_example_created ?
+        "Exemplo de Ouro gerado" : "Rubrica crítica de 0 a 10";
+    }
+
+    // Terminal Logs
+    if (cycleElements.terminal && Array.isArray(data.logs)) {
+      if (data.logs.length !== lastLogCount) {
+        lastLogCount = data.logs.length;
+        cycleElements.terminal.replaceChildren();
+        if (!data.logs.length) {
+          const emptyLine = el("div", "term-line info");
+          emptyLine.append(el("span", "term-time", "[00:00:00] "), "Nenhum evento registrado ainda.");
+          cycleElements.terminal.append(emptyLine);
+        } else {
+          for (const item of data.logs) {
+            const line = el("div", "term-line " + (item.level || "info"));
+            line.append(el("span", "term-time", "[" + (item.timestamp || "--:--:--") + "] "), item.message || "");
+            cycleElements.terminal.append(line);
+          }
+        }
+        if (cycleElements.autoscrollChk && cycleElements.autoscrollChk.checked) {
+          cycleElements.terminal.scrollTop = cycleElements.terminal.scrollHeight;
+        }
+      }
+    }
+  } catch (err) {
+    // Falha silenciosa de polling para não poluir tela
+  } finally {
+    cyclePending = false;
+  }
+}
+
+if (cycleElements.triggerBtn) {
+  cycleElements.triggerBtn.addEventListener("click", async () => {
+    cycleElements.triggerBtn.disabled = true;
+    cycleElements.triggerBtn.textContent = "Disparando...";
+    try {
+      const resp = await fetch("/api/study/trigger", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const res = await resp.json();
+      if (!res.success && res.message) {
+        alert(res.message);
+      }
+    } catch (e) {
+      alert("Falha ao disparar ciclo: " + (e.message || e));
+    } finally {
+      setTimeout(refreshCycleLive, 500);
+    }
+  });
+}
+
+if (cycleElements.abortBtn) {
+  cycleElements.abortBtn.addEventListener("click", async () => {
+    cycleElements.abortBtn.disabled = true;
+    cycleElements.abortBtn.textContent = "Interrompendo...";
+    try {
+      await fetch("/api/study/abort", { method: "POST", credentials: "same-origin" });
+    } finally {
+      cycleElements.abortBtn.disabled = false;
+      setTimeout(refreshCycleLive, 500);
+    }
+  });
+}
+
+if (cycleElements.clearBtn) {
+  cycleElements.clearBtn.addEventListener("click", async () => {
+    try {
+      await fetch("/api/study/clear-logs", { method: "POST", credentials: "same-origin" });
+      if (cycleElements.terminal) {
+        cycleElements.terminal.replaceChildren();
+        lastLogCount = 0;
+      }
+    } finally {
+      setTimeout(refreshCycleLive, 400);
+    }
+  });
+}
+
+if (cycleElements.viewReportBtn && cycleElements.reportModal && cycleElements.reportMarkdownView) {
+  cycleElements.viewReportBtn.addEventListener("click", async () => {
+    cycleElements.reportMarkdownView.textContent = "Carregando último relatório consolidado...";
+    cycleElements.reportModal.classList.remove("hidden");
+    try {
+      const rep = await get("/api/study/report");
+      cycleElements.reportMarkdownView.textContent = rep.report_markdown ||
+        "Nenhum relatório gerado ainda. Execute um ciclo para gerar o primeiro boletim.";
+    } catch (err) {
+      cycleElements.reportMarkdownView.textContent = "Erro ao carregar relatório: " + (err.message || err);
+    }
+  });
+}
+
+if (cycleElements.closeReportBtn && cycleElements.reportModal) {
+  cycleElements.closeReportBtn.addEventListener("click", () => {
+    cycleElements.reportModal.classList.add("hidden");
+  });
+}
+
+refreshCycleLive();
+setInterval(refreshCycleLive, 2000);

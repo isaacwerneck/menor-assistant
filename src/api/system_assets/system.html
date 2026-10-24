@@ -55,6 +55,85 @@
       <p class="footnote">Revisão implantada e últimos reinícios não são atestados por este painel. CPU/RAM/GPU são lidos separadamente abaixo.</p>
     </section>
   </div>
+  <section class="section" id="cycle-monitor" aria-labelledby="cycle-title">
+    <div class="section-header">
+      <div class="cycle-header-flex">
+        <div>
+          <p class="eyebrow">AUTO-APRENDIZADO & EVOLUÇÃO CONTÍNUA</p>
+          <h2 id="cycle-title">Monitor de Ciclos Cognitivos (Ao Vivo)</h2>
+          <p id="cycle-header-desc">Acompanhe em tempo real o que o Menor aprende, anti-padrões identificados, cobertura AST e auto-avaliações.</p>
+        </div>
+        <div class="cycle-actions">
+          <button id="cycle-trigger-btn" type="button" class="btn-primary">Disparar Ciclo Agora</button>
+          <button id="cycle-abort-btn" type="button" class="btn-danger hidden">Interromper Ciclo</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel cycle-status-card">
+      <div class="cycle-status-top">
+        <div class="cycle-badge-group">
+          <span id="cycle-badge" class="state cycle-badge idle">Inativo (Aguardando Ociosidade)</span>
+          <span id="cycle-phase-badge" class="cycle-phase-pill">Fase 0/5</span>
+        </div>
+        <span id="cycle-duration" class="cycle-duration-text">Duração: 0s</span>
+      </div>
+      <div class="cycle-progress-wrapper">
+        <div class="cycle-steps-labels">
+          <span class="step-lbl" id="step-lbl-1">1. Reflexão</span>
+          <span class="step-lbl" id="step-lbl-2">2. Estudo Web</span>
+          <span class="step-lbl" id="step-lbl-3">3. Inspeção AST</span>
+          <span class="step-lbl" id="step-lbl-4">4. Auto-Crítica</span>
+          <span class="step-lbl" id="step-lbl-5">5. Relatório</span>
+        </div>
+        <progress id="cycle-progress-bar" max="100" value="0"></progress>
+      </div>
+      <p id="cycle-current-action" class="cycle-action-note">Aguardando início de novo ciclo de auto-evolução...</p>
+    </div>
+    <div class="metric-grid cycle-metrics-grid">
+      <article class="panel metric-card">
+        <h3>Aprendizados Mapeados</h3>
+        <strong id="metric-learnings">+0</strong>
+        <p class="footnote">Conhecimentos verificados assimilados</p>
+      </article>
+      <article class="panel metric-card">
+        <h3>Anti-Padrões Evitados</h3>
+        <strong id="metric-antipatterns">0</strong>
+        <p class="footnote">Armadilhas de execução mapeadas</p>
+      </article>
+      <article class="panel metric-card">
+        <h3>Cobertura AST (Código)</h3>
+        <strong id="metric-coverage">—</strong>
+        <p id="metric-gaps-detail" class="footnote">Gaps de teste identificados</p>
+      </article>
+      <article class="panel metric-card">
+        <h3>Auto-Avaliação (Juiz)</h3>
+        <strong id="metric-judge-score">—</strong>
+        <p id="metric-gold-detail" class="footnote">Rubrica crítica de 0 a 10</p>
+      </article>
+    </div>
+    <div class="panel cycle-console-panel">
+      <div class="cycle-console-header">
+        <span>Terminal de Execução do Ciclo</span>
+        <div class="console-ctrls">
+          <label class="autoscroll-toggle"><input type="checkbox" id="autoscroll-chk" checked> Auto-rolagem</label>
+          <button type="button" id="clear-cycle-logs-btn" class="btn-xs">Limpar Terminal</button>
+          <button type="button" id="view-report-btn" class="btn-xs">Ver Último Relatório</button>
+        </div>
+      </div>
+      <div id="cycle-terminal" class="cycle-terminal-box" role="log" aria-live="polite">
+        <div class="term-line info"><span class="term-time">[00:00:00]</span> Sistema de auto-monitoramento pronto. Nenhum ciclo em andamento.</div>
+      </div>
+    </div>
+    <div id="report-modal" class="report-drawer hidden">
+      <div class="report-drawer-content panel">
+        <div class="report-drawer-header">
+          <h3>Último Relatório de Auto-Evolução Consolidado</h3>
+          <button type="button" id="close-report-btn" class="btn-xs">Fechar ✕</button>
+        </div>
+        <pre id="report-markdown-view" class="report-markdown-box">Carregando relatório...</pre>
+      </div>
+    </div>
+  </section>
   <section class="section" aria-labelledby="resources-title">
     <div class="section-header"><div><h2 id="resources-title">Recursos em tempo quase real</h2>
       <p>Leitura privada a cada 3 segundos enquanto a página estiver visível. CPU é calculada entre amostras; GPU depende do driver.</p></div></div>
