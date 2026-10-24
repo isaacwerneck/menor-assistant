@@ -45,7 +45,7 @@ def get_active_model(preferred: Optional[str] = None) -> str:
         resp = requests.get(f"{OLLAMA_SERVER_URL}/api/tags", timeout=2)
         if resp.status_code == 200:
             installed = [m.get("name", "") for m in resp.json().get("models", [])]
-            for candidate in ["qwen2.5:7b", "qwen2.5:latest", "qwen2.5:14b", "qwen2.5"]:
+            for candidate in ["qwen-fast", "qwen2.5:14b-instruct-q3_K_M", "qwen2.5:7b", "qwen2.5:latest", "qwen2.5:14b", "qwen2.5"]:
                 for m in installed:
                     if candidate in m:
                         return m
