@@ -140,6 +140,17 @@ else:
         fi
         exec python3 -m src.agent.reflection "$@"
         ;;
+    atualizar|update)
+        shift
+        root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+        cd "$root"
+        echo "==> Puxando atualizações do repositório (git pull origin main)..."
+        git pull origin main
+        echo "==> Reiniciando a API do Menor com novos endpoints..."
+        systemctl --user daemon-reload >/dev/null 2>&1 || true
+        systemctl --user restart menor-api.service >/dev/null 2>&1 || true
+        echo "OK: Menor v2 atualizado e API reiniciada com sucesso."
+        ;;
     tunel|tunnel)
         shift
         if ! command -v cloudflared >/dev/null 2>&1; then

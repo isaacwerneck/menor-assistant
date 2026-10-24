@@ -364,12 +364,12 @@ class StudyWorker:
                     "stream": False,
                     "options": {
                         "temperature": 0.2,
-                        "num_predict": 180,
+                        "num_predict": 100,
                         "num_thread": get_optimal_threads(),
-                        "num_ctx": 2048,
+                        "num_ctx": 1024,
                     },
                 },
-                timeout=(5, 45),
+                timeout=(3, 18),
             )
             if resp.status_code == 200:
                 card = resp.json().get("message", {}).get("content", "").strip()
@@ -541,7 +541,7 @@ class DiagnosticEngine:
                     ],
                     "stream": False,
                 },
-                timeout=(5, 45),
+                timeout=(3, 18),
             )
             if resp.status_code == 200:
                 student_answer = resp.json().get("message", {}).get("content", "")
@@ -584,12 +584,12 @@ class DiagnosticEngine:
                     "format": "json",
                     "options": {
                         "temperature": 0.2,
-                        "num_predict": 150,
+                        "num_predict": 100,
                         "num_thread": get_optimal_threads(),
-                        "num_ctx": 2048,
+                        "num_ctx": 1024,
                     },
                 },
-                timeout=(5, 45),
+                timeout=(3, 18),
             )
             if resp_judge.status_code == 200:
                 data = json.loads(resp_judge.json().get("message", {}).get("content", "{}"))

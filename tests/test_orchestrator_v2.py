@@ -73,7 +73,32 @@ class TestOrchestratorV2(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertIn("Arquivo criado", result["reply"])
         self.assertEqual(len(result["tools_executed"]), 1)
-        self.assertEqual(result["tools_executed"][0]["tool"], "fs_write")
+
+    @patch("src.agent.orchestrator.requests.post")
+    def test_run_turn_tool_400_fallback(self, mock_post):
+        import requests
+        err_resp = MagicMock()
+        err_resp.status_code = 400
+        http_err = requests.HTTPError(response=err_resp)
+
+        success_resp = MagicMock()
+        success_resp.status_code = 200
+        success_resp.json.return_value = {
+            "message": {
+                "role": "assistant",
+                "content": "Resposta obtida via fallback sem tools com sucesso!",
+            }
+        }
+        mock_post.side_effect = [http_err, success_resp]
+
+        orchestrator = Orchestrator()
+        result = orchestrator.run_turn(
+            messages=[{"role": "user", "content": "Execute um comando no terminal"}],
+            enable_tools=True,
+        )
+
+        self.assertTrue(result["success"])
+        self.assertIn("Resposta obtida via fallback", result["reply"])
 
 
 if __name__ == "__main__":

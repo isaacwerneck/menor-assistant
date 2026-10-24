@@ -225,6 +225,8 @@ class Orchestrator:
             "oq estudou", "o que estudou", "relatório de estudo", "relatorio de estudo",
             "último estudo", "ultimo estudo", "briefing de estudo", "o que aprendeu",
             "oq aprendeu", "fez enquanto", "estudou essa noite", "estudou hoje",
+            "aprendeu", "o que você aprendeu", "o que vc aprendeu", "oq vc aprendeu",
+            "ultimos tempos", "últimos tempos", "novidades de estudo",
         )
         if any(t in norm_user for t in study_report_triggers):
             try:
@@ -264,11 +266,12 @@ class Orchestrator:
                 "messages": chat_history,
                 "stream": False,
                 "options": {
-                    "temperature": 0.6,
+                    "temperature": 0.6 if not should_use_tools else 0.2,
                     "top_p": 0.9,
                     "repeat_penalty": 1.1,
+                    "num_predict": 80 if not should_use_tools else 250,
                     "num_thread": get_optimal_threads(),
-                    "num_ctx": 1024 if not should_use_tools else 4096,
+                    "num_ctx": 512 if not should_use_tools else 2048,
                 },
                 "keep_alive": "60m",
             }
@@ -279,6 +282,32 @@ class Orchestrator:
                 resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
                 resp.raise_for_status()
                 data = resp.json()
+            except requests.HTTPError as http_err:
+                # Blindagem: se o modelo retornar 400 Bad Request por incompatibilidade com tools=[...],
+                # remove tools e tenta novamente como texto puro
+                status_code = getattr(http_err.response, "status_code", None)
+                if tools_schema and status_code == 400:
+                    LOGGER.warning("Modelo %s retornou 400 com tools. Tentando fallback sem tools.", target_model)
+                    payload.pop("tools", None)
+                    payload["options"]["num_ctx"] = 1024
+                    try:
+                        resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
+                        resp.raise_for_status()
+                        data = resp.json()
+                    except Exception as retry_exc:
+                        LOGGER.error("Falha no retry sem tools (%s): %s", target_url, retry_exc)
+                        return {
+                            "success": False,
+                            "reply": f"Erro de comunicação com o modelo ({target_model}): {str(retry_exc)}",
+                            "tools_executed": executed_tools_log,
+                        }
+                else:
+                    LOGGER.error("Falha ao comunicar com Ollama (%s): %s", target_url, http_err)
+                    return {
+                        "success": False,
+                        "reply": f"Erro de comunicação com o modelo ({target_model}): {str(http_err)}",
+                        "tools_executed": executed_tools_log,
+                    }
             except Exception as exc:
                 LOGGER.error("Falha ao comunicar com Ollama (%s): %s", target_url, exc)
                 return {
