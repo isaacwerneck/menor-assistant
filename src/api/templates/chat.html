@@ -545,6 +545,70 @@
             margin-bottom: 8px;
         }
 
+        /* Artifact Preview Card (Sites, HTML, Web Apps) */
+        .artifact-preview-card {
+            margin: 12px 0 8px;
+            background: rgba(22, 20, 34, 0.92);
+            border: 1px solid rgba(139, 92, 246, 0.45);
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 680px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        }
+        .artifact-preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(35, 30, 54, 0.9);
+            border-bottom: 1px solid rgba(139, 92, 246, 0.25);
+            font-size: 0.88rem;
+            color: #e2e8f0;
+        }
+        .artifact-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .artifact-title code {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.82rem;
+        }
+        .artifact-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            background: #7c3aed;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 7px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+        .artifact-btn:hover {
+            background: #6d28d9;
+            transform: translateY(-1px);
+        }
+        .artifact-iframe-wrapper {
+            width: 100%;
+            height: 320px;
+            background: #000000;
+            border: none;
+            position: relative;
+        }
+        .artifact-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #ffffff;
+        }
+
         /* ========== INPUT BAR ========== */
         .input-area {
             padding: 16px 20px 24px;
@@ -2303,7 +2367,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         function buildHistory(messages, message) {
             const history = [];
             let remaining = 32000 - message.length;
-            for (let i = messages.length - 1; i >= 0 && history.length < 20; i--) {
+            for (let i = messages.length - 1; i >= 0 && history.length < 50; i--) {
                 const artifact = messages[i].artifact;
                 const receipt = artifact?.kind === 'image'
                     ? '\n[Recibo confirmado do servidor: arquivo de imagem gerado; pedido: '
@@ -2664,9 +2728,46 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        function isActionIntent(text) {
+        function isActionIntent(text, hist = []) {
             if (!text || typeof text !== 'string') return false;
-            return /\b(leia|le\b|ler|escreva|escreve|criar?|cria|crie|salve?|liste?|roda|rode?|executa?|instala?|pesquise?|busca|busque|analise?|consert(a|e)|test(a|e)|terminal|comando|plano|projeto|arquivo|git|npm|python|ferramenta|diret[oó]rio|pasta|site|desenhe?|gerar? imagem|imagem|fa[çc]a|fazer|program(a|ar)?|desenvolv(a|er)?|implement(a|ar)?|constru(a|ir)?|html|css|js)\b/i.test(text);
+            const actionTriggers = /\b(leia|le\b|ler|escreva|escreve|criar?|cria|crie|salve?|liste?|roda|rode?|executa?|instala?|pesquise?|busca|busque|analise?|consert(a|e)|test(a|e)|terminal|comando|plano|projeto|arquivo|git|npm|python|ferramenta|diret[oó]rio|pasta|site|desenhe?|gerar? imagem|imagem|fa[çc]a|fazer|program(a|ar)?|desenvolv(a|er)?|implement(a|ar)?|constru(a|ir)?|html|css|js|c[oó]digo|codigo|script|manda|mandar|mostra|mostrar|envi(a|ar)|cad[eê]|link|abrir|p[aá]gina)\b/i;
+            if (actionTriggers.test(text)) return true;
+
+            if (Array.isArray(hist) && hist.length > 0) {
+                const recent = hist.slice(-6).map(m => m.content || '').join(' ');
+                const contextTriggers = /\b(site|html|css|arquivo|c[oó]digo|codigo|script|projeto|p[aá]gina|ferramenta|plano)\b/i;
+                const followUpTriggers = /\b(manda|mostra|ver|cade|cadê|envi|conseguiu|pronto|onde|terminou|fez|t[aá] pronto|sim|bora|continua|manda a[ií])\b/i;
+                if (contextTriggers.test(recent) && followUpTriggers.test(text)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function renderArtifactPreview(container, filepath) {
+            if (!container || !filepath || typeof filepath !== 'string') return;
+            const cleanPath = filepath.replace(/\\/g, '/').split('/').pop();
+            if (!cleanPath) return;
+            if (container.querySelector(`.artifact-preview-card[data-file="${cleanPath}"]`)) return;
+
+            const isHtml = cleanPath.toLowerCase().endsWith('.html') || cleanPath.toLowerCase().endsWith('.htm');
+            const card = document.createElement('div');
+            card.className = 'artifact-preview-card';
+            card.setAttribute('data-file', cleanPath);
+            card.innerHTML = `
+                <div class="artifact-preview-header">
+                    <span class="artifact-title">🌐 <strong>Site Gerado:</strong> <code>${escapeHtml(cleanPath)}</code></span>
+                    <a href="/preview/${encodeURIComponent(cleanPath)}" target="_blank" class="artifact-btn">
+                        Abrir em Nova Aba ↗
+                    </a>
+                </div>
+                ${isHtml ? `
+                <div class="artifact-iframe-wrapper">
+                    <iframe src="/preview/${encodeURIComponent(cleanPath)}" class="artifact-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+                </div>` : ''}
+            `;
+            container.appendChild(card);
+            scrollToBottom();
         }
 
         function dispatchDualBrainHubTask(conv, goal) {
@@ -2712,6 +2813,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                                 <div style="font-size:0.9rem; line-height:1.6; white-space:pre-wrap;">${escapeHtml(task.result || 'Operação finalizada.')}</div>
                             `;
                             container.appendChild(card);
+                            const matchHtml = (task.result || '').match(/\b([a-zA-Z0-9_\-]+\.html)\b/i);
+                            if (matchHtml) {
+                                renderArtifactPreview(container, matchHtml[1]);
+                            }
                             scrollToBottom();
 
                             conv.messages.push({
@@ -2779,148 +2884,149 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const target = getSelectedComputeTarget();
             let fallbackToServer = false;
             if (target.node === 'local') {
-                const act = activeGeneration?.activity;
-                if (act) {
-                    act.addStep('Conectando ao Ollama GPU Local (GTX 1650)...');
-                    act.addStep(`Carregando modelo ${target.model || 'qwen2.5:3b'} na VRAM...`);
-                }
-                content.textContent = '';
-                document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '3B'}) gerando resposta…`;
-                try {
-                    let systemPrompt = 'Você é o Menor v2, assistente pessoal e executivo de software do Isaac.\n'
-                        + 'Você opera como a interface de voz ultrarrápida no PC local, conectada em tempo real ao Hub Central Menor no servidor Ubuntu.\n'
-                        + 'Diretrizes OBRIGATÓRIAS:\n'
-                        + '1. Responda SEMPRE em português do Brasil, de forma direta, natural e EXTREMAMENTE concisa (no máximo 1 a 3 frases curtas).\n'
-                        + '2. Você tem total capacidade de programar, criar sites, ler/escrever arquivos e executar comandos através do Servidor Hub Menor. Se o Isaac pedir para criar, fazer, programar ou implementar algo, confirme prontamente com brevidade que você e o Servidor Hub Menor já estão executando e criando os arquivos solicitados.\n'
-                        + '3. NUNCA diga que está fora do seu alcance ou que você não tem ferramentas. Você é o Menor v2 com ferramentas reais ativas no Hub.\n'
-                        + '4. Sem enrolação, sem divagações filosóficas, sem introduções desnecessárias.';
-
-                    const isStudyQuery = /\b(estud(o|ou|os|ar)|aprend(eu|e|idos?|izados?)|ciclo|relat[oó]rio|melhor(ou|as?)|ast|sandbox|diagn[oó]stico|evolu(ir|[cç][aã]o))\b/i.test(message);
-                    if (isStudyQuery) {
-                        if (act) act.addStep('Consultando Hub Central Ubuntu (192.168.0.16) para memórias e auto-evolução...');
-                        try {
-                            const repResp = await turnFetch('/api/study/report');
-                            if (repResp.ok) {
-                                const repData = await repResp.json();
-                                if (repData && repData.has_report && repData.report_markdown) {
-                                    systemPrompt += '\n\n[DADOS REAIS DO ÚLTIMO CICLO DE ESTUDO NO SERVIDOR HUB]:\n'
-                                        + repData.report_markdown.slice(0, 1500)
-                                        + '\n(Atenção: Baseie sua resposta estritamente nos dados reais acima. Responda em no máximo 2 frases curtas e diretas.)';
-                                } else {
-                                    systemPrompt += '\n\n[INFORMAÇÃO]: Não há relatório de estudos registrado no hub ainda. Responda que o ciclo ainda não gerou relatório.';
-                                }
-                            }
-                        } catch (_) {}
+                if (isActionIntent(message, history)) {
+                    // Turno de AÇÃO com ferramentas reais (criação de site, código, arquivos, comandos):
+                    // Delegar diretamente ao Hub Central onde as ferramentas reais executam!
+                    fallbackToServer = true;
+                } else {
+                    const act = activeGeneration?.activity;
+                    if (act) {
+                        act.addStep('Conectando ao Ollama GPU Local (GTX 1650)...');
+                        act.addStep(`Carregando modelo ${target.model || 'qwen2.5:3b'} na VRAM...`);
                     }
+                    content.textContent = '';
+                    document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '3B'}) gerando resposta…`;
+                    try {
+                        let systemPrompt = 'Você é o Menor v2, assistente pessoal e executivo de software do Isaac.\n'
+                            + 'Você opera como a interface de voz ultrarrápida no PC local, conectada em tempo real ao Hub Central Menor no servidor Ubuntu com ferramentas reais do sistema operacional.\n'
+                            + 'Diretrizes OBRIGATÓRIAS:\n'
+                            + '1. Responda SEMPRE em português do Brasil, de forma direta, natural e concisa.\n'
+                            + '2. NUNCA diga que é apenas um modelo/assistente de texto, que não tem memória ou que não pode criar/enviar arquivos.\n'
+                            + '3. NUNCA finja que criou ou implementou algo que não executou com ferramentas reais.\n'
+                            + '4. Consulte sempre as mensagens do histórico da conversa para manter coerência total com o Isaac.\n'
+                            + '5. Sem enrolação, sem divagações filosóficas, sem introduções desnecessárias.';
 
-                    const localHistory = history.slice(-6);
-                    if (act) act.addStep(`Processando inferência na GPU Local (${target.model || 'qwen2.5:3b'})...`);
-
-                    const localResp = await fetch('http://localhost:11434/api/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model: target.model || 'qwen2.5:3b',
-                            messages: [
-                                {
-                                    role: 'system',
-                                    content: systemPrompt
-                                },
-                                ...localHistory,
-                                { role: 'user', content: message }
-                            ],
-                            options: {
-                                temperature: 0.4,
-                                num_predict: 80,
-                                stop: ['\nThinking Process:', 'Thinking Process:', '<think>', 'Okay, let\'s']
-                            },
-                            stream: true
-                        }),
-                        signal: activeGeneration?.controller?.signal
-                    });
-                    if (!localResp.ok) throw new Error('Ollama local retornou HTTP ' + localResp.status);
-                    const reader = localResp.body.getReader();
-                    const decoder = new TextDecoder();
-                    let fullText = '';
-                    let spokenIndex = 0;
-                    let firstToken = true;
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        const chunk = decoder.decode(value, { stream: true });
-                        const lines = chunk.split('\n');
-                        for (const line of lines) {
-                            if (!line.trim()) continue;
+                        const isStudyQuery = /\b(estud(o|ou|os|ar)|aprend(eu|e|idos?|izados?)|ciclo|relat[oó]rio|melhor(ou|as?)|ast|sandbox|diagn[oó]stico|evolu(ir|[cç][aã]o))\b/i.test(message);
+                        if (isStudyQuery) {
+                            if (act) act.addStep('Consultando Hub Central Ubuntu (192.168.0.16) para memórias e auto-evolução...');
                             try {
-                                const parsed = JSON.parse(line);
-                                const token = parsed.message?.content || '';
-                                if (token) {
-                                    if (firstToken) {
-                                        firstToken = false;
-                                        if (act) act.addStep('Sintetizando tokens na GPU em tempo real (~45 tok/s)...');
-                                    }
-                                    fullText += token;
-                                    const cleanSoFar = cleanAssistantText(fullText) || fullText;
-                                    content.textContent = cleanSoFar;
-                                    scrollToBottom();
-
-                                    // Streaming de Fala (ChatGPT-style): enfileira sentença assim que finaliza pontuação
-                                    if (handsFreeVoiceEnabled && cleanSoFar) {
-                                        const remaining = cleanSoFar.substring(spokenIndex);
-                                        const sentenceMatch = remaining.match(/^(.*?[\.\!\?\n]+)\s*/);
-                                        if (sentenceMatch && sentenceMatch[1].trim().length >= 4) {
-                                            const sentenceToSpeak = sentenceMatch[1].trim();
-                                            spokenIndex += sentenceMatch[0].length;
-                                            enqueueSpeech(sentenceToSpeak);
-                                        }
+                                const repResp = await turnFetch('/api/study/report');
+                                if (repResp.ok) {
+                                    const repData = await repResp.json();
+                                    if (repData && repData.has_report && repData.report_markdown) {
+                                        systemPrompt += '\n\n[DADOS REAIS DO ÚLTIMO CICLO DE ESTUDO NO SERVIDOR HUB]:\n'
+                                            + repData.report_markdown.slice(0, 1500)
+                                            + '\n(Atenção: Baseie sua resposta estritamente nos dados reais acima. Responda em no máximo 2 frases curtas e diretas.)';
+                                    } else {
+                                        systemPrompt += '\n\n[INFORMAÇÃO]: Não há relatório de estudos registrado no hub ainda. Responda que o ciclo ainda não gerou relatório.';
                                     }
                                 }
                             } catch (_) {}
                         }
-                    }
-                    assertLiveTurn(conv);
-                    const finalLocal = cleanAssistantText(fullText) || 'E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?';
-                    content.textContent = finalLocal;
-                    const wallMs = activeGeneration ? Date.now() - activeGeneration.started : 0;
-                    const secs = (wallMs / 1000).toFixed(1) + 's';
-                    const avatar = content.parentElement?.querySelector?.('.avatar.bot-avatar');
-                    if (avatar && wallMs > 0) {
-                        if (avatar.dataset) avatar.dataset.time = secs;
-                        if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
-                        avatar.title = `Gerado em ${secs}`;
-                    }
-                    conv.messages.push({ role: 'bot', content: finalLocal, timing: { browser_request_wall_ms: wallMs } });
-                    save();
 
-                    // Modo de Voz Contínua: Falar qualquer sentença restante que não tenha terminado com pontuação
-                    if (handsFreeVoiceEnabled && finalLocal) {
-                        const leftover = finalLocal.substring(spokenIndex).trim();
-                        if (leftover) {
-                            enqueueSpeech(leftover);
-                        } else if (!isSpeakingTTS) {
-                            resumeListening();
+                        const localHistory = history;
+                        if (act) act.addStep(`Processando inferência na GPU Local (${target.model || 'qwen2.5:3b'})...`);
+
+                        const localResp = await fetch('http://localhost:11434/api/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                model: target.model || 'qwen2.5:3b',
+                                messages: [
+                                    {
+                                        role: 'system',
+                                        content: systemPrompt
+                                    },
+                                    ...localHistory,
+                                    { role: 'user', content: message }
+                                ],
+                                options: {
+                                    temperature: 0.4,
+                                    num_predict: 80,
+                                    stop: ['\nThinking Process:', 'Thinking Process:', '<think>', 'Okay, let\'s']
+                                },
+                                stream: true
+                            }),
+                            signal: activeGeneration?.controller?.signal
+                        });
+                        if (!localResp.ok) throw new Error('Ollama local retornou HTTP ' + localResp.status);
+                        const reader = localResp.body.getReader();
+                        const decoder = new TextDecoder();
+                        let fullText = '';
+                        let spokenIndex = 0;
+                        let firstToken = true;
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            const chunk = decoder.decode(value, { stream: true });
+                            const lines = chunk.split('\n');
+                            for (const line of lines) {
+                                if (!line.trim()) continue;
+                                try {
+                                    const parsed = JSON.parse(line);
+                                    const token = parsed.message?.content || '';
+                                    if (token) {
+                                        if (firstToken) {
+                                            firstToken = false;
+                                            if (act) act.addStep('Sintetizando tokens na GPU em tempo real (~45 tok/s)...');
+                                        }
+                                        fullText += token;
+                                        const cleanSoFar = cleanAssistantText(fullText) || fullText;
+                                        content.textContent = cleanSoFar;
+                                        scrollToBottom();
+
+                                        // Streaming de Fala (ChatGPT-style): enfileira sentença assim que finaliza pontuação
+                                        if (handsFreeVoiceEnabled && cleanSoFar) {
+                                            const remaining = cleanSoFar.substring(spokenIndex);
+                                            const sentenceMatch = remaining.match(/^(.*?[\.\!\?\n]+)\s*/);
+                                            if (sentenceMatch && sentenceMatch[1].trim().length >= 4) {
+                                                const sentenceToSpeak = sentenceMatch[1].trim();
+                                                spokenIndex += sentenceMatch[0].length;
+                                                enqueueSpeech(sentenceToSpeak);
+                                            }
+                                        }
+                                    }
+                                } catch (_) {}
+                            }
                         }
-                    }
+                        assertLiveTurn(conv);
+                        const finalLocal = cleanAssistantText(fullText) || 'E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?';
+                        content.textContent = finalLocal;
+                        const wallMs = activeGeneration ? Date.now() - activeGeneration.started : 0;
+                        const secs = (wallMs / 1000).toFixed(1) + 's';
+                        const avatar = content.parentElement?.querySelector?.('.avatar.bot-avatar');
+                        if (avatar && wallMs > 0) {
+                            if (avatar.dataset) avatar.dataset.time = secs;
+                            if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
+                            avatar.title = `Gerado em ${secs}`;
+                        }
+                        conv.messages.push({ role: 'bot', content: finalLocal, timing: { browser_request_wall_ms: wallMs } });
+                        save();
 
-                    // Dual-Brain: Se o usuário pediu ações complexas, despachar em paralelo ao Hub do Servidor
-                    if (isActionIntent(message)) {
-                        if (act) act.addStep('Despachando ferramentas de execução para o Hub Central Ubuntu...');
-                        dispatchDualBrainHubTask(conv, message);
-                    }
+                        // Modo de Voz Contínua: Falar qualquer sentença restante que não tenha terminado com pontuação
+                        if (handsFreeVoiceEnabled && finalLocal) {
+                            const leftover = finalLocal.substring(spokenIndex).trim();
+                            if (leftover) {
+                                enqueueSpeech(leftover);
+                            } else if (!isSpeakingTTS) {
+                                resumeListening();
+                            }
+                        }
 
-                    if (act) {
-                        act.complete(`Respondido via GPU Local (${target.model || '3B'}) em ${secs}`);
-                    }
+                        if (act) {
+                            act.complete(`Respondido via GPU Local (${target.model || '3B'}) em ${secs}`);
+                        }
 
-                    return true;
-                } catch (err) {
-                    if (err.name === 'AbortError') throw err;
-                    console.warn('Erro ao conectar ao PC Local:', err);
-                    if (act) act.addStep('Ollama local inacessível. Redirecionando tarefa para o Servidor Ubuntu...');
-                    content.textContent = 'Aviso: Não foi possível conectar ao Ollama local em http://localhost:11434.\n'
-                        + 'Dica: Verifique se o Ollama está em execução no seu computador com a variável OLLAMA_ORIGINS="*".\n'
-                        + 'Redirecionando a tarefa para o Servidor Ubuntu...\n\n';
-                    fallbackToServer = true;
+                        return true;
+                    } catch (err) {
+                        if (err.name === 'AbortError') throw err;
+                        console.warn('Erro ao conectar ao PC Local:', err);
+                        if (act) act.addStep('Ollama local inacessível. Redirecionando tarefa para o Servidor Ubuntu...');
+                        content.textContent = 'Aviso: Não foi possível conectar ao Ollama local em http://localhost:11434.\n'
+                            + 'Dica: Verifique se o Ollama está em execução no seu computador com a variável OLLAMA_ORIGINS="*".\n'
+                            + 'Redirecionando a tarefa para o Servidor Ubuntu...\n\n';
+                        fallbackToServer = true;
+                    }
                 }
             }
 
@@ -3012,6 +3118,26 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             }
             imageReply(conv, content, notice, result.image || '', result.artifact || null,
                 result.phase === 'approval' ? result.approval : null, timing);
+
+            // Renderizar Card de Preview se algum arquivo HTML/Site foi gerado ou mencionado
+            let createdHtmlFile = null;
+            if (result.tools_executed && Array.isArray(result.tools_executed)) {
+                result.tools_executed.forEach(tool => {
+                    const filepath = typeof tool === 'string' && tool.startsWith('fs_write:')
+                        ? tool.split(':')[1]
+                        : (tool.args?.filepath || tool.result?.filepath || '');
+                    if (filepath && (filepath.toLowerCase().endsWith('.html') || filepath.toLowerCase().endsWith('.htm'))) {
+                        createdHtmlFile = filepath;
+                    }
+                });
+            }
+            if (!createdHtmlFile) {
+                const matchHtml = notice.match(/\b([a-zA-Z0-9_\-]+\.html)\b/i);
+                if (matchHtml) createdHtmlFile = matchHtml[1];
+            }
+            if (createdHtmlFile) {
+                renderArtifactPreview(content, createdHtmlFile);
+            }
             return true;
         }
 

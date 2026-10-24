@@ -180,6 +180,27 @@ class TestApiV2(unittest.TestCase):
         self.assertIn("diagnosis", data)
         self.assertIn("proposed_fix", data)
 
+    def test_preview_file_endpoint(self):
+        from src.tools.core import fs_write
+        test_html_name = "test_preview_site_temp.html"
+        test_content = "<html><body><h1>Parabens Rebelo</h1></body></html>"
+        write_res = fs_write(test_html_name, test_content)
+        self.assertTrue(write_res["success"])
+
+        try:
+            resp = self.client.get(f"/preview/{test_html_name}")
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Parabens Rebelo", resp.text)
+
+            # Test 404 for nonexistent file
+            resp_404 = self.client.get("/preview/arquivo_que_nao_existe_123456.html")
+            self.assertEqual(resp_404.status_code, 404)
+        finally:
+            from pathlib import Path
+            test_file = Path(write_res["filepath"])
+            if test_file.exists():
+                test_file.unlink(missing_ok=True)
+
 
 if __name__ == "__main__":
     unittest.main()

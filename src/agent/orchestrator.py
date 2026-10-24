@@ -32,6 +32,11 @@ Regras Inegociáveis e Diretrizes de Execução:
   arquivos em blocos de texto ou markdown. Se precisar executar comandos ou ler/escrever arquivos, use
   OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
   diretamente sem inventar arquivos ou saídas fictícias.
+- NUNCA diga que é apenas um modelo ou assistente de texto, que não pode criar arquivos ou que não tem ferramentas.
+  Você é o Menor v2 com ferramentas reais ativas no Hub e capacidade de criar arquivos e sites diretamente.
+- NUNCA finja que criou ou implementou algo se a ferramenta `fs_write` não foi executada no turno.
+- Se o usuário perguntar o que foi conversado ou pedido anteriormente, consulte com rigor as mensagens do histórico
+  e responda diretamente, sem dizer que não tem memória.
 - NUNCA invente pastas ou caminhos inexistentes (como ~/estudos/ ou /ancora_de_estudos/).
 - Sua Âncora de Estudos oficial está no bloco [STUDY_ANCHORS] da Core Memory residente logo acima.
 - NUNCA faça propaganda não solicitada de ferramentas ou projetos no meio de conversas comuns.
@@ -45,14 +50,11 @@ CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, assistente pessoal e parceiro de 
 Converse diretamente em português brasileiro, de forma natural, amigável e descontraída
 (usando gírias leves como mano, suave, blz).
 
-Exemplos de como você responde:
-Usuário: eai menor
-Menor: E aí Isaac, suave? O que manda hoje?
-
-Usuário: tudo bem?
-Menor: Tudo tranquilo por aqui, mano! E com você, como estão as coisas?
-
-Responda sempre diretamente na voz do Menor v2, sem introduções em inglês e sem blocos de raciocínio interno.
+Diretrizes essenciais:
+- Você tem total acesso ao ecossistema de ferramentas do Menor e ao Hub Central.
+- NUNCA diga que é apenas um assistente de texto, que não tem memória ou que não pode criar/enviar arquivos.
+- Se o usuário perguntar sobre a conversa anterior, consulte o histórico no contexto e responda com clareza.
+- Responda sempre diretamente na voz do Menor v2, sem introduções em inglês e sem blocos de raciocínio interno.
 """
 
 
@@ -185,6 +187,7 @@ class Orchestrator:
             "estude ", "estudar", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia",
             "noticia", "relat", "fez enquanto", "estudou", "agendar", "agende", "adicione",
             "faz ", "fazer", "faça", "constru", "program", "desenvolv", "implement", "html", "css", "js",
+            "mand", "mostr", "ver", "envi", "cadê", "cade", "onde tá", "onde ta", "preview", "link",
         )
         return any(t in last_user for t in triggers)
 
@@ -383,6 +386,60 @@ class Orchestrator:
                     }
             except Exception as exc:
                 LOGGER.debug("Consulta de hardware ignorada: %s", exc)
+
+        # Visualização e leitura direta de sites criados
+        site_preview_triggers = (
+            "mostrar o site", "mostra o site", "mostrar site", "ver o site", "ver site",
+            "onde está o site", "onde ta o site", "onde tá o site", "cade o site", "cadê o site",
+            "site que você fez", "site que vc fez", "site que você criou", "site que vc criou",
+            "qual endereço", "qual o endereço", "qual endereco", "mandar o arquivo", "manda o arquivo",
+            "manda o arquivo dele", "mandar o arquivo dele", "mostrar ele aqui", "mostra ele aqui",
+            "me mostrar o site", "me mostra o site",
+        )
+        if any(t in norm_user for t in site_preview_triggers):
+            try:
+                from src.tools.core import fs_read
+                candidate_files = ["site_menor.html", "index.html", "index_dual_brain.html"]
+                found_file = None
+                content_preview = ""
+                for cf in candidate_files:
+                    read_try = fs_read(cf)
+                    if read_try.get("success") and read_try.get("content"):
+                        found_file = cf
+                        content_preview = read_try.get("content", "")
+                        executed_tools_log.append("fs_read")
+                        break
+
+                if found_file:
+                    preview_url = f"http://192.168.0.10:8000/preview/{found_file}"
+                    code_snippet = content_preview[:1200]
+                    return {
+                        "success": True,
+                        "reply": (
+                            f"Consigo sim, mano! O site está pronto e salvo no arquivo `{found_file}`.\n\n"
+                            f"**Link direto para abrir e ver no navegador:**\n"
+                            f"[{preview_url}]({preview_url})\n\n"
+                            f"**Código do arquivo `{found_file}`:**\n"
+                            f"```html\n{code_snippet}\n```"
+                        ),
+                        "tools_executed": executed_tools_log,
+                        "model_used": target_model,
+                        "node_url": target_url,
+                    }
+                else:
+                    return {
+                        "success": True,
+                        "reply": (
+                            "O arquivo do site ainda não foi gerado no workspace. "
+                            "Me fala o tema que você quer (ex: 'cria um site simples em index.html') "
+                            "que eu crio com a ferramenta real fs_write agora mesmo!"
+                        ),
+                        "tools_executed": executed_tools_log,
+                        "model_used": target_model,
+                        "node_url": target_url,
+                    }
+            except Exception as exc:
+                LOGGER.warning("Visualização de site falhou: %s", exc)
 
         # Listagem de arquivos salvos
         fs_list_triggers = (

@@ -42,7 +42,7 @@ LOCAL_ACTION_TRIGGERS = (
     "arquivo", "file", "ler", "leia", "le ", "lê", "escrev", "salv", "list", "pasta", "dir",
     "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
     "plano", "projet", "ferramenta", "tool", "código", "codigo", "consert", "corrig",
-    "preferencia", "perfil", "lembr", "memor",
+    "preferencia", "perfil", "lembr", "memor", "site", "html", "css", "script", "manda", "mostra",
 )
 
 # Stopwords coloquiais e gírias a remover na reformulação de queries
@@ -71,7 +71,8 @@ def classify_intent(message: str) -> str:
     # 1. Ações de criação e desenvolvimento local têm prioridade máxima sobre buscas
     creation_words = (
         "cria", "criar", "crie", "faz ", "fazer", "faça",
-        "program", "desenvolv", "constru", "implement", "escrev", "salv"
+        "program", "desenvolv", "constru", "implement", "escrev", "salv",
+        "site", "html", "css", "script", "manda", "mostra", "onde tá", "onde ta"
     )
     if any(w in norm for w in creation_words):
         return "LOCAL_ACTION"

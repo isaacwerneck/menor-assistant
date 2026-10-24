@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Annotated, List, Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field, StringConstraints
 import requests
 import re
@@ -242,6 +242,42 @@ def require_chat_access(request: Request):
 def serve_chat_ui():
     html_file = TEMPLATES_DIR / "chat.html"
     return HTMLResponse(content=html_file.read_text(encoding="utf-8"), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/preview/{filepath:path}")
+def preview_file(filepath: str, request: Request):
+    """Serve arquivos gerados pelo Menor (HTML, CSS, JS, imagens) com segurança para visualização imediata."""
+    try:
+        from src.tools.core import _resolve_safe_path
+        path = _resolve_safe_path(filepath)
+        if not path.exists() or not path.is_file():
+            alt_path = Path.cwd() / "workspace" / filepath
+            if alt_path.exists() and alt_path.is_file():
+                path = alt_path
+            else:
+                return HTMLResponse(
+                    f"<div style='font-family:sans-serif;padding:24px;color:#ef4444;background:#18181b;'>"
+                    f"<h3>Arquivo <code>{filepath}</code> ainda não foi gerado no workspace.</h3>"
+                    f"<p style='color:#a1a1aa;'>Peça ao Menor para criar o arquivo "
+                    f"(ex: 'cria o arquivo {filepath}').</p>"
+                    f"</div>",
+                    status_code=404,
+                )
+        suffix = path.suffix.lower()
+        if suffix in (".html", ".htm"):
+            return HTMLResponse(content=path.read_text(encoding="utf-8", errors="replace"))
+        elif suffix in (".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"):
+            return FileResponse(path)
+        elif suffix == ".css":
+            return Response(content=path.read_text(encoding="utf-8", errors="replace"), media_type="text/css")
+        elif suffix == ".js":
+            content_js = path.read_text(encoding="utf-8", errors="replace")
+            return Response(content=content_js, media_type="application/javascript")
+        else:
+            return PlainTextResponse(content=path.read_text(encoding="utf-8", errors="replace"))
+    except Exception as exc:
+        err_html = f"<div style='font-family:sans-serif;padding:24px;color:#ef4444;'><h3>Erro: {exc}</h3></div>"
+        return HTMLResponse(err_html, status_code=500)
 
 
 @app.get("/health")

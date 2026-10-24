@@ -93,6 +93,8 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
         "não posso criar", "não posso programar", "não consigo criar", "não consigo programar",
         "não sou capaz de criar", "não sou capaz de programar", "como um modelo de linguagem",
         "como modelo de ia", "não tenho a capacidade de programar", "não posso criar ou programar",
+        "não posso mostrar", "não posso exibir", "não posso enviar arquivos", "como assistente de voz",
+        "não tenho a capacidade de criar ou exibir", "apenas um assistente de voz",
     ))
 
     if not cleaned.strip() or is_still_english_scratchpad or has_false_refusal:
@@ -104,6 +106,20 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
 def _fallback_casual_reply(user_msg: str) -> str:
     """Gera resposta conversacional calorosa em pt-BR quando o modelo falhou em gerar saída limpa."""
     norm_user = (user_msg or "").lower()
+    preview_prompts = (
+        "mostrar o site", "mostra o site", "mostrar site", "mostra o arquivo",
+        "mandar o arquivo", "manda o arquivo", "onde está o site", "onde ta o site",
+        "onde tá o site", "ver o site", "site que vc fez", "site que você fez",
+        "qual endereço", "qual o endereço", "qual endereco", "mostrar ele aqui"
+    )
+    if any(w in norm_user for w in preview_prompts):
+        return (
+            "Consigo sim, mano! O site está salvo no servidor. "
+            "Você pode abrir e visualizar no navegador pelo link: "
+            "http://192.168.0.10:8000/preview/site_menor.html (ou index.html). "
+            "Se quiser que eu envie o código completo aqui, é só me dizer!"
+        )
+
     site_prompts = (
         "consegue fazer um site", "pode fazer um site", "faz um site", "fazer um site",
         "fazer site", "site", "landing page", "programar um site", "criar um site",
