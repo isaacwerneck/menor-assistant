@@ -2284,6 +2284,12 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 }
             }
 
+            // Se for conversa comum, pergunta ou cumprimento (não for ação de ferramentas/SO),
+            // pula direto para o /chat/stream em tempo real (1-2s) sem bloquear no /agent/run
+            if (!isActionIntent(message)) {
+                return false;
+            }
+
             const previous = conv.pendingAgentRequest;
             const payload = previous && previous.message === message ? previous : {
                 session_id: conv.id, turn_id: genId(), message, history, project,
