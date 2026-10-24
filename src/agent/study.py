@@ -149,6 +149,10 @@ class TopicManager:
         model: Optional[str] = None,
     ) -> List[str]:
         """Gera novos tópicos alinhados aos domínios do Isaac quando a fila estiver vazia."""
+        active = self.list_topics(uncompleted_only=True)
+        if len(active) >= 6:
+            return []
+
         generated = []
         core_anchors = CoreMemoryManager(store=self.store).get_block("study_anchors")
         anchors_list = [
@@ -493,13 +497,15 @@ class DiagnosticEngine:
         gap_scheduled = False
         if score < 7.0 or gap:
             gap_name = gap or f"Reforço técnico: {question[:60]}"
-            self.topic_mgr.save_topic(f"[Reforço Crítico] {gap_name}", priority="high")
-            self.core_memory.set_block(
-                "system_directives",
-                f"Atenção técnica reforçada em auto-diagnóstico: rever boas práticas sobre {gap_name}.",
-                mode="append",
-            )
-            gap_scheduled = True
+            existing_topics = [t["text"].lower() for t in self.topic_mgr.list_topics(uncompleted_only=True)]
+            if not any(gap_name.lower() in e for e in existing_topics):
+                self.topic_mgr.save_topic(f"[Reforço Crítico] {gap_name}", priority="high")
+                self.core_memory.set_block(
+                    "system_directives",
+                    f"Atenção técnica reforçada em auto-diagnóstico: rever boas práticas sobre {gap_name}.",
+                    mode="append",
+                )
+                gap_scheduled = True
 
         # 4. Salva boletim em diagnosticos/
         diag_dir = self.store.brain_dir / "diagnosticos"
@@ -604,5 +610,16 @@ def run_autonomous_cycle(
     )
     md_path.write_text(md_content, encoding="utf-8")
     cycle_report["report_markdown"] = md_content
+
+    # Limpeza defensiva de relatórios antigos (mantém últimos 20)
+    diag_dir = st.brain_dir / "diagnosticos"
+    if diag_dir.exists():
+        reports = sorted(diag_dir.glob("auto_avaliacao_*.md"), key=os.path.getmtime)
+        if len(reports) > 20:
+            for old_rep in reports[:-20]:
+                try:
+                    old_rep.unlink()
+                except Exception:
+                    pass
 
     return cycle_report

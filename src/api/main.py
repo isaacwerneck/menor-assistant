@@ -40,6 +40,9 @@ _last_interaction_time = time.time()
 _study_abort_event = threading.Event()
 _study_running_lock = threading.Lock()
 IDLE_STUDY_DELAY = int(os.environ.get("MENOR_IDLE_STUDY_DELAY", "1800"))
+CYCLE_COOLDOWN = int(os.environ.get("MENOR_CYCLE_COOLDOWN", "900"))  # 15 min
+DEEP_REST_INTERVAL = int(os.environ.get("MENOR_DEEP_REST_INTERVAL", str(3 * 3600)))  # 3 horas
+DEEP_REST_DURATION = int(os.environ.get("MENOR_DEEP_REST_DURATION", str(30 * 60)))  # 30 min
 
 
 def _notify_user_active():
@@ -50,26 +53,57 @@ def _notify_user_active():
         _study_abort_event.set()
 
 
+async def _interruptible_sleep(duration_seconds: float, abort_event: threading.Event) -> bool:
+    """Aguarda em fatias curtas de 1 segundo para acordar imediatamente se o usuário interagir."""
+    deadline = time.time() + duration_seconds
+    while time.time() < deadline:
+        if abort_event.is_set():
+            return False
+        await asyncio.sleep(1.0)
+    return True
+
+
 async def _idle_study_monitor():
-    """Monitor de inatividade: ativa o estudo autônomo após 30 min sem requests."""
+    """Monitor de inatividade: ciclos contínuos (15 min cooldown, 30 min descanso a cada 3h)."""
     await asyncio.sleep(5)
+    last_deep_rest_time = time.time()
+
     while True:
-        await asyncio.sleep(15)
+        await asyncio.sleep(10)
         idle_seconds = time.time() - _last_interaction_time
-        if idle_seconds >= IDLE_STUDY_DELAY:
+        if idle_seconds >= IDLE_STUDY_DELAY and not _study_running_lock.locked():
             if _study_running_lock.acquire(blocking=False):
                 try:
-                    _study_abort_event.clear()
-                    from src.agent.study import run_autonomous_cycle
                     logger.info(
-                        "Iniciando ciclo autônomo (Refletir -> Estudar -> Diagnosticar) por inatividade (%ds)...",
+                        "Inatividade de %ds atingida. Iniciando ciclos autônomos até interação do usuário...",
                         int(idle_seconds),
                     )
-                    await asyncio.to_thread(
-                        run_autonomous_cycle, ollama_url=OLLAMA_SERVER_URL, abort_event=_study_abort_event
-                    )
+                    _study_abort_event.clear()
+                    while not _study_abort_event.is_set():
+                        from src.agent.study import run_autonomous_cycle
+                        await asyncio.to_thread(
+                            run_autonomous_cycle, ollama_url=OLLAMA_SERVER_URL, abort_event=_study_abort_event
+                        )
+
+                        if _study_abort_event.is_set():
+                            break
+
+                        now = time.time()
+                        if (now - last_deep_rest_time) >= DEEP_REST_INTERVAL:
+                            logger.info(
+                                "3 horas de sessões atingidas. Entrando em descanso térmico profundo de 30 min..."
+                            )
+                            slept = await _interruptible_sleep(DEEP_REST_DURATION, _study_abort_event)
+                            last_deep_rest_time = time.time()
+                        else:
+                            logger.info("Ciclo concluído com sucesso. Cooldown térmico de 15 min...")
+                            slept = await _interruptible_sleep(CYCLE_COOLDOWN, _study_abort_event)
+
+                        if not slept or _study_abort_event.is_set():
+                            logger.info("Sessão autônoma interrompida imediatamente por chamada do operador.")
+                            break
                 except Exception as exc:
-                    logger.debug("Ciclo de estudo em background: %s", exc)
+                    logger.debug("Ciclo autônomo em background: %s", exc)
                 finally:
                     _study_running_lock.release()
 
