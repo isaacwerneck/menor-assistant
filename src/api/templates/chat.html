@@ -2430,9 +2430,77 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 && /\b(imagem|img|foto|arquivo|resultado|que voce gerou|que vc gerou)\b/.test(text);
         }
 
+        function escapeHtml(str) {
+            if (!str || typeof str !== 'string') return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         function isActionIntent(text) {
             if (!text || typeof text !== 'string') return false;
-            return /\b(leia|le\b|ler|escreva|escreve|criar?|salve?|liste?|roda|rode?|executa?|instala?|pesquise?|busca|busque|analise?|consert(a|e)|test(a|e)|terminal|comando|plano|projeto|arquivo|git|npm|python|ferramenta|diret[oó]rio|pasta)\b/i.test(text);
+            return /\b(leia|le\b|ler|escreva|escreve|criar?|salve?|liste?|roda|rode?|executa?|instala?|pesquise?|busca|busque|analise?|consert(a|e)|test(a|e)|terminal|comando|plano|projeto|arquivo|git|npm|python|ferramenta|diret[oó]rio|pasta|site|desenhe?|gerar? imagem|imagem)\b/i.test(text);
+        }
+
+        function dispatchDualBrainHubTask(conv, goal) {
+            const container = document.getElementById('messagesContainer');
+            if (!container) return;
+
+            const pill = document.createElement('div');
+            pill.className = 'hub-dispatch-pill';
+            pill.innerHTML = `
+                <span class="activity-live-spinner" style="width:13px;height:13px;"></span>
+                <span>⚡ <strong>Servidor Hub Menor</strong> executando em 2º plano: <em>${escapeHtml(goal.slice(0, 55))}...</em></span>
+            `;
+            container.appendChild(pill);
+            scrollToBottom();
+
+            fetch('/api/tasks/enqueue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    goal: goal,
+                    project_slug: conv.project || null
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !data.task_id) throw new Error('Não foi possível enfileirar a tarefa no servidor.');
+                const taskId = data.task_id;
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const res = await fetch(`/api/tasks/${taskId}`);
+                        if (!res.ok) return;
+                        const task = await res.json();
+                        if (task.status === 'completed' || task.status === 'failed') {
+                            clearInterval(pollInterval);
+                            pill.remove();
+
+                            const card = document.createElement('div');
+                            card.className = 'hub-task-card';
+                            const icon = task.status === 'completed' ? '✔ 🚀' : '⚠';
+                            card.innerHTML = `
+                                <div class="hub-task-card-header">${icon} Servidor Hub Menor: Tarefa Concluída</div>
+                                <div style="font-size:0.9rem; line-height:1.6; white-space:pre-wrap;">${escapeHtml(task.result || 'Operação finalizada.')}</div>
+                            `;
+                            container.appendChild(card);
+                            scrollToBottom();
+
+                            conv.messages.push({
+                                role: 'bot',
+                                content: `[Servidor Hub em Segundo Plano]:\n${task.result || 'Operação concluída.'}`
+                            });
+                            save();
+
+                            if (handsFreeVoiceEnabled) {
+                                speakText("Isaac, o servidor concluiu a tarefa em segundo plano.");
+                            }
+                        }
+                    } catch (_) {}
+                }, 3000);
+            })
+            .catch(err => {
+                pill.innerHTML = `<span style="color:#ef4444;">⚠ Falha ao despachar para o servidor: ${escapeHtml(err.message)}</span>`;
+                setTimeout(() => pill.remove(), 6000);
+            });
         }
 
         async function handleAgentTurn(conv, message, history, project, content) {
@@ -2530,6 +2598,19 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     }
                     conv.messages.push({ role: 'bot', content: fullText, timing: { browser_request_wall_ms: wallMs } });
                     save();
+
+                    // Modo de Voz Contínua: Falar e voltar a ouvir
+                    if (handsFreeVoiceEnabled && fullText) {
+                        speakText(fullText, () => {
+                            if (handsFreeVoiceEnabled) resumeListening();
+                        });
+                    }
+
+                    // Dual-Brain: Se o usuário pediu ações complexas, despachar em paralelo ao Hub do Servidor
+                    if (isActionIntent(message)) {
+                        dispatchDualBrainHubTask(conv, message);
+                    }
+
                     return true;
                 } catch (err) {
                     if (err.name === 'AbortError') throw err;
