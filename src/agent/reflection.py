@@ -11,6 +11,7 @@ import re
 from typing import Any, Dict, List, Optional
 import requests
 
+from src.agent.study import get_optimal_threads
 from src.agent.workers import TaskQueue, get_task_queue
 from src.memory.core_memory import CoreMemoryManager
 from src.memory.search import KnowledgeIndex
@@ -106,6 +107,12 @@ class ReflectionWorker:
                     ],
                     "stream": False,
                     "format": "json",
+                    "options": {
+                        "temperature": 0.2,
+                        "num_predict": 200,
+                        "num_thread": get_optimal_threads(),
+                        "num_ctx": 2048,
+                    },
                 },
                 timeout=(5, 60),
             )
