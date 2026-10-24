@@ -1468,7 +1468,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
             rec.onerror = function(event) {
                 console.warn('Reconhecimento de voz:', event.error);
-                if (event.error === 'no-speech') return;
+                if (event.error === 'no-speech' || event.error === 'aborted') return;
                 handsFreeVoiceEnabled = false;
                 updateVoiceUI();
                 if (event.error === 'not-allowed') {
@@ -3348,6 +3348,77 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             return false;
         }
 
+        // ========== AUTO-DIAGNÓSTICO E REPARO INTERATIVO (HUMAN-IN-THE-LOOP) ==========
+        async function handleInteractiveRepairTurn(conv, message, content) {
+            // Caso 1: Usuário respondendo à proposta de conserto pendente
+            if (conv.pendingRepair) {
+                const choice = missionConsent(message);
+                const wantsRepair = choice === 'approve' || /\b(consert(a|e)|arrum(a|e)|corrig(e|ir)|vai|pode|sim|manda bala|eu aprovo|aprovar?|faz|bora)\b/i.test(message);
+                const rejectsRepair = choice === 'reject' || /\b(n[aã]o|cancela|deixa|esquece)\b/i.test(message);
+
+                if (wantsRepair) {
+                    const plan = conv.pendingRepair.plan;
+                    delete conv.pendingRepair;
+                    save();
+                    content.textContent = 'Iniciando execução do conserto no Servidor Hub...';
+                    dispatchDualBrainHubTask(conv, 'Consertar: ' + plan);
+                    return true;
+                }
+                if (rejectsRepair) {
+                    delete conv.pendingRepair;
+                    save();
+                    imageReply(conv, content, 'Entendido, conserto cancelado. O que você gostaria de fazer em vez disso?');
+                    return true;
+                }
+            }
+
+            // Caso 2: Usuário apontando erro ou falha no que foi feito
+            const isErrorComplaint = /\b(t[aá] errad[oa]|deu ruim|n[aã]o funcionou|com erro|deu erro|quebr(ou|ado)|falhou|n[aã]o era isso|ficou ruim|essa porra|olha essa merda|t[aá] tudo bugado|conserta essa porra|n[aã]o deu certo)\b/i.test(message);
+            if (!isErrorComplaint) return false;
+
+            assertLiveTurn(conv);
+            content.textContent = 'Analisando o que deu errado e preparando plano de conserto...';
+
+            try {
+                const lastBotMsg = conv.messages.slice().reverse().find(m => m.role === 'bot')?.content || '';
+                const diagResp = await turnFetch('/api/agent/diagnose-error', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        complaint: message,
+                        last_bot_reply: lastBotMsg,
+                        session_id: conv.id
+                    })
+                });
+
+                if (!diagResp.ok) throw new Error('Falha ao diagnosticar erro.');
+                const diagData = await diagResp.json();
+                assertLiveTurn(conv);
+
+                const diagnosisText = diagData.diagnosis || 'Identifiquei que a operação anterior não gerou o resultado esperado.';
+                const planText = diagData.proposed_fix || 'Reexecutar a operação corrigindo as ferramentas.';
+
+                conv.pendingRepair = { issue: diagnosisText, plan: planText };
+                save();
+
+                const approval = {
+                    title: 'Deseja que eu execute o conserto agora?',
+                    description: planText
+                };
+
+                const fullReply = `Identifiquei o erro:\n${diagnosisText}\n\nO que podemos fazer:\n${planText}\n\nPosso consertar agora?`;
+                imageReply(conv, content, fullReply, '', null, approval);
+
+                if (handsFreeVoiceEnabled) {
+                    enqueueSpeech(`Identifiquei o erro: ${diagnosisText}. Posso consertar agora?`);
+                }
+                return true;
+            } catch (err) {
+                console.warn('Erro no diagnóstico interativo:', err);
+                return false;
+            }
+        }
+
         // ========== AUTOEDIÇÃO SUPERVISIONADA ==========
         async function handleRepairTurn(conv, message, content) {
             // Código não pode inferir execução de uma combinação de palavras.
@@ -3492,6 +3563,8 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 if (!conv.pendingMemory && !conv.activeMission && !conv.pendingCapabilityOffer
                     && (selectedImageFile || conv.pendingImage || imagePriority.route)
                     && await handleImageTurn(conv, msg, botContent, imagePriority.forceEdit)) return;
+                assertLiveTurn(conv);
+                if (!conv.pendingMemory && (await handleInteractiveRepairTurn(conv, msg, botContent))) return;
                 assertLiveTurn(conv);
                 if (await handleAgentTurn(conv, msg, history, project, botContent)) return;
                 assertLiveTurn(conv);

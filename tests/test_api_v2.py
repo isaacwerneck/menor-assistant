@@ -161,6 +161,25 @@ class TestApiV2(unittest.TestCase):
         self.assertTrue(data.get("handled"))
         self.assertIn("servidor", data.get("reply"))
 
+    def test_diagnose_error_endpoint(self):
+        self.client.post("/auth/setup", json={"password": "minhasenhadeproprietario123"})
+        resp_login = self.client.post("/auth/login", json={"password": "minhasenhadeproprietario123"})
+        cookies = {"menor_session": resp_login.cookies.get("menor_session")}
+
+        resp = self.client.post(
+            "/api/agent/diagnose-error",
+            json={
+                "complaint": "Pô mano, essa porra tá errada, não criou o arquivo",
+                "last_bot_reply": "Atualmente não posso criar arquivos.",
+            },
+            cookies=cookies,
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("success"))
+        self.assertIn("diagnosis", data)
+        self.assertIn("proposed_fix", data)
+
 
 if __name__ == "__main__":
     unittest.main()

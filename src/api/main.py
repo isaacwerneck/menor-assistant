@@ -225,6 +225,12 @@ class TaskEnqueueRequest(BaseModel):
     auto_start: bool = True
 
 
+class DiagnoseErrorRequest(BaseModel):
+    complaint: str = Field(min_length=1, max_length=2000)
+    last_bot_reply: Optional[str] = Field(default="", max_length=4000)
+    session_id: Optional[str] = Field(default=None, max_length=128)
+
+
 def require_chat_access(request: Request):
     if auth.configured() or auth.public_origin():
         auth.require_owner(request)
@@ -436,9 +442,10 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
             "temperature": 0.6,
             "top_p": 0.9,
             "repeat_penalty": 1.1,
+            "num_predict": 1024,
             "num_thread": get_optimal_threads(),
             "num_ctx": 4096,
-            "stop": ["\nThinking Process:", "Thinking Process:", "<think>", "Okay, let's", "Let's tackle"],
+            "stop": ["\nThinking Process:", "Thinking Process:", "Okay, let's", "Let's tackle"],
         },
     }
 
@@ -480,22 +487,37 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
                                 buffer = ""
                     elif in_thought:
                         buffer += token
-                        parts = re.split(
-                            r"\n\s*(?:Resposta|Response|Final Answer|Assistant|Menor):\s*",
-                            buffer,
-                            flags=re.IGNORECASE,
-                        )
-                        if len(parts) > 1 and parts[-1].strip():
+                        if "</think>" in buffer or "</thought>" in buffer:
+                            parts = re.split(r"</(?:think|thought)>", buffer, maxsplit=1)
+                            after = parts[-1].lstrip()
                             in_thought = False
-                            yield parts[-1].lstrip()
-                            streamed_any = True
                             buffer = ""
+                            if after:
+                                yield after
+                                streamed_any = True
+                        else:
+                            parts = re.split(
+                                r"\n\s*(?:Resposta|Response|Final Answer|Assistant|Menor):\s*",
+                                buffer,
+                                flags=re.IGNORECASE,
+                            )
+                            if len(parts) > 1 and parts[-1].strip():
+                                in_thought = False
+                                yield parts[-1].lstrip()
+                                streamed_any = True
+                                buffer = ""
                     else:
                         if token:
                             yield token
                             streamed_any = True
 
                     if data.get("done"):
+                        if not streamed_any and buffer:
+                            clean_buf = re.sub(r"<(?:think|thought)>.*?</(?:think|thought)>", "", buffer, flags=re.DOTALL)
+                            clean_buf = re.sub(r"<(?:think|thought)>.*", "", clean_buf, flags=re.DOTALL).strip()
+                            if clean_buf:
+                                yield clean_buf
+                                streamed_any = True
                         if not streamed_any:
                             yield _fallback_casual_reply(req.message)
                         return
@@ -567,6 +589,69 @@ def get_task_status(task_id: int, request: Request):
     if not task:
         raise HTTPException(404, "Tarefa não encontrada.")
     return task
+
+
+@app.post("/api/agent/diagnose-error")
+def diagnose_error(body: DiagnoseErrorRequest, request: Request):
+    auth.require_owner(request)
+    from src.agent.workers import get_task_queue
+    from src.agent.study import get_optimal_model
+    from src.agent.orchestrator import Orchestrator
+
+    queue = get_task_queue()
+    recent_tasks = queue.list_tasks(limit=3)
+    failed_task = next((t for t in recent_tasks if t.get("status") == "failed"), None)
+    last_task = recent_tasks[0] if recent_tasks else None
+
+    context_details = []
+    if failed_task:
+        context_details.append(f"Última tarefa falhou: Meta='{failed_task.get('goal')}', Erro='{failed_task.get('result')}'")
+    elif last_task:
+        context_details.append(f"Última tarefa executada: Meta='{last_task.get('goal')}', Status='{last_task.get('status')}', Resultado='{str(last_task.get('result'))[:300]}'")
+
+    if body.last_bot_reply:
+        context_details.append(f"Última resposta do assistente: '{body.last_bot_reply[:400]}'")
+
+    model = get_optimal_model()
+    orchestrator = Orchestrator(default_model=model)
+    diag_prompt = (
+        "Você é o especialista de diagnóstico e auto-recuperação do Menor v2. "
+        "O usuário Isaac relatou uma falha ou insatisfação com a execução anterior. "
+        "Analise os dados abaixo e retorne um diagnóstico claro e um plano de conserto em JSON estrito.\n\n"
+        f"Reclamação do Isaac: {body.complaint}\n"
+        + ("\n".join(context_details) if context_details else "Nenhum log de erro recente disponível.")
+        + "\n\nResponda APENAS em JSON no formato:\n"
+        "{\"diagnosis\": \"explicação em 1 frase curta do erro\", \"proposed_fix\": \"plano de 1 frase de como consertar\"}"
+    )
+    try:
+        res = orchestrator.run_turn(
+            messages=[{"role": "user", "content": diag_prompt}],
+            enable_tools=False,
+            max_steps=1,
+        )
+        reply = res.get("reply", "")
+        match = re.search(r"\{.*\}", reply, re.DOTALL)
+        if match:
+            parsed = json.loads(match.group(0))
+            return {
+                "success": True,
+                "diagnosis": parsed.get("diagnosis", "Falha na execução ou formato da resposta anterior."),
+                "proposed_fix": parsed.get("proposed_fix", "Reexecutar a tarefa com parâmetros corrigidos e ferramentas reais.")
+            }
+    except Exception as exc:
+        logger.warning("Diagnóstico automático falhou: %s", exc)
+
+    if failed_task:
+        return {
+            "success": True,
+            "diagnosis": f"A tarefa '{failed_task.get('goal')}' falhou no Hub: {failed_task.get('result')}",
+            "proposed_fix": f"Reexecutar a tarefa '{failed_task.get('goal')}' corrigindo os parâmetros e aplicando as ferramentas necessárias."
+        }
+    return {
+        "success": True,
+        "diagnosis": "Ocorreu uma divergência ou falha na execução do último pedido.",
+        "proposed_fix": "Refazer a operação utilizando ferramentas reais do sistema com os parâmetros corretos."
+    }
 
 
 # --- ENDPOINTS DE ESTUDO & AUTO-DIAGNÓSTICO ---
