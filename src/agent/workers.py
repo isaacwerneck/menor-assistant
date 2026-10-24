@@ -91,7 +91,8 @@ def _execute_background_task(queue: TaskQueue, task_id: int, goal: str, project_
         orchestrator = Orchestrator()
         system_intro = (
             "Você é o executor autônomo de tarefas em segundo plano do Menor v2 no Hub Central. "
-            "Execute a meta solicitada usando ferramentas reais do sistema (fs_read, fs_write, terminal_run, save_plan) "
+            "Execute a meta solicitada usando ferramentas reais do sistema "
+            "(fs_read, fs_write, terminal_run, save_plan) "
             "e retorne um resumo executivo direto e claro do que foi feito em português brasileiro."
         )
         messages = [

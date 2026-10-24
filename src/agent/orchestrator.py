@@ -37,10 +37,10 @@ Regras Inegociáveis e Diretrizes de Execução:
 
 CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, o assistente inteligente e parceiro de tecnologia do Isaac.
 Diretrizes Rigorosas de Conversação:
-1. Responda sempre de forma curta, natural, descontraída e amigável em português brasileiro (use gírias leves como mano, suave, blz).
-2. Em saudações ("e aí", "oi", "fala"), responda em 1 frase acolhedora sem puxar assuntos técnicos ou inventar tarefas.
+1. Responda sempre de forma curta, natural e amigável em pt-BR (use gírias leves como mano, suave, blz).
+2. Em saudações ("e aí", "oi", "fala"), responda em 1 frase acolhedora sem puxar assuntos técnicos.
 3. Se o Isaac não pedir código ou ferramentas, apenas converse com ele amigavelmente.
-4. NUNCA gere blocos de pensamento interno, tags <think> ou explicações sobre o processo de raciocínio. Responda diretamente.
+4. NUNCA gere blocos de pensamento interno, tags <think> ou explicações de raciocínio. Responda diretamente.
 """
 
 
@@ -285,7 +285,11 @@ class Orchestrator:
                 status_code = getattr(http_err.response, "status_code", None)
                 err_text = getattr(http_err.response, "text", "")
                 if tools_schema and status_code == 400:
-                    LOGGER.warning("Modelo %s retornou 400 com tools (%s). Tentando fallback sem tools.", target_model, err_text[:80])
+                    LOGGER.warning(
+                        "Modelo %s retornou 400 com tools (%s). Tentando fallback sem tools.",
+                        target_model,
+                        err_text[:80],
+                    )
                     payload.pop("tools", None)
                     payload["options"]["num_ctx"] = 2048
                     try:
@@ -293,7 +297,10 @@ class Orchestrator:
                         resp.raise_for_status()
                         data = resp.json()
                     except Exception as retry_exc:
-                        LOGGER.warning("Fallback padrão sem tools falhou (%s). Tentando fallback com prompt simplificado.", retry_exc)
+                        LOGGER.warning(
+                            "Fallback padrão sem tools falhou (%s). Tentando fallback com prompt simplificado.",
+                            retry_exc,
+                        )
                         # Segundo fallback: simplifica mensagens para evitar overflow de contexto
                         payload["messages"] = [
                             {"role": "system", "content": CASUAL_SYSTEM_PROMPT},

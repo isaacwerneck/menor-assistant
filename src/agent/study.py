@@ -866,7 +866,7 @@ def run_autonomous_cycle(
     diag_score = (cycle_report["diagnostic"] or {}).get("score", "N/A")
     diag_gap = (cycle_report["diagnostic"] or {}).get("gap_identified") or "Nenhum"
 
-    now_human = datetime.now(timezone.utc).strftime("%d/%m/%Y às %H:%M UTC")
+    now_human = datetime.now().astimezone().strftime("%d/%m/%Y às %H:%M")
 
     # Histórico consolidado de tópicos concluídos para nunca zerar o relatório do usuário
     completed_topics = [
