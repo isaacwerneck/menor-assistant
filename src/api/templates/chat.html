@@ -840,6 +840,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 <div class="topbar-title" id="topbarTitle">Menor AI</div>
             </div>
             <div class="topbar-actions" role="group" aria-label="Ações da conversa">
+                <select id="nodeSelector" class="toggle-sidebar-btn" style="font-size: 13px; font-weight: 500; padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Escolha onde processar a inteligência">
+                    <option value="server">Servidor (Qwen 14B)</option>
+                    <option value="local">PC Local (Qwen 7B GPU)</option>
+                </select>
                 <button type="button" class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
                     aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
                 <details class="topbar-overflow">
@@ -887,6 +891,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     onchange="documentSelected(this)" hidden>
                 <textarea id="userInput" rows="1" maxlength="8000" aria-label="Mensagem para o Menor" placeholder="Mande uma mensagem para o Menor..."
                     onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+                <button type="button" class="toggle-sidebar-btn mic-btn" id="micBtn" aria-label="Gravar áudio" title="Falar por voz" onclick="toggleVoice()">🎙️</button>
                 <button type="button" class="send-btn" id="sendBtn" aria-label="Enviar mensagem"
                     title="Enviar mensagem" onclick="sendMsg()">➤</button>
                 <button type="button" class="toggle-sidebar-btn" id="cancelBtn"
@@ -1013,6 +1018,56 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         </div>
     </section>
     <script>
+        
+        // --- Menor v2: Suporte a Voz e Seletor de Cérebro ---
+        let recognition = null;
+        let isRecording = false;
+
+        function toggleVoice() {
+            const micBtn = document.getElementById('micBtn');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert('Seu navegador não suporta reconhecimento de voz nativo. Use Chrome, Edge ou Safari.');
+                return;
+            }
+
+            if (!recognition) {
+                recognition = new SpeechRecognition();
+                recognition.lang = 'pt-BR';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = function() {
+                    isRecording = true;
+                    if (micBtn) micBtn.style.color = '#ef4444';
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    const input = document.getElementById('userInput');
+                    if (input) {
+                        input.value = (input.value ? input.value + ' ' : '') + transcript;
+                        autoResize(input);
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.warn('Erro no reconhecimento de voz:', event.error);
+                };
+
+                recognition.onend = function() {
+                    isRecording = false;
+                    if (micBtn) micBtn.style.color = '';
+                };
+            }
+
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+
         // ========== STATE ==========
         let canSave = true;
         let conversations = loadConversations();

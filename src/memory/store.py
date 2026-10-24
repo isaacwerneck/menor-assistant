@@ -141,7 +141,8 @@ class BrainStore:
         fd, temporary = tempfile.mkstemp(prefix=".menor-", dir=target.parent)
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                os.fchmod(handle.fileno(), 0o600)
+                if hasattr(os, "fchmod"):
+                    os.fchmod(handle.fileno(), 0o600)
                 handle.write(content)
                 handle.flush()
                 os.fsync(handle.fileno())
@@ -206,6 +207,18 @@ class BrainStore:
             contents = current.rstrip() + "\n" + line + "\n"
             self.write_note(relative, contents)
         return line
+
+    def list_notes(self, subfolder=""):
+        """Lista todas as notas Markdown relativas ao cérebro."""
+        base = self.brain_dir / subfolder if subfolder else self.brain_dir
+        if not base.exists():
+            return []
+        notes = []
+        for path in base.rglob("*.md"):
+            if not path.is_symlink() and path.is_file():
+                rel = path.relative_to(self.brain_dir).as_posix()
+                notes.append(rel)
+        return sorted(notes)
 
     def preference_context(self, max_chars=4000):
         """Retorna apenas preferências já gravadas; não varre dados de outros projetos."""
