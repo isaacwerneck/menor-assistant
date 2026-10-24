@@ -24,9 +24,10 @@ criação de ferramentas (create_new_tool), agendamento de estudos (schedule_stu
 consulta de relatórios (get_study_report) e atualização de memória de trabalho (update_core_memory).
 
 Regras Inegociáveis e Diretrizes de Execução:
-- Se o usuário pedir para criar, fazer, programar ou salvar um site, página web, arquivo, script ou código,
-  chame IMEDIATAMENTE a ferramenta real `fs_write` com o caminho do arquivo (ex: 'index.html') e o código funcional.
-  NUNCA apenas prometa fazer ou diga que vai criar: execute a ferramenta real `fs_write` no mesmo turno.
+- Se o usuário pedir para criar, fazer, programar, desenvolver ou salvar um site, página web, arquivo, script ou código:
+  Chame OBRIGATORIAMENTE a ferramenta `fs_write` com 'filepath' (ex: 'index.html') e 'content' (o código HTML/CSS/JS completo).
+  NUNCA use web_read nem web_search para pedidos de criar ou programar sites/arquivos locais.
+  Execute `fs_write` imediatamente no primeiro turno.
 - NUNCA simule saídas de terminal, prompts de shell (ex: ```terminal $ ls ...```, ```bash```) ou finja leituras de
   arquivos em blocos de texto ou markdown. Se precisar executar comandos ou ler/escrever arquivos, use
   OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
@@ -103,12 +104,12 @@ class Orchestrator:
             notes = self.store.list_notes()
             preferences = []
             for n in notes:
-                if n.startswith("identidade/") or n.startswith("preferencias/") or n.startswith("conhecimentos/"):
+                if n.startswith("preferencias/"):
                     content = self.store.read_note(n)
                     if content:
                         preferences.append(f"[{n}]: {content.strip()}")
             if preferences:
-                sections.append("Memória permanente do usuário:\n" + "\n".join(preferences[:10]))
+                sections.append("Preferências do usuário:\n" + "\n".join(preferences[:3]))
         except Exception as exc:
             LOGGER.warning("Não foi possível carregar memória permanente: %s", exc)
 
@@ -393,13 +394,21 @@ class Orchestrator:
             except Exception:
                 pass
 
-        chat_history = [{"role": "system", "content": full_system}]
+        system_content = full_system
+        non_system = []
+        for m in messages:
+            if m.get("role") == "system":
+                system_content += f"\n\n{m.get('content', '')}"
+            else:
+                non_system.append(m)
+
+        chat_history = [{"role": "system", "content": system_content}]
         if not should_use_tools:
             # Em modo casual, limita aos últimos 3 turnos para não sobrecarregar a CPU com mensagens passadas
-            for m in messages[-3:]:
+            for m in non_system[-3:]:
                 chat_history.append({"role": m["role"], "content": m["content"]})
         else:
-            for m in messages:
+            for m in non_system:
                 chat_history.append({"role": m["role"], "content": m["content"]})
 
         steps_taken = 0
@@ -416,7 +425,7 @@ class Orchestrator:
                     "repeat_penalty": 1.1,
                     "num_predict": 1024 if not should_use_tools else 1536,
                     "num_thread": get_optimal_threads(),
-                    "num_ctx": 4096,
+                    "num_ctx": 4096 if not should_use_tools else 8192,
                     "stop": ["\nThinking Process:", "Thinking Process:", "Okay, let's", "Let's tackle"],
                 },
                 "keep_alive": "60m",
