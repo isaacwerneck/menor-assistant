@@ -184,6 +184,23 @@ def web_search(query: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Falha na busca web: {str(exc)}"}
 
 
+def grounded_search(query: str, store: Optional[BrainStore] = None) -> Dict[str, Any]:
+    """Pesquisa fatos e incidentes recentes na web com reformulação de query, passagens e citações."""
+    try:
+        from src.tools.search_router import GroundedSearchEngine
+        engine = GroundedSearchEngine(store=store)
+        res = engine.search_and_ground(query)
+        return {
+            "success": res.get("success", False),
+            "query": res.get("primary_query", query),
+            "citations": res.get("citations", []),
+            "environment_risk": res.get("environment_risk", ""),
+            "summary": res.get("grounded_context", ""),
+        }
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
 def web_read(url: str, query: Optional[str] = None) -> Dict[str, Any]:
     """Lê o conteúdo em texto limpo de uma página web pública (URL)."""
     try:
@@ -435,6 +452,25 @@ CORE_TOOLS_SCHEMA = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "grounded_search",
+            "description": (
+                "Pesquisa na web por notícias, vulnerabilidades, CVEs e documentações recentes com citações."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Assunto, nome de biblioteca, tecnologia ou incidente a pesquisar.",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    },
 ]
 
 TOOL_DISPATCHER = {
@@ -447,4 +483,5 @@ TOOL_DISPATCHER = {
     "web_read": web_read,
     "create_new_tool": create_new_tool,
     "update_core_memory": update_core_memory,
+    "grounded_search": grounded_search,
 }

@@ -85,6 +85,14 @@ class Orchestrator:
             if m.get("role") == "user":
                 last_user = str(m.get("content", "")).lower()
                 break
+
+        try:
+            from src.tools.search_router import classify_intent
+            if classify_intent(last_user) in ("WEB_GROUNDING", "LOCAL_ACTION"):
+                return True
+        except Exception:
+            pass
+
         triggers = (
             "arquivo", "file", "ler", "leia", "le ", "lê", "escrev", "salv", "list", "pasta", "dir",
             "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
@@ -109,6 +117,25 @@ class Orchestrator:
         context_mem = self._get_context_summary()
         full_system = SYSTEM_PROMPT + (f"\n{context_mem}" if context_mem else "")
 
+        executed_tools_log = []
+        last_user = ""
+        for m in reversed(messages):
+            if m.get("role") == "user":
+                last_user = str(m.get("content", ""))
+                break
+
+        # Grounding factual em tempo real (CRAG + Perplexity Pattern)
+        try:
+            from src.tools.search_router import classify_intent, GroundedSearchEngine
+            if classify_intent(last_user) == "WEB_GROUNDING":
+                engine = GroundedSearchEngine(self.store)
+                grounded_data = engine.search_and_ground(last_user)
+                if grounded_data.get("grounded_context"):
+                    full_system += f"\n\n{grounded_data['grounded_context']}"
+                    executed_tools_log.append("grounded_search")
+        except Exception as exc:
+            LOGGER.warning("Grounding em tempo real indisponível: %s", exc)
+
         chat_history = [{"role": "system", "content": full_system}]
         for m in messages:
             chat_history.append({"role": m["role"], "content": m["content"]})
@@ -116,7 +143,6 @@ class Orchestrator:
         should_use_tools = enable_tools and self._needs_tools(messages)
         tools_schema = CORE_TOOLS_SCHEMA if should_use_tools else None
         steps_taken = 0
-        executed_tools_log = []
 
         while steps_taken < max_steps:
             steps_taken += 1
