@@ -90,7 +90,10 @@ def _fallback_casual_reply(user_msg: str) -> str:
     """Gera resposta conversacional calorosa em pt-BR quando o modelo foi interrompido no scratchpad."""
     norm_user = (user_msg or "").lower()
     if any(w in norm_user for w in ("site", "fazer um site", "criar um site", "landing page", "web")):
-        return "Com certeza, mano! Consigo sim. Me conta o que você tem em mente para o site (tema, páginas e funcionalidades) que a gente já começa a estruturar agora."
+        return (
+            "Com certeza, mano! Consigo sim. Me conta o que você tem em mente para o site "
+            "(tema, páginas e funcionalidades) que a gente já começa a estruturar agora."
+        )
     if any(w in norm_user for w in ("tudo bem", "td bem", "como vai", "suave", "tranquilo")):
         return "Tudo suave por aqui, mano! E com você, como estão as coisas?"
     if any(w in norm_user for w in ("eai", "e ai", "opa", "salve", "fala", "oi", "olá", "ola")):

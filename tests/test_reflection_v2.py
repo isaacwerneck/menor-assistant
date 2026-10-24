@@ -92,7 +92,7 @@ class TestReflectionWorker(unittest.TestCase):
     @patch("requests.post", side_effect=Exception("Connection refused"))
     def test_reflect_fallback_when_offline(self, mock_post):
         # Quando Ollama estiver offline ou der timeout, deve acionar fallback heurístico
-        task_id = self.queue.enqueue("Refatorar endpoint SSE", "api")
+        task_id = self.queue.enqueue("Refatorar endpoint SSE", "api", auto_start=False)
         self.queue.update_status(task_id, "completed", result="Reduziu latência em 400ms")
 
         res = self.worker.reflect()
