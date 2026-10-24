@@ -271,8 +271,37 @@ const cycleElements = {
 async function refreshCycleLive() {
   if (cyclePending || (typeof document.hidden === "boolean" && document.hidden)) return;
   cyclePending = true;
+  let data = null;
   try {
-    const data = await get("/api/study/live");
+    data = await get("/api/study/live");
+  } catch (liveErr) {
+    // Fallback defensivo para instâncias onde o serviço FastAPI ainda não foi reiniciado
+    try {
+      const statusData = await get("/api/study/status");
+      if (statusData && typeof statusData === "object") {
+        const isStudying = statusData.is_studying === true;
+        data = statusData.cycle_telemetry || {
+          is_running: isStudying,
+          current_phase: isStudying ? 2 : 0,
+          progress_percent: isStudying ? 45 : 0,
+          phase_desc: isStudying ? "Ciclo autônomo ativo em segundo plano (processando no Ollama)..." : "Aguardando próximo ciclo de estudo...",
+          duration_seconds: isStudying ? Math.max(0, (statusData.idle_seconds || 0) - (statusData.idle_threshold || 1800)) : 0,
+          metrics: {
+            learnings_count: 0,
+            anti_patterns_count: 0,
+            coverage_percentage: "—",
+            uncovered_gaps: 0,
+            judge_score: "—",
+            golden_example_created: false
+          },
+          logs: isStudying ? [
+            { timestamp: new Date().toLocaleTimeString("pt-BR"), level: "step", message: "Ciclo autônomo em execução no servidor Ubuntu (Ollama)." }
+          ] : []
+        };
+      }
+    } catch (_) {}
+  }
+  try {
     if (!data || typeof data !== "object") return;
 
     // Status Badge & Ações

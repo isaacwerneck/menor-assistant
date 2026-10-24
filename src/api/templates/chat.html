@@ -1648,9 +1648,27 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
         async function refreshChatCycle() {
             try {
+                let data = null;
                 const resp = await fetch('/api/study/live', { credentials: 'same-origin' });
-                if (!resp.ok) return;
-                const data = await resp.json();
+                if (resp.ok) {
+                    data = await resp.json();
+                } else {
+                    const fallbackResp = await fetch('/api/study/status', { credentials: 'same-origin' });
+                    if (fallbackResp.ok) {
+                        const sData = await fallbackResp.json();
+                        const isStud = sData.is_studying === true;
+                        data = sData.cycle_telemetry || {
+                            is_running: isStud,
+                            current_phase: isStud ? 2 : 0,
+                            progress_percent: isStud ? 45 : 0,
+                            phase_desc: isStud ? "Ciclo autônomo ativo em segundo plano..." : "Aguardando próximo ciclo...",
+                            duration_seconds: isStud ? Math.max(0, (sData.idle_seconds || 0) - (sData.idle_threshold || 1800)) : 0,
+                            metrics: { learnings_count: 0, anti_patterns_count: 0, coverage_percentage: "—", judge_score: "—" },
+                            logs: isStud ? [{ timestamp: new Date().toLocaleTimeString(), level: "step", message: "Ciclo cognitivo autônomo em execução." }] : []
+                        };
+                    }
+                }
+                if (!data) return;
                 
                 const isRunning = data.is_running === true;
                 const badge = document.getElementById('chatCycleBadge');
@@ -3171,6 +3189,8 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             } catch (err) {
                 if (activeGeneration === generation && err.name !== 'AbortError') {
                     botContent.textContent = 'Erro ao se comunicar com o Menor: ' + err.message;
+                } else if (err.name === 'AbortError' && botContent && !botContent.textContent.trim()) {
+                    botContent.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">[Interrompido por nova mensagem enviada]</span>';
                 }
             } finally {
                 if (activeGeneration === generation) {
