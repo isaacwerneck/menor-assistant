@@ -14,8 +14,8 @@ from src.memory.store import BrainStore
 
 LOGGER = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Você é o Menor v2, um assistente executivo e arquiteto de software de alto nível.
-Você é direto, técnico, proativo, inteligente e parceiro próximo do Isaac.
+SYSTEM_PROMPT = """Você é o Menor v2, parceiro de tecnologia e arquiteto de software de alto nível do Isaac.
+Você é direto, técnico, proativo, inteligente e parceiro de engenharia.
 Você tem acesso a ferramentas reais no computador: leitura e escrita de arquivos, listagem de pastas,
 execução de comandos no terminal, pesquisa web (web_search, web_read, grounded_search), criação de ferramentas
 (create_new_tool), agendamento de estudos (schedule_study_topic), consulta de relatórios (get_study_report)
@@ -27,28 +27,23 @@ Regras Inegociáveis e Diretrizes de Execução:
   OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
   diretamente sem inventar arquivos ou saídas fictícias.
 - NUNCA invente pastas ou caminhos inexistentes (como ~/estudos/ ou /ancora_de_estudos/).
-- Sua Âncora de Estudos oficial está no bloco [STUDY_ANCHORS] da Core Memory residente logo acima. Para informar
-  sobre a âncora de estudos, consulte diretamente o bloco [STUDY_ANCHORS] presente no contexto.
-- Para editar, adicionar tópicos ou modificar a Âncora de Estudos, use a ferramenta:
-  update_core_memory(block_key='study_anchors', content=...).
-- Para agendar tópicos de estudo para períodos de inatividade ou noturnos, use a ferramenta:
-  schedule_study_topic(topic=..., category=...).
-- Para consultar o que foi estudado ou o último briefing de aprendizado, use a ferramenta get_study_report().
-- Compreenda perfeitamente o português brasileiro informal, abreviações de internet (vc, hj, blz, eai, pra, oq)
-  e gírias cotidianas.
-- Em saudações e conversas informais (ex: 'e aí', 'tudo bem com vc?'), seja natural, caloroso e descontraído.
-  NUNCA force nem fique puxando assunto sobre projetos ou trabalho a menos que o Isaac peça ou traga o tema.
-- Quando o Isaac expressar preferências pessoais, rotinas, hábitos ou correções de estilo, use a ferramenta:
-  update_core_memory(block_key='user_profile', content=..., mode='append') para registrar e nunca esquecer.
-- Para criar, inspecionar, consertar ou testar código, use as ferramentas reais (fs_read, fs_write, terminal_run).
-- Ao discutir uma ideia de projeto, estruture um plano de engenharia acionável com save_plan.
-- Responda sempre em português brasileiro fluente, sem rodeios ou formalidades vazias.
+- Sua Âncora de Estudos oficial está no bloco [STUDY_ANCHORS] da Core Memory residente logo acima.
+- NUNCA faça propaganda não solicitada de ferramentas ou projetos no meio de conversas comuns.
+  Responda estritamente ao que foi perguntado.
+- NUNCA invente reuniões, compromissos ou presuma a rotina pessoal do Isaac.
+- Responda sempre em português brasileiro fluente, natural e direto, sem rodeios ou formalidades vazias.
 """
 
-CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, assistente executivo e parceiro pessoal do Isaac.
-Compreenda perfeitamente gírias e abreviações da internet brasileira (vc, hj, eai, blz, oq, pra).
-Responda sempre de forma natural, calorosa, fluente e direta em português brasileiro.
-Em conversas casuais e cumprimentos, seja descontraído, amigável e parceiro, sem rodeios ou formalidades vazias.
+CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, o parceiro inteligente de software e tecnologia do Isaac.
+Diretrizes Rigorosas de Conversação (Estilo ChatGPT / Colega de Equipe):
+1. Espelhamento de Energia: Em cumprimentos ("oi", "e aí"), frases curtas ou vagas, responda
+   de forma CURTA e NATURAL (máximo 1 a 2 frases amigáveis).
+2. Proibição de Auto-Propaganda: NUNCA recite listas de projetos nem ofereça ferramentas sem o Isaac pedir.
+   Seja receptivo: apenas pergunte no que ele está pensando.
+3. Zero Suposição de Rotina: NUNCA presuma nem invente reuniões, compromissos, tarefas, cansaço ou horários fictícios.
+4. Linguagem Humana e Direta: Fale em português brasileiro fluente, descontraído e parceiro (use gírias como mano,
+   cara, blz, suave com naturalidade). Evite excesso de emojis e nunca use emojis de robô ou ferramentas.
+5. Se o Isaac não trouxer um assunto técnico, NUNCA puxe assunto sobre código ou trabalho.
 """
 
 
@@ -69,8 +64,22 @@ class Orchestrator:
         self.default_model = default_model or os.environ.get("OLLAMA_MODEL", "qwen2.5:14b")
         self.store = store or BrainStore()
 
-    def _get_context_summary(self) -> str:
-        """Coleta Core Memory residente e memórias permanentes do cérebro."""
+    def _get_context_summary(self, casual: bool = False) -> str:
+        """Coleta Core Memory residente e memórias permanentes do cérebro.
+
+        No modo casual, apenas o perfil essencial do usuário é retornado para acelerar
+        a inferência em CPUs locais sem sobrecarga de tokens.
+        """
+        if casual:
+            try:
+                from src.memory.core_memory import CoreMemoryManager
+                user_prof = CoreMemoryManager(self.store).get_block("user_profile")
+                if user_prof:
+                    return f"Perfil do Usuário:\n{user_prof.strip()}"
+            except Exception:
+                pass
+            return ""
+
         sections = []
         try:
             from src.memory.core_memory import CoreMemoryManager
@@ -124,6 +133,23 @@ class Orchestrator:
         except Exception:
             pass
 
+        # Expressões coloquiais e saudações comuns nunca devem ativar tools
+        casual_bypass = (
+            "oi", "ola", "olá", "eai", "e aí", "e ai", "fala tu", "opa", "salve",
+            "tudo bem", "como vai", "blz", "beleza", "suave", "tranquilo",
+            "to querendo uma parada", "tô querendo uma parada", "querendo uma parada",
+            "quero ver um negocio", "quero ver um negócio", "preciso de uma parada",
+        )
+        norm_clean = last_user.strip(" !?.,;:")
+        greetings = ("oi ", "ola ", "olá ", "eai ", "e aí ", "opa ")
+        if norm_clean in casual_bypass or any(norm_clean.startswith(c) for c in greetings):
+            action_words = (
+                "leia", "ler", "escreva", "escreve", "crie", "criar",
+                "rode", "rodar", "terminal", "pytest", "git", "salve"
+            )
+            if not any(w in norm_clean for w in action_words):
+                return False
+
         # Consultas de relatório de estudo já têm o briefing injetado diretamente no system prompt
         study_report_triggers = (
             "estudou", "o que você estudou", "o que vc estudou", "oq vc estudou",
@@ -162,8 +188,16 @@ class Orchestrator:
         target_url = (ollama_url or self.ollama_url).rstrip("/")
         target_model = model or self.default_model
 
-        context_mem = self._get_context_summary()
-        full_system = SYSTEM_PROMPT + (f"\n{context_mem}" if context_mem else "")
+        should_use_tools = enable_tools and self._needs_tools(messages)
+        tools_schema = CORE_TOOLS_SCHEMA if should_use_tools else None
+
+        if not should_use_tools:
+            # Modo ultrarrápido para conversas casuais na CPU (< 80 tokens de prompt)
+            context_mem = self._get_context_summary(casual=True)
+            full_system = CASUAL_SYSTEM_PROMPT + (f"\n{context_mem}" if context_mem else "")
+        else:
+            context_mem = self._get_context_summary(casual=False)
+            full_system = SYSTEM_PROMPT + (f"\n{context_mem}" if context_mem else "")
 
         executed_tools_log = []
         last_user = ""
@@ -213,11 +247,14 @@ class Orchestrator:
                 pass
 
         chat_history = [{"role": "system", "content": full_system}]
-        for m in messages:
-            chat_history.append({"role": m["role"], "content": m["content"]})
+        if not should_use_tools:
+            # Em modo casual, limita aos últimos 3 turnos para não sobrecarregar a CPU com mensagens passadas
+            for m in messages[-3:]:
+                chat_history.append({"role": m["role"], "content": m["content"]})
+        else:
+            for m in messages:
+                chat_history.append({"role": m["role"], "content": m["content"]})
 
-        should_use_tools = enable_tools and self._needs_tools(messages)
-        tools_schema = CORE_TOOLS_SCHEMA if should_use_tools else None
         steps_taken = 0
 
         while steps_taken < max_steps:
@@ -231,7 +268,7 @@ class Orchestrator:
                     "top_p": 0.9,
                     "repeat_penalty": 1.1,
                     "num_thread": get_optimal_threads(),
-                    "num_ctx": 4096,
+                    "num_ctx": 1024 if not should_use_tools else 4096,
                 },
                 "keep_alive": "60m",
             }

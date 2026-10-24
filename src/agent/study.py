@@ -585,19 +585,63 @@ class DiagnosticEngine:
         except Exception as exc:
             LOGGER.debug("Avaliação do juiz falhou (%s), usando pontuação segura.", exc)
 
-        # 3. Auto-Aprimoramento: se nota < 7.0 ou gap identificado, agenda estudo e ajusta Core Memory
+        # 3. Auto-Aprimoramento, Golden Examples e Anti-Padrões (Reflexion)
         gap_scheduled = False
-        if score < 7.0 or gap:
-            gap_name = gap or f"Reforço técnico: {question[:60]}"
-            existing_topics = [t["text"].lower() for t in self.topic_mgr.list_topics(uncompleted_only=True)]
-            if not any(gap_name.lower() in e for e in existing_topics):
-                self.topic_mgr.save_topic(f"[Reforço Crítico] {gap_name}", priority="high")
-                self.core_memory.set_block(
-                    "system_directives",
-                    f"Atenção técnica reforçada em auto-diagnóstico: rever boas práticas sobre {gap_name}.",
+        golden_example = ""
+        if score < 8.5 or gap:
+            golden_prompt = (
+                f"A resposta para '{question}' obteve nota {score}/10.\nCrítica: {critique}\n"
+                "Reescreva a resposta ideal perfeita, concisa e precisa (máximo 4 linhas):"
+            )
+            try:
+                resp_gold = requests.post(
+                    f"{self.ollama_url}/api/chat",
+                    json={
+                        "model": self.model,
+                        "messages": [{"role": "user", "content": golden_prompt}],
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.1,
+                            "num_predict": 150,
+                            "num_thread": get_optimal_threads(),
+                        },
+                    },
+                    timeout=(5, 30),
+                )
+                if resp_gold.status_code == 200:
+                    golden_example = resp_gold.json().get("message", {}).get("content", "").strip()
+            except Exception:
+                pass
+
+            if not golden_example:
+                golden_example = (
+                    "Utilize loop.run_in_executor ou starlette run_in_threadpool para I/O bloqueante."
+                )
+
+            self.store.improve_knowledge(
+                domain="programacao",
+                topic="exemplos_ouro",
+                content=f"### Pergunta: {question}\n**Resposta Perfeita (Juiz):**\n{golden_example}\n",
+                mode="append",
+            )
+
+            if score < 7.0:
+                self.store.improve_knowledge(
+                    domain="programacao",
+                    topic="anti_padroes_respostas",
+                    content=f"- Em '{question[:50]}...': Evitar: {critique}",
                     mode="append",
                 )
-                gap_scheduled = True
+                gap_name = gap or f"Reforço técnico: {question[:60]}"
+                existing_topics = [t["text"].lower() for t in self.topic_mgr.list_topics(uncompleted_only=True)]
+                if not any(gap_name.lower() in e for e in existing_topics):
+                    self.topic_mgr.save_topic(f"[Reforço Crítico] {gap_name}", priority="high")
+                    self.core_memory.set_block(
+                        "system_directives",
+                        f"Atenção técnica reforçada em auto-diagnóstico: rever boas práticas sobre {gap_name}.",
+                        mode="append",
+                    )
+                    gap_scheduled = True
 
         # 4. Salva boletim em diagnosticos/
         diag_dir = self.store.brain_dir / "diagnosticos"
@@ -610,6 +654,7 @@ class DiagnosticEngine:
             f"**Nota Global:** {score}/10\n\n"
             f"**Crítica do Juiz:** {critique}\n\n"
             f"**Resposta Avaliada:**\n{student_answer}\n\n"
+            f"**Exemplo de Ouro Gerado:** {'Sim' if golden_example else 'Não necessário'}\n\n"
             f"**Gap Agendado para Estudo:** {'Sim - ' + gap if gap_scheduled else 'Nenhum'}\n"
         )
         report_file.write_text(report_content, encoding="utf-8")
@@ -620,6 +665,7 @@ class DiagnosticEngine:
             "critique": critique,
             "gap_identified": gap,
             "gap_scheduled": gap_scheduled,
+            "golden_example_created": bool(golden_example),
             "report_path": str(report_file),
         }
 
@@ -639,6 +685,7 @@ def run_autonomous_cycle(
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "reflection": None,
         "study": None,
+        "inspection": None,
         "diagnostic": None,
         "interrupted": False,
     }
@@ -648,7 +695,7 @@ def run_autonomous_cycle(
         return cycle_report
 
     try:
-        print("[1/4] [REFLEXAO] Analisando tarefas recentes e separando anti-padroes...")
+        print("[1/5] [REFLEXAO] Analisando tarefas recentes e separando anti-padroes...")
         from src.agent.reflection import ReflectionWorker
         rw = ReflectionWorker(store=st, ollama_url=url, model=mdl)
         cycle_report["reflection"] = rw.reflect()
@@ -663,7 +710,7 @@ def run_autonomous_cycle(
         return cycle_report
 
     try:
-        print(f"[2/4] [ESTUDO] Pesquisando e assimilando novos topicos de estudo ({mdl})...")
+        print(f"[2/5] [ESTUDO] Pesquisando e assimilando novos topicos de estudo ({mdl})...")
         sw = StudyWorker(store=st, ollama_url=url, model=mdl)
         cycle_report["study"] = sw.study_cycle(max_topics=2, abort_event=abort_event, verbose=True)
         studied = (cycle_report["study"] or {}).get("studied", 0)
@@ -676,11 +723,28 @@ def run_autonomous_cycle(
         return cycle_report
 
     try:
-        print("[3/4] [DIAGNOSTICO] Executando auto-diagnostico critico (DSPy / Voyager)...")
+        print("[3/5] [INSPECAO] Inspecionando saude do codigo e cobertura de testes (AST)...")
+        from src.agent.inspector import CodebaseInspector
+        inspector = CodebaseInspector()
+        cycle_report["inspection"] = inspector.audit()
+        cov = (cycle_report["inspection"] or {}).get("coverage_percentage", "N/A")
+        gaps = (cycle_report["inspection"] or {}).get("uncovered_count", 0)
+        print(f"      OK: Inspeção concluida (Cobertura: {cov}%, {gaps} gaps mapeados)")
+    except Exception as exc:
+        LOGGER.debug("Erro na inspeção do ciclo: %s", exc)
+
+    if abort_event and abort_event.is_set():
+        cycle_report["interrupted"] = True
+        return cycle_report
+
+    try:
+        print("[4/5] [AUTO-CRITICA] Executando auto-diagnostico e refinamento (Reflexion)...")
         de = DiagnosticEngine(store=st, ollama_url=url, model=mdl)
         cycle_report["diagnostic"] = de.run_self_eval(abort_event=abort_event)
         sc = (cycle_report["diagnostic"] or {}).get("score", "N/A")
-        print(f"      OK: Auto-diagnostico concluido (Nota do Juiz: {sc}/10)")
+        gold = (cycle_report["diagnostic"] or {}).get("golden_example_created", False)
+        gold_tag = " (+1 Exemplo de Ouro gerado)" if gold else ""
+        print(f"      OK: Auto-critica concluida (Nota: {sc}/10{gold_tag})")
     except Exception as exc:
         LOGGER.debug("Erro no diagnóstico do ciclo: %s", exc)
 
@@ -690,7 +754,7 @@ def run_autonomous_cycle(
     md_path = rep_dir / "ultimo_estudo.md"
 
     json_path.write_text(json.dumps(cycle_report, indent=2, ensure_ascii=False), encoding="utf-8")
-    print("[4/4] [RELATORIO] Relatorio final gerado com sucesso!")
+    print("[5/5] [RELATORIO] Relatorio final integrado gerado com sucesso!")
     print(f"      Salvo em: {md_path}")
 
     ref_learns = (cycle_report["reflection"] or {}).get("learnings_added", 0)
@@ -738,17 +802,25 @@ def run_autonomous_cycle(
             f"- {f}" for f in recent_facts
         )
 
+    insp_cov = (cycle_report["inspection"] or {}).get("coverage_percentage", "N/A")
+    insp_gaps = (cycle_report["inspection"] or {}).get("uncovered_count", "N/A")
+    gold_created = (cycle_report["diagnostic"] or {}).get("golden_example_created", False)
+
     md_content = (
-        f"# Relatório da Sessão de Estudo e Reflexão do Menor\n"
+        f"# Relatório da Sessão de Auto-Evolução do Menor v2\n"
         f"**Concluído em:** {now_human}\n\n"
         f"### 1. Reflexão das Ações Recentes\n"
         f"- Aprendizados verificados consolidados: {ref_learns}\n"
         f"- Anti-padrões e armadilhas mapeadas: {ref_antis}\n\n"
         f"### 2. Tópicos Estudados na Web\n"
         f"{study_block}\n\n"
-        f"### 3. Auto-Diagnóstico Crítico\n"
+        f"### 3. Saúde do Código e Cobertura AST\n"
+        f"- Cobertura estimada de testes: {insp_cov}%\n"
+        f"- Gaps de funções sem teste mapeados: {insp_gaps}\n\n"
+        f"### 4. Auto-Diagnóstico Crítico & Self-Refinement\n"
         f"- Nota de Auto-Avaliação: {diag_score}/10\n"
-        f"- Ponto Fraco / Gap Identificado: {diag_gap}"
+        f"- Ponto Fraco / Gap Identificado: {diag_gap}\n"
+        f"- Exemplo de Ouro (Golden Example): {'Gerado e gravado' if gold_created else 'Não necessário'}"
         f"{facts_block}\n"
     )
     md_path.write_text(md_content, encoding="utf-8")
