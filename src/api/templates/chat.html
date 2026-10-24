@@ -1361,10 +1361,15 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
             rec.onerror = function(event) {
                 console.warn('Reconhecimento de voz:', event.error);
+                if (event.error === 'no-speech') return;
+                handsFreeVoiceEnabled = false;
+                updateVoiceUI();
                 if (event.error === 'not-allowed') {
-                    handsFreeVoiceEnabled = false;
-                    updateVoiceUI();
-                    alert('Acesso ao microfone foi negado pelo navegador. Conceda a permissão para usar o modo de voz.');
+                    alert('Acesso ao microfone negado. Conceda a permissão no cadeado da barra de endereço do navegador.');
+                } else if (event.error === 'network' || event.error === 'service-not-allowed') {
+                    alert('O navegador bloqueou o microfone nesta URL (HTTP não seguro na rede local).\n\nPara liberar no Chrome/Edge:\n1. Acesse: chrome://flags/#unsafely-treat-insecure-origin-as-secure\n2. Adicione: ' + window.location.origin + '\n3. Mude para Enabled e clique em Relaunch.');
+                } else {
+                    alert('Erro no microfone (' + event.error + '). Verifique se o microfone está conectado e permitido.');
                 }
             };
 
