@@ -280,7 +280,7 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
 
     def sse_generator():
         try:
-            with requests.post(f"{target_url}/api/chat", json=payload, stream=True, timeout=(5, 120)) as resp:
+            with requests.post(f"{target_url}/api/chat", json=payload, stream=True, timeout=(15, 600)) as resp:
                 resp.raise_for_status()
                 for line in resp.iter_lines():
                     if not line:

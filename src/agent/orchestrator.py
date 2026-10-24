@@ -42,7 +42,16 @@ class Orchestrator:
         self.store = store or BrainStore()
 
     def _get_context_summary(self) -> str:
-        """Coleta memórias estáveis e preferências do usuário do cérebro SQLite."""
+        """Coleta Core Memory residente e memórias permanentes do cérebro."""
+        sections = []
+        try:
+            from src.memory.core_memory import CoreMemoryManager
+            core_ctx = CoreMemoryManager(self.store).format_system_context()
+            if core_ctx:
+                sections.append(core_ctx)
+        except Exception as exc:
+            LOGGER.warning("Não foi possível carregar Core Memory: %s", exc)
+
         try:
             self.store.initialize()
             notes = self.store.list_notes()
@@ -53,10 +62,11 @@ class Orchestrator:
                     if content:
                         preferences.append(f"[{n}]: {content.strip()}")
             if preferences:
-                return "\nMemória permanente do usuário:\n" + "\n".join(preferences[:10])
+                sections.append("Memória permanente do usuário:\n" + "\n".join(preferences[:10]))
         except Exception as exc:
             LOGGER.warning("Não foi possível carregar memória permanente: %s", exc)
-        return ""
+
+        return "\n\n".join(sections)
 
     @staticmethod
     def _needs_tools(messages: List[Dict[str, Any]]) -> bool:
@@ -74,7 +84,8 @@ class Orchestrator:
             "arquivo", "file", "ler", "leia", "le ", "lê", "escrev", "salv", "list", "pasta", "dir",
             "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
             "plano", "projet", "pesquis", "busc", "web", "site", "url", "http", "ferramenta", "tool",
-            "código", "codigo", "python", "script", "consert", "bug", "corrig", "cri"
+            "código", "codigo", "python", "script", "consert", "bug", "corrig", "cri",
+            "lembr", "memor", "perfil", "preferencia"
         )
         return any(t in last_user for t in triggers)
 
@@ -115,7 +126,7 @@ class Orchestrator:
                 payload["tools"] = tools_schema
 
             try:
-                resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(5, 120))
+                resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
                 resp.raise_for_status()
                 data = resp.json()
             except Exception as exc:

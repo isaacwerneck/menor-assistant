@@ -147,6 +147,28 @@ def save_plan(project_slug: str, markdown_content: str, store: Optional[BrainSto
         return {"success": False, "error": str(exc)}
 
 
+def update_core_memory(
+    block_key: str,
+    content: str,
+    mode: str = "replace",
+    store: Optional[BrainStore] = None,
+) -> Dict[str, Any]:
+    """Atualiza ou anexa informações em um bloco da Core Memory (user_profile, active_projects, etc.)."""
+    try:
+        from src.memory.core_memory import CoreMemoryManager
+        mgr = CoreMemoryManager(store=store)
+        mgr.set_block(block_key, content, mode=mode)
+        return {
+            "success": True,
+            "block_key": block_key,
+            "mode": mode,
+            "content": content,
+            "message": f"Bloco '{block_key}' da Core Memory atualizado com sucesso.",
+        }
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
 def web_search(query: str) -> Dict[str, Any]:
     """Pesquisa na web por termos públicos e retorna os resultados mais relevantes com URLs e títulos."""
     try:
@@ -387,6 +409,32 @@ CORE_TOOLS_SCHEMA = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_core_memory",
+            "description": "Atualiza ou anexa dados na Core Memory residente (blocos: user_profile, active_projects).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "block_key": {
+                        "type": "string",
+                        "description": "Chave do bloco (ex: 'user_profile', 'active_projects').",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Conteúdo a ser salvo no bloco de memória de trabalho.",
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["replace", "append"],
+                        "description": "'replace' para sobrescrever ou 'append' para adicionar mantendo o anterior.",
+                    },
+                },
+                "required": ["block_key", "content"],
+            },
+        },
+    },
 ]
 
 TOOL_DISPATCHER = {
@@ -398,4 +446,5 @@ TOOL_DISPATCHER = {
     "web_search": web_search,
     "web_read": web_read,
     "create_new_tool": create_new_tool,
+    "update_core_memory": update_core_memory,
 }
