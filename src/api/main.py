@@ -270,12 +270,24 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
     payload = {
         "model": target_model,
         "messages": [
-            {"role": "system", "content": "Você é o Menor v2, assistente pessoal direto e inteligente em pt-BR."},
+            {
+                "role": "system",
+                "content": (
+                    "Você é o Menor v2, assistente executivo e parceiro de engenharia do Isaac. "
+                    "Compreenda perfeitamente gírias e abreviações da internet brasileira (vc, hj, eai, blz). "
+                    "Responda sempre de forma natural, calorosa e fluente em português brasileiro."
+                ),
+            },
             *[item.model_dump() for item in req.history],
             {"role": "user", "content": req.message},
         ],
         "stream": True,
         "keep_alive": KEEP_ALIVE,
+        "options": {
+            "temperature": 0.6,
+            "top_p": 0.9,
+            "repeat_penalty": 1.1,
+        },
     }
 
     def sse_generator():
