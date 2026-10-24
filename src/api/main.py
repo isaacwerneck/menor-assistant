@@ -108,6 +108,12 @@ async def _idle_study_monitor():
                     _study_running_lock.release()
 
 
+def get_optimal_threads() -> int:
+    """Calcula threads físicas ideais para evitar colisão de HyperThreading no Ollama."""
+    count = os.cpu_count() or 4
+    return max(2, count // 2 if count >= 4 else count)
+
+
 def get_active_model(preferred: Optional[str] = None) -> str:
     """Detecta o modelo disponível no Ollama do servidor, com fallback seguro para qwen2.5:7b."""
     if preferred:
@@ -408,11 +414,13 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
             {"role": "user", "content": req.message},
         ],
         "stream": True,
-        "keep_alive": KEEP_ALIVE,
+        "keep_alive": "60m",
         "options": {
             "temperature": 0.6,
             "top_p": 0.9,
             "repeat_penalty": 1.1,
+            "num_thread": get_optimal_threads(),
+            "num_ctx": 4096,
         },
     }
 

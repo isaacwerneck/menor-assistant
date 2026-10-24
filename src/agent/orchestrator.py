@@ -46,6 +46,12 @@ Regras Inegociáveis e Diretrizes de Execução:
 """
 
 
+def get_optimal_threads() -> int:
+    """Calcula threads físicas ideais para evitar colisão de HyperThreading no llama.cpp."""
+    count = os.cpu_count() or 4
+    return max(2, count // 2 if count >= 4 else count)
+
+
 class Orchestrator:
     def __init__(
         self,
@@ -111,9 +117,8 @@ class Orchestrator:
             "código", "codigo", "python", "script", "consert", "bug", "corrig", "cri",
             "lembr", "memor", "perfil", "preferencia", "não precisa", "nao precisa",
             "não fique", "nao fique", "prefiro",
-            "estud", "reflet", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia",
-            "noticia", "relat", "fez enquanto", "estudou", "âncora", "ancora", "core memory",
-            "core_memory", "agendar",
+            "estude ", "estudar", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia",
+            "noticia", "relat", "fez enquanto", "estudou", "agendar", "agende", "adicione",
         )
         return any(t in last_user for t in triggers)
 
@@ -169,8 +174,10 @@ class Orchestrator:
                     "temperature": 0.6,
                     "top_p": 0.9,
                     "repeat_penalty": 1.1,
+                    "num_thread": get_optimal_threads(),
+                    "num_ctx": 4096,
                 },
-                "keep_alive": -1,
+                "keep_alive": "60m",
             }
             if tools_schema:
                 payload["tools"] = tools_schema
