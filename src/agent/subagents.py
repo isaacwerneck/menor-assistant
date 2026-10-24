@@ -59,7 +59,8 @@ class SpecializedSubagent:
         self.domain = str(domain).lower().strip().replace("-", "_")
         self.store = store or BrainStore()
         self.ollama_url = (ollama_url or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")).rstrip("/")
-        self.model = model or os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
+        from src.agent.study import get_optimal_model
+        self.model = model or os.environ.get("OLLAMA_MODEL") or get_optimal_model(self.ollama_url)
 
     def get_system_prompt(self) -> str:
         """Gera o prompt de sistema do subagente incorporando suas notas de estilo."""
@@ -93,6 +94,17 @@ class SpecializedSubagent:
                 json=payload,
                 timeout=(5, 60),
             )
+            if resp.status_code == 404:
+                from src.agent.study import get_optimal_model
+                discovered = get_optimal_model(self.ollama_url)
+                if discovered and discovered != self.model:
+                    self.model = discovered
+                    payload["model"] = self.model
+                    resp = requests.post(
+                        f"{self.ollama_url}/api/chat",
+                        json=payload,
+                        timeout=(5, 60),
+                    )
             if resp.status_code == 200:
                 answer = resp.json().get("message", {}).get("content", "")
                 return {

@@ -340,14 +340,30 @@
             display: flex;
             flex-direction: column;
             gap: 7px;
-            padding: 10px 14px;
-            background: rgba(26, 24, 38, 0.75);
-            border: 1px solid rgba(145, 126, 204, 0.22);
-            border-radius: 12px;
+            padding: 9px 13px;
+            background: rgba(26, 24, 38, 0.85);
+            border: 1px solid rgba(145, 126, 204, 0.25);
+            border-radius: 11px;
             margin-bottom: 8px;
-            font-size: 0.84rem;
-            max-width: 440px;
+            font-size: 0.83rem;
+            max-width: 480px;
             backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+        .activity-live-box.completed {
+            background: rgba(22, 20, 32, 0.65);
+            border: 1px solid rgba(145, 126, 204, 0.18);
+            padding: 6px 12px;
+            cursor: pointer;
+            width: fit-content;
+        }
+        .activity-live-box.completed:hover {
+            border-color: rgba(145, 126, 204, 0.4);
+            background: rgba(30, 27, 44, 0.85);
+        }
+        .activity-live-box.completed:not(.collapsed) {
+            width: 100%;
+            max-width: 480px;
         }
         .activity-live-header {
             display: flex;
@@ -355,6 +371,25 @@
             gap: 8px;
             font-weight: 600;
             color: #c4b5fd;
+            cursor: pointer;
+            user-select: none;
+        }
+        .activity-completed-icon {
+            font-size: 0.88rem;
+            line-height: 1;
+            color: #a78bfa;
+        }
+        .activity-toggle-icon {
+            margin-left: 8px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            transition: transform 0.2s ease;
+        }
+        .activity-live-box.collapsed .activity-steps-container {
+            display: none;
+        }
+        .activity-live-box.collapsed .activity-toggle-icon {
+            transform: rotate(-90deg);
         }
         .activity-live-spinner {
             width: 14px;
@@ -411,6 +446,13 @@
         @keyframes actPulse {
             0%, 100% { opacity: 0.4; transform: scale(0.85); }
             50% { opacity: 1; transform: scale(1.3); }
+        }
+        .bot-text-body {
+            line-height: 1.7;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         .avatar.user-avatar { background: #7c3aed; color: #fff; }
 
@@ -2520,7 +2562,31 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
             const content = document.createElement('div');
             content.className = 'message-content' + (animate ? ' cursor' : '');
-            content.textContent = text;
+            if (role === 'bot' && animate) {
+                const textSlot = document.createElement('div');
+                textSlot.className = 'bot-text-body';
+                textSlot.textContent = text;
+                content.appendChild(textSlot);
+
+                Object.defineProperty(content, 'textContent', {
+                    get() {
+                        const slot = this.querySelector('.bot-text-body');
+                        return slot ? slot.textContent : (this.innerText || '');
+                    },
+                    set(val) {
+                        let slot = this.querySelector('.bot-text-body');
+                        if (!slot) {
+                            slot = document.createElement('div');
+                            slot.className = 'bot-text-body';
+                            this.appendChild(slot);
+                        }
+                        slot.textContent = val;
+                    },
+                    configurable: true
+                });
+            } else {
+                content.textContent = text;
+            }
             if (role === 'bot' && approval) {
                 content.textContent = '';
                 if (!approvalCard(content, approval, activeApproval)) content.textContent = text;
@@ -2639,6 +2705,8 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
                             const icon = task.status === 'completed' ? '✔ 🚀' : '⚠';
                             const title = task.status === 'completed' ? 'Servidor Hub Menor: Tarefa Concluída' : 'Servidor Hub Menor: Falha na Execução';
+                            const card = document.createElement('div');
+                            card.className = 'hub-task-card';
                             card.innerHTML = `
                                 <div class="hub-task-card-header">${icon} ${title}</div>
                                 <div style="font-size:0.9rem; line-height:1.6; white-space:pre-wrap;">${escapeHtml(task.result || 'Operação finalizada.')}</div>
@@ -2711,6 +2779,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const target = getSelectedComputeTarget();
             let fallbackToServer = false;
             if (target.node === 'local') {
+                const act = activeGeneration?.activity;
+                if (act) {
+                    act.addStep('Conectando ao Ollama GPU Local (GTX 1650)...');
+                    act.addStep(`Carregando modelo ${target.model || 'qwen2.5:3b'} na VRAM...`);
+                }
                 content.textContent = '';
                 document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '3B'}) gerando resposta…`;
                 try {
@@ -2724,6 +2797,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
                     const isStudyQuery = /\b(estud(o|ou|os|ar)|aprend(eu|e|idos?|izados?)|ciclo|relat[oó]rio|melhor(ou|as?)|ast|sandbox|diagn[oó]stico|evolu(ir|[cç][aã]o))\b/i.test(message);
                     if (isStudyQuery) {
+                        if (act) act.addStep('Consultando Hub Central Ubuntu (192.168.0.16) para memórias e auto-evolução...');
                         try {
                             const repResp = await turnFetch('/api/study/report');
                             if (repResp.ok) {
@@ -2740,6 +2814,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     }
 
                     const localHistory = history.slice(-6);
+                    if (act) act.addStep(`Processando inferência na GPU Local (${target.model || 'qwen2.5:3b'})...`);
 
                     const localResp = await fetch('http://localhost:11434/api/chat', {
                         method: 'POST',
@@ -2768,6 +2843,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     const decoder = new TextDecoder();
                     let fullText = '';
                     let spokenIndex = 0;
+                    let firstToken = true;
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
@@ -2779,6 +2855,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                                 const parsed = JSON.parse(line);
                                 const token = parsed.message?.content || '';
                                 if (token) {
+                                    if (firstToken) {
+                                        firstToken = false;
+                                        if (act) act.addStep('Sintetizando tokens na GPU em tempo real (~45 tok/s)...');
+                                    }
                                     fullText += token;
                                     const cleanSoFar = cleanAssistantText(fullText) || fullText;
                                     content.textContent = cleanSoFar;
@@ -2824,13 +2904,19 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
                     // Dual-Brain: Se o usuário pediu ações complexas, despachar em paralelo ao Hub do Servidor
                     if (isActionIntent(message)) {
+                        if (act) act.addStep('Despachando ferramentas de execução para o Hub Central Ubuntu...');
                         dispatchDualBrainHubTask(conv, message);
+                    }
+
+                    if (act) {
+                        act.complete(`Respondido via GPU Local (${target.model || '3B'}) em ${secs}`);
                     }
 
                     return true;
                 } catch (err) {
                     if (err.name === 'AbortError') throw err;
                     console.warn('Erro ao conectar ao PC Local:', err);
+                    if (act) act.addStep('Ollama local inacessível. Redirecionando tarefa para o Servidor Ubuntu...');
                     content.textContent = 'Aviso: Não foi possível conectar ao Ollama local em http://localhost:11434.\n'
                         + 'Dica: Verifique se o Ollama está em execução no seu computador com a variável OLLAMA_ORIGINS="*".\n'
                         + 'Redirecionando a tarefa para o Servidor Ubuntu...\n\n';
@@ -2847,13 +2933,16 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             };
             conv.pendingAgentRequest = payload;
             save();
-            if (activeGeneration?.activity) {
-                activeGeneration.activity.addStep('Analisando intenção e ferramentas no agente...');
+            const act = activeGeneration?.activity;
+            if (act) {
+                act.addStep('Conectando ao Hub Central Ubuntu (192.168.0.16)...');
+                act.addStep('Consultando Cérebro Permanente (SQLite FTS5)...');
+                act.addStep('Avaliando ferramentas reais do sistema operacional no Hub...');
             } else {
-    content.textContent = 'Interpretando contexto e escolhendo a próxima ação...';
+                content.textContent = 'Interpretando contexto e escolhendo a próxima ação...';
             }
             document.getElementById('generationStatus').textContent =
-                'Analisando a intenção com o modelo local…';
+                'Analisando a intenção no Servidor Hub…';
             const requestStart = Date.now();
             const response = await turnFetch('/agent/run', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2915,6 +3004,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         activeGeneration?.activity?.addStep('Executou ferramenta: ' + name);
                     }
                 });
+            }
+            if (activeGeneration?.activity) {
+                const wallMs = Date.now() - (activeGeneration?.started || requestStart);
+                const secs = (wallMs / 1000).toFixed(1) + 's';
+                activeGeneration.activity.complete(`Executado com Ferramentas no Hub Ubuntu em ${secs}`);
             }
             imageReply(conv, content, notice, result.image || '', result.artifact || null,
                 result.phase === 'approval' ? result.approval : null, timing);
@@ -3360,6 +3454,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     const plan = conv.pendingRepair.plan;
                     delete conv.pendingRepair;
                     save();
+                    if (activeGeneration?.activity) {
+                        activeGeneration.activity.addStep('Iniciando execução do conserto no Servidor Hub...');
+                        activeGeneration.activity.complete('Conserto despachado para o Servidor ✓');
+                    }
                     content.textContent = 'Iniciando execução do conserto no Servidor Hub...';
                     dispatchDualBrainHubTask(conv, 'Consertar: ' + plan);
                     return true;
@@ -3367,6 +3465,9 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 if (rejectsRepair) {
                     delete conv.pendingRepair;
                     save();
+                    if (activeGeneration?.activity) {
+                        activeGeneration.activity.complete('Conserto cancelado pelo usuário ✓');
+                    }
                     imageReply(conv, content, 'Entendido, conserto cancelado. O que você gostaria de fazer em vez disso?');
                     return true;
                 }
@@ -3377,7 +3478,12 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             if (!isErrorComplaint) return false;
 
             assertLiveTurn(conv);
-            content.textContent = 'Analisando o que deu errado e preparando plano de conserto...';
+            if (activeGeneration?.activity) {
+                activeGeneration.activity.addStep('Identificando reclamação e analisando falha na última operação...');
+                activeGeneration.activity.addStep('Consultando diagnóstico inteligente no Hub Ubuntu...');
+            } else {
+                content.textContent = 'Analisando o que deu errado e preparando plano de conserto...';
+            }
 
             try {
                 const lastBotMsg = conv.messages.slice().reverse().find(m => m.role === 'bot')?.content || '';
@@ -3407,6 +3513,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 };
 
                 const fullReply = `Identifiquei o erro:\n${diagnosisText}\n\nO que podemos fazer:\n${planText}\n\nPosso consertar agora?`;
+                if (activeGeneration?.activity) {
+                    activeGeneration.activity.addStep('Elaborando proposta de conserto e aprovação...');
+                    activeGeneration.activity.complete('Diagnóstico de falha concluído ✓');
+                }
                 imageReply(conv, content, fullReply, '', null, approval);
 
                 if (handsFreeVoiceEnabled) {
@@ -3498,6 +3608,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 steps: ['Interpretando mensagem e contexto...'],
                 started: Date.now(),
                 box: null,
+                completed: false,
                 addStep(step) {
                     if (!this.steps.includes(step)) {
                         this.steps.push(step);
@@ -3505,29 +3616,70 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     }
                 },
                 render() {
+                    if (this.completed) return;
                     if (typeof HTMLElement === 'undefined' || !(botContent instanceof HTMLElement)) return;
                     if (!this.box) {
                         this.box = document.createElement('div');
                         this.box.className = 'activity-live-box';
-                        botContent.innerHTML = '';
-                        botContent.appendChild(this.box);
+                        botContent.insertBefore(this.box, botContent.firstChild);
                     }
                     const elapsed = ((Date.now() - this.started) / 1000).toFixed(1);
-                    let html = `<div class="activity-live-header">`
+                    let html = `<div class="activity-live-header" title="Clique para expandir/recolher os passos">`
                         + `<span class="activity-live-spinner"></span>`
                         + `<span>Pensando com o Menor...</span>`
                         + `<span class="activity-live-timer">${elapsed}s</span>`
+                        + `<span class="activity-toggle-icon">▾</span>`
                         + `</div><div class="activity-steps-container">`;
                     this.steps.forEach((s, idx) => {
                         const isLast = idx === this.steps.length - 1;
                         if (isLast) {
-                            html += `<div class="activity-step-row active"><span class="step-dot"></span><span>${s}</span></div>`;
+                            html += `<div class="activity-step-row active"><span class="step-dot"></span><span>${escapeHtml(s)}</span></div>`;
                         } else {
-                            html += `<div class="activity-step-row done"><span class="step-check">✓</span><span>${s}</span></div>`;
+                            html += `<div class="activity-step-row done"><span class="step-check">✓</span><span>${escapeHtml(s)}</span></div>`;
                         }
                     });
                     html += `</div>`;
                     this.box.innerHTML = html;
+                    const header = this.box.querySelector('.activity-live-header');
+                    if (header) {
+                        header.onclick = (e) => {
+                            e.stopPropagation();
+                            this.box.classList.toggle('collapsed');
+                        };
+                    }
+                    scrollToBottom();
+                },
+                complete(summary) {
+                    if (this.completed) return;
+                    this.completed = true;
+                    if (!this.box) {
+                        this.render();
+                    }
+                    const elapsed = ((Date.now() - this.started) / 1000).toFixed(1);
+                    this.box.classList.add('completed');
+                    this.box.classList.add('collapsed');
+
+                    const count = this.steps.length;
+                    const titleText = summary || `Pensou por ${elapsed}s (${count} etapas)`;
+
+                    let html = `<div class="activity-live-header" title="Clique para expandir/recolher os passos">`
+                        + `<span class="activity-completed-icon">⚡</span>`
+                        + `<span>${escapeHtml(titleText)}</span>`
+                        + `<span class="activity-toggle-icon">▾</span>`
+                        + `</div><div class="activity-steps-container">`;
+                    this.steps.forEach((s) => {
+                        html += `<div class="activity-step-row done"><span class="step-check">✓</span><span>${escapeHtml(s)}</span></div>`;
+                    });
+                    html += `</div>`;
+                    this.box.innerHTML = html;
+
+                    const header = this.box.querySelector('.activity-live-header');
+                    if (header) {
+                        header.onclick = (e) => {
+                            e.stopPropagation();
+                            this.box.classList.toggle('collapsed');
+                        };
+                    }
                     scrollToBottom();
                 }
             };
@@ -3535,16 +3687,16 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             activity.render();
 
             generation.timer = setInterval(() => {
-                if (activeGeneration === generation) {
+                if (activeGeneration === generation && !activity.completed) {
                     const seconds = Math.floor((Date.now() - generation.started) / 1000);
                     document.getElementById('generationStatus').textContent =
                         'Menor está processando há ' + seconds + 's. Você pode parar ou trocar de chat.';
                     if (seconds >= 2 && seconds < 4) {
                         activity.addStep('Consultando Core Memory e preferências...');
-                    } else if (seconds >= 4 && seconds < 10) {
+                    } else if (seconds >= 4 && seconds < 8) {
                         const target = getSelectedComputeTarget();
                         activity.addStep(target.node === 'local' ? 'Raciocinando na GPU Local (GTX 1650)...' : 'Raciocinando com modelo no Servidor Ubuntu...');
-                    } else if (seconds >= 10) {
+                    } else if (seconds >= 8) {
                         activity.addStep('Sintetizando resposta...');
                     }
                     activity.render();
@@ -3700,6 +3852,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 }
                 assertLiveTurn(conv);
                 const streamTarget = getSelectedComputeTarget();
+                if (activeGeneration?.activity) {
+                    activeGeneration.activity.addStep('Iniciando conexão de streaming com o Servidor Ubuntu...');
+                    activeGeneration.activity.addStep(`Sintetizando tokens no modelo ${streamTarget.model || 'Hub Central'}...`);
+                }
                 const response = await turnFetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3726,6 +3882,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 const decoder = new TextDecoder('utf-8');
                 let fullReply = '';
                 let streamSpokenIdx = 0;
+                let firstChunk = true;
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -3736,6 +3893,12 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         const elapsed = ((Date.now() - generation.started) / 1000).toFixed(1);
                         document.getElementById('generationStatus').textContent =
                             'Primeiro texto recebido em ' + elapsed + 's.';
+                    }
+                    if (firstChunk && chunk) {
+                        firstChunk = false;
+                        if (activeGeneration?.activity) {
+                            activeGeneration.activity.addStep('Transmitindo resposta em tempo real via stream...');
+                        }
                     }
                     fullReply += chunk;
                     const displayChunk = cleanAssistantText(fullReply);
@@ -3781,6 +3944,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     timing: { browser_request_wall_ms: wallMs },
                 });
                 save();
+
+                if (activeGeneration?.activity) {
+                    activeGeneration.activity.complete(`Respondido via Servidor Ubuntu (${streamTarget.model || 'Hub'}) em ${secs}`);
+                }
                 if (handsFreeVoiceEnabled && fullReply) {
                     speakText(routeNotice + fullReply, () => {
                         if (handsFreeVoiceEnabled) resumeListening();
@@ -3794,6 +3961,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 }
             } finally {
                 if (activeGeneration === generation) {
+                    if (generation.activity && !generation.activity.completed) {
+                        const wallMs = Date.now() - generation.started;
+                        const secs = (wallMs / 1000).toFixed(1) + 's';
+                        generation.activity.complete(`Pensou por ${secs} (${generation.activity.steps.length} etapas)`);
+                    }
                     botContent.classList.remove('cursor');
                     isGenerating = false;
                     activeGeneration = null;
