@@ -147,6 +147,125 @@ def save_plan(project_slug: str, markdown_content: str, store: Optional[BrainSto
         return {"success": False, "error": str(exc)}
 
 
+def web_search(query: str) -> Dict[str, Any]:
+    """Pesquisa na web por termos públicos e retorna os resultados mais relevantes com URLs e títulos."""
+    try:
+        from src.tools.web import search
+        res = search(query)
+        return {
+            "success": True,
+            "query": query,
+            "results": res.get("results", []),
+            "provider": res.get("provider", "web"),
+        }
+    except Exception as exc:
+        return {"success": False, "error": f"Falha na busca web: {str(exc)}"}
+
+
+def web_read(url: str, query: Optional[str] = None) -> Dict[str, Any]:
+    """Lê o conteúdo em texto limpo de uma página web pública (URL)."""
+    try:
+        from src.tools.web import read
+        res = read(url, query=query)
+        return {
+            "success": True,
+            "url": res.get("url", url),
+            "content": res.get("text", "")[:8000],
+            "truncated": res.get("truncated", False),
+        }
+    except Exception as exc:
+        return {"success": False, "error": f"Falha ao ler página web: {str(exc)}"}
+
+
+DYNAMIC_TOOLS_DIR = Path(__file__).parent / "dynamic"
+
+
+def create_new_tool(
+    name: str,
+    code: str,
+    test_command: str,
+    description: str,
+    parameters_schema: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Cria, valida, testa com terminal_run e registra dinamicamente uma nova ferramenta Python.
+
+    Se os testes passarem com sucesso, a ferramenta torna-se disponível imediatamente
+    no assistente para chamadas futuras.
+    """
+    try:
+        import ast
+        import importlib.util
+        import re
+
+        clean_name = re.sub(r"[^a-zA-Z0-9_]", "", name).strip().lower()
+        if not clean_name:
+            return {"success": False, "error": "Nome de ferramenta inválido."}
+
+        try:
+            ast.parse(code)
+        except SyntaxError as syn_err:
+            return {
+                "success": False,
+                "error": f"Erro de sintaxe Python na ferramenta: {syn_err}",
+                "phase": "syntax_validation",
+            }
+
+        DYNAMIC_TOOLS_DIR.mkdir(parents=True, exist_ok=True)
+        init_file = DYNAMIC_TOOLS_DIR / "__init__.py"
+        if not init_file.exists():
+            init_file.write_text("# Dynamic tools package\n", encoding="utf-8")
+
+        target_file = DYNAMIC_TOOLS_DIR / f"{clean_name}.py"
+        target_file.write_text(code, encoding="utf-8")
+
+        test_res = terminal_run(test_command)
+        if not test_res.get("success"):
+            return {
+                "success": False,
+                "error": f"Testes falharam: {test_res.get('stderr') or test_res.get('stdout')}",
+                "phase": "test_execution",
+                "exit_code": test_res.get("exit_code"),
+            }
+
+        spec = importlib.util.spec_from_file_location(f"src.tools.dynamic.{clean_name}", str(target_file))
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            tool_callable = getattr(mod, clean_name, None)
+            if not callable(tool_callable):
+                return {
+                    "success": False,
+                    "error": f"O módulo foi carregado, mas não possui a função chamada '{clean_name}'.",
+                }
+
+            TOOL_DISPATCHER[clean_name] = tool_callable
+            schema = {
+                "type": "function",
+                "function": {
+                    "name": clean_name,
+                    "description": description or f"Ferramenta criada dinamicamente: {clean_name}",
+                    "parameters": parameters_schema or {
+                        "type": "object",
+                        "properties": {},
+                    },
+                },
+            }
+            filtered_schemas = [s for s in CORE_TOOLS_SCHEMA if s.get("function", {}).get("name") != clean_name]
+            filtered_schemas.append(schema)
+            CORE_TOOLS_SCHEMA.clear()
+            CORE_TOOLS_SCHEMA.extend(filtered_schemas)
+
+            return {
+                "success": True,
+                "tool_name": clean_name,
+                "filepath": str(target_file),
+                "message": f"Ferramenta '{clean_name}' criada, testada e registrada com sucesso!",
+            }
+        return {"success": False, "error": "Não foi possível carregar o módulo gerado."}
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
 # Schemas para o Tool Calling oficial do Ollama / OpenAI
 CORE_TOOLS_SCHEMA = [
     {
@@ -221,6 +340,53 @@ CORE_TOOLS_SCHEMA = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Pesquisa termos na web e retorna uma lista de links e títulos relevantes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Termo de busca público."}
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_read",
+            "description": "Lê o conteúdo em texto limpo de uma página web pública através de uma URL HTTPS.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL HTTPS pública da página web."},
+                    "query": {"type": "string", "description": "Trecho opcional de foco na leitura."}
+                },
+                "required": ["url"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_new_tool",
+            "description": "Cria, testa e registra dinamicamente uma nova ferramenta Python quando necessário.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Nome da função/ferramenta (ex: 'convert_units')."},
+                    "code": {"type": "string", "description": "Código Python completo implementando a função."},
+                    "test_command": {"type": "string", "description": "Comando de terminal para testar a ferramenta."},
+                    "description": {"type": "string", "description": "Descrição detalhada para a IA."},
+                    "parameters_schema": {"type": "object", "description": "Schema JSON dos parâmetros aceitos."},
+                },
+                "required": ["name", "code", "test_command", "description"],
+            },
+        },
+    },
 ]
 
 TOOL_DISPATCHER = {
@@ -229,4 +395,7 @@ TOOL_DISPATCHER = {
     "fs_list": fs_list,
     "terminal_run": terminal_run,
     "save_plan": save_plan,
+    "web_search": web_search,
+    "web_read": web_read,
+    "create_new_tool": create_new_tool,
 }

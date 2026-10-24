@@ -1902,9 +1902,67 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             }
             if (conv.pendingImage || conv.activeMission ||
                 conv.pendingCapabilityOffer || selectedImageFile) return false;
+
+            const selectedNode = document.getElementById('nodeSelector')?.value || 'server';
+            if (selectedNode === 'local') {
+                content.textContent = '';
+                document.getElementById('generationStatus').textContent = 'Qwen 7B (GPU Local) gerando resposta…';
+                try {
+                    const localResp = await fetch('http://localhost:11434/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: 'qwen2.5:7b',
+                            messages: [
+                                { role: 'system', content: 'Você é o Menor v2 rodando na GPU local. Responda com agilidade, precisão e clareza em pt-BR.' },
+                                ...history,
+                                { role: 'user', content: message }
+                            ],
+                            stream: true
+                        }),
+                        signal: activeGeneration?.controller?.signal
+                    });
+                    if (!localResp.ok) throw new Error('Ollama local retornou HTTP ' + localResp.status);
+                    const reader = localResp.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullText = '';
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n');
+                        for (const line of lines) {
+                            if (!line.trim()) continue;
+                            try {
+                                const parsed = JSON.parse(line);
+                                const token = parsed.message?.content || '';
+                                if (token) {
+                                    fullText += token;
+                                    content.textContent = fullText;
+                                    scrollToBottom();
+                                }
+                            } catch (_) {}
+                        }
+                    }
+                    assertLiveTurn(conv);
+                    conv.messages.push({ role: 'bot', content: fullText });
+                    save();
+                    return true;
+                } catch (err) {
+                    if (err.name === 'AbortError') throw err;
+                    console.warn('Erro ao conectar ao PC Local:', err);
+                    content.textContent = 'Aviso: Não foi possível conectar ao Ollama local em http://localhost:11434.\n'
+                        + 'Dica: Verifique se o Ollama está em execução no seu computador com a variável OLLAMA_ORIGINS="*".\n'
+                        + 'Redirecionando a tarefa para o Servidor Ubuntu...\n\n';
+                }
+            }
+
             const previous = conv.pendingAgentRequest;
             const payload = previous && previous.message === message ? previous : {
                 session_id: conv.id, turn_id: genId(), message, history, project,
+                node: selectedNode,
+                model: selectedNode === 'local' ? 'qwen2.5:7b' : null,
+                ollama_url: selectedNode === 'local' ? 'http://localhost:11434' : null,
             };
             conv.pendingAgentRequest = payload;
             save();
@@ -2514,7 +2572,12 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 try {
                     const routeResponse = await turnFetch('/agent/route', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: msg, history, project }),
+                        body: JSON.stringify({
+                        message: msg,
+                        history,
+                        project,
+                        node: document.getElementById('nodeSelector')?.value || 'server'
+                    }),
                     });
                     if (routeResponse.ok) {
                         const route = await routeResponse.json();
@@ -2578,7 +2641,12 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 const response = await turnFetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg, history, project })
+                    body: JSON.stringify({
+                        message: msg,
+                        history,
+                        project,
+                        node: document.getElementById('nodeSelector')?.value || 'server'
+                    })
                 });
 
                 if (!response.ok) {

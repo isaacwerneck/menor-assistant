@@ -47,6 +47,12 @@ cat > "$sandbox/bin/curl" <<'STUB'
 echo curl >> .git/deploy-actions
 exit "${FAIL_HEALTH:-0}"
 STUB
+if ! command -v flock >/dev/null 2>&1; then
+cat > "$sandbox/bin/flock" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+fi
 chmod +x .venv/bin/python "$sandbox/bin/"*
 export PATH="$sandbox/bin:$PATH"
 

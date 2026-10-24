@@ -1,3 +1,4 @@
+from pathlib import Path
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -5,6 +6,11 @@ from src.agent.orchestrator import Orchestrator
 
 
 class TestOrchestratorV2(unittest.TestCase):
+    def tearDown(self):
+        mock_file = Path("teste_mock.txt")
+        if mock_file.exists():
+            mock_file.unlink(missing_ok=True)
+
     @patch("src.agent.orchestrator.requests.post")
     def test_run_turn_direct_reply(self, mock_post):
         mock_resp = MagicMock()
