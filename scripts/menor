@@ -56,10 +56,43 @@ case "${1:-status}" in
         shift
         root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
         cd "$root"
+        runner="python3"
         if [[ -x "$root/.venv/bin/python" ]]; then
-            exec "$root/.venv/bin/python" -c "from src.agent.study import run_autonomous_cycle; res = run_autonomous_cycle(); print(res)" "$@"
+            runner="$root/.venv/bin/python"
         fi
-        exec python3 -c "from src.agent.study import run_autonomous_cycle; res = run_autonomous_cycle(); print(res)" "$@"
+        exec "$runner" -c "
+import sys, time
+from src.agent.study import run_autonomous_cycle
+
+if '--loop' in sys.argv:
+    print('Iniciando loop autonomo continuo (cooldown 15m, descanso 30m a cada 3h). Ctrl+C para parar.')
+    last_deep_rest = time.time()
+    while True:
+        try:
+            run_autonomous_cycle()
+        except KeyboardInterrupt:
+            print('\nLoop interrompido pelo operador.')
+            break
+        except Exception as exc:
+            print(f'\nErro no ciclo: {exc}')
+        now = time.time()
+        if (now - last_deep_rest) >= (3 * 3600):
+            print('\n[PAUSA] 3 horas atingidas. Descanso termico profundo de 30 minutos...')
+            try:
+                time.sleep(30 * 60)
+            except KeyboardInterrupt:
+                break
+            last_deep_rest = time.time()
+        else:
+            print('\n[COOLDOWN] Ciclo concluido. Resfriando por 15 minutos...')
+            try:
+                time.sleep(15 * 60)
+            except KeyboardInterrupt:
+                break
+else:
+    res = run_autonomous_cycle()
+    print(res)
+" "$@"
         ;;
     relatorio|report)
         shift
