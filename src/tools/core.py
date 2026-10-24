@@ -77,6 +77,75 @@ def fs_write(filepath: str, content: str) -> Dict[str, Any]:
         return {"success": False, "error": str(exc)}
 
 
+def fs_patch(filepath: str, search_block: str, replace_block: str) -> Dict[str, Any]:
+    """Substitui cirurgicamente um bloco de código exato em um arquivo (Aider Pattern).
+
+    Evita reescrever arquivos completos, preservando o restante do código sem truncamento.
+    Retorna erro se o bloco não for encontrado ou se houver múltiplas ocorrências ambíguas.
+    """
+    try:
+        if not search_block or not isinstance(search_block, str):
+            return {"success": False, "error": "Bloco de busca inválido ou vazio."}
+        if replace_block is None:
+            replace_block = ""
+        if not isinstance(replace_block, str):
+            replace_block = str(replace_block)
+
+        path = _resolve_safe_path(filepath)
+        if not path.exists():
+            return {"success": False, "error": f"Arquivo não encontrado: {filepath}"}
+        if not path.is_file():
+            return {"success": False, "error": f"O caminho não é um arquivo: {filepath}"}
+
+        content = path.read_text(encoding="utf-8", errors="replace")
+
+        # 1. Correspondência exata
+        occurrences = content.count(search_block)
+        matched_search = search_block
+
+        # 2. Se falhar, normaliza quebras de linha (\r\n vs \n)
+        if occurrences == 0:
+            norm_content = content.replace("\r\n", "\n")
+            norm_search = search_block.replace("\r\n", "\n")
+            if norm_content.count(norm_search) > 0:
+                content = norm_content
+                matched_search = norm_search
+                replace_block = replace_block.replace("\r\n", "\n")
+                occurrences = content.count(matched_search)
+
+        if occurrences == 0:
+            return {
+                "success": False,
+                "error": "Bloco de busca não encontrado no arquivo. Verifique indentação e linhas de contexto.",
+            }
+
+        if occurrences > 1:
+            return {
+                "success": False,
+                "error": (
+                    f"O bloco de busca foi encontrado {occurrences} vezes. "
+                    "Forneça mais linhas de contexto antes e depois do trecho para garantir alteração única."
+                ),
+                "occurrences": occurrences,
+            }
+
+        new_content = content.replace(matched_search, replace_block, 1)
+        path.write_text(new_content, encoding="utf-8")
+
+        search_lines = len(matched_search.splitlines())
+        replace_lines = len(replace_block.splitlines())
+        return {
+            "success": True,
+            "filepath": str(path),
+            "bytes_written": len(new_content.encode("utf-8")),
+            "lines_removed": search_lines,
+            "lines_added": replace_lines,
+        }
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+
 def fs_list(dirpath: str = ".") -> Dict[str, Any]:
     """Lista arquivos e subdiretórios em um caminho."""
     try:
@@ -283,6 +352,28 @@ def web_read(url: str, query: Optional[str] = None) -> Dict[str, Any]:
         return {"success": False, "error": f"Falha ao ler página web: {str(exc)}"}
 
 
+def repo_map(root_dir: str = ".", max_depth: int = 4, max_files: int = 50) -> Dict[str, Any]:
+    """Gera um mapa compacto de símbolos do projeto no estilo Aider/Tree-Sitter."""
+    try:
+        from src.tools.code_intel import repo_map as _rm
+        return _rm(root_dir=root_dir, max_depth=max_depth, max_files=max_files)
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
+def symbol_lookup(
+    symbol_name: str,
+    file_hint: Optional[str] = None,
+    root_dir: str = ".",
+) -> Dict[str, Any]:
+    """Busca cirúrgica por definições de símbolos (classes, funções, variáveis) via AST e LSP."""
+    try:
+        from src.tools.code_intel import symbol_lookup as _sl
+        return _sl(symbol_name=symbol_name, file_hint=file_hint, root_dir=root_dir)
+    except Exception as exc:
+        return {"success": False, "error": str(exc)}
+
+
 DYNAMIC_TOOLS_DIR = Path(__file__).parent / "dynamic"
 
 
@@ -315,6 +406,20 @@ def create_new_tool(
                 "error": f"Erro de sintaxe Python na ferramenta: {syn_err}",
                 "phase": "syntax_validation",
             }
+
+        # Validação de simplicidade e anti-bloat Ponytail
+        try:
+            from src.agent.ponytail import lint_tool_creation
+            lint_res = lint_tool_creation(clean_name, code, description)
+            if not lint_res.get("passed"):
+                return {
+                    "success": False,
+                    "error": f"Rejeitado pelo linter Ponytail: {lint_res.get('reason')}",
+                    "phase": "ponytail_linter",
+                    "warnings": lint_res.get("warnings", []),
+                }
+        except Exception:
+            pass
 
         DYNAMIC_TOOLS_DIR.mkdir(parents=True, exist_ok=True)
         init_file = DYNAMIC_TOOLS_DIR / "__init__.py"
@@ -589,11 +694,74 @@ CORE_TOOLS_SCHEMA = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "fs_patch",
+            "description": (
+                "Substitui cirurgicamente um bloco de código exato em um arquivo. "
+                "Evita reescrever arquivos inteiros e previne truncamentos de código."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filepath": {"type": "string", "description": "Caminho do arquivo a alterar."},
+                    "search_block": {
+                        "type": "string",
+                        "description": "Trecho de código original exato que será substituído (com linhas de contexto).",
+                    },
+                    "replace_block": {
+                        "type": "string",
+                        "description": "Novo trecho de código que substituirá o bloco original.",
+                    },
+                },
+                "required": ["filepath", "search_block", "replace_block"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "repo_map",
+            "description": (
+                "Gera um mapa compacto da árvore e símbolos do projeto (classes, métodos e funções). "
+                "Use para conhecer a estrutura do código gastando poucos tokens."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "root_dir": {"type": "string", "description": "Diretório raiz para mapear (padrão '.')."},
+                    "max_depth": {"type": "integer", "description": "Profundidade máxima de pastas (padrão 4)."},
+                    "max_files": {"type": "integer", "description": "Quantidade máxima de arquivos (padrão 50)."},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "symbol_lookup",
+            "description": (
+                "Busca cirúrgica por definições de símbolos (classes, funções, variáveis) via AST/LSP. "
+                "Retorna assinatura, arquivo e linhas exatas sem ler o arquivo inteiro."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol_name": {"type": "string", "description": "Nome da classe, função ou variável a localizar."},
+                    "file_hint": {"type": "string", "description": "Caminho opcional do arquivo para acelerar a busca."},
+                    "root_dir": {"type": "string", "description": "Diretório de busca (padrão '.')."},
+                },
+                "required": ["symbol_name"],
+            },
+        },
+    },
 ]
 
 TOOL_DISPATCHER = {
     "fs_read": fs_read,
     "fs_write": fs_write,
+    "fs_patch": fs_patch,
     "fs_list": fs_list,
     "terminal_run": terminal_run,
     "save_plan": save_plan,
@@ -604,4 +772,6 @@ TOOL_DISPATCHER = {
     "grounded_search": grounded_search,
     "schedule_study_topic": schedule_study_topic,
     "get_study_report": get_study_report,
+    "repo_map": repo_map,
+    "symbol_lookup": symbol_lookup,
 }

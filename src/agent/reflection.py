@@ -152,6 +152,13 @@ class ReflectionWorker:
                 self.core_memory.set_block("user_profile", p_item.strip(), mode="append")
                 added_profile += 1
 
+        # Otimização algorítmica de prompts offline (DSPy Pattern)
+        try:
+            from src.agent.prompt_optimizer import PromptOptimizer
+            PromptOptimizer(self.store).compile()
+        except Exception as exc:
+            LOGGER.debug("Otimização offline de prompts em reflexão ignorada: %s", exc)
+
         return {
             "success": True,
             "learnings_added": added_learnings,

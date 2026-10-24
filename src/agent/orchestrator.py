@@ -88,6 +88,14 @@ class Orchestrator:
         except Exception as exc:
             LOGGER.warning("Não foi possível carregar memória permanente: %s", exc)
 
+        try:
+            from src.agent.prompt_optimizer import PromptOptimizer
+            dspy_inj = PromptOptimizer(self.store).format_system_injection()
+            if dspy_inj:
+                sections.append(dspy_inj)
+        except Exception as exc:
+            LOGGER.debug("PromptOptimizer indisponível: %s", exc)
+
         return "\n\n".join(sections)
 
     @staticmethod
@@ -127,6 +135,8 @@ class Orchestrator:
             "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
             "plano", "projet", "pesquis", "busc", "web", "site", "url", "http", "ferramenta", "tool",
             "código", "codigo", "python", "script", "consert", "bug", "corrig", "cri",
+            "patch", "alterar", "substituir", "simbolo", "símbolo", "mapa", "repo_map", "onde fica", "onde está",
+            "declaração", "declaracao", "refator",
             "lembr", "memor", "perfil", "preferencia", "não precisa", "nao precisa",
             "não fique", "nao fique", "prefiro",
             "estude ", "estudar", "aprender", "esses dias", "ataque", "vulnerabilidade", "cve", "notícia",
@@ -185,6 +195,14 @@ class Orchestrator:
                     executed_tools_log.append("get_study_report")
             except Exception as exc:
                 LOGGER.debug("Grounding de relatório de estudos ignorado: %s", exc)
+
+        coding_keywords = ("código", "codigo", "script", "bug", "patch", "consert", "refator", "função", "classe", "test")
+        if any(k in norm_user for k in coding_keywords):
+            try:
+                from src.agent.ponytail import get_ponytail_system_prompt
+                full_system += f"\n\n{get_ponytail_system_prompt()}"
+            except Exception:
+                pass
 
         chat_history = [{"role": "system", "content": full_system}]
         for m in messages:
