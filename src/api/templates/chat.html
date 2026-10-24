@@ -2010,7 +2010,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 const parts = raw.split(':');
                 return {
                     node: 'local',
-                    model: parts.length > 1 ? parts[1] : 'qwen2.5:7b',
+                    model: parts.length > 1 ? parts.slice(1).join(':') : 'qwen2.5:3b',
                     url: 'http://localhost:11434',
                 };
             }
@@ -2862,6 +2862,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 ...(timing || (wallMs ? { timing: { browser_request_wall_ms: wallMs } } : {})) });
             save();
             scrollToBottom();
+            if (handsFreeVoiceEnabled && message) {
+                speakText(message, () => {
+                    if (handsFreeVoiceEnabled) resumeListening();
+                });
+            }
         }
 
         async function handleImageTurn(conv, message, content, forceEdit = false) {
@@ -3446,6 +3451,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     timing: { browser_request_wall_ms: wallMs },
                 });
                 save();
+                if (handsFreeVoiceEnabled && fullReply) {
+                    speakText(routeNotice + fullReply, () => {
+                        if (handsFreeVoiceEnabled) resumeListening();
+                    });
+                }
             } catch (err) {
                 if (activeGeneration === generation && err.name !== 'AbortError') {
                     botContent.textContent = 'Erro ao se comunicar com o Menor: ' + err.message;
