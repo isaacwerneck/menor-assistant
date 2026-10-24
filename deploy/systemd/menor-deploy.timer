@@ -2,8 +2,8 @@
 Description=Verificar novos pushes do Menor
 
 [Timer]
-OnStartupSec=30s
-OnUnitInactiveSec=30s
+OnStartupSec=10s
+OnUnitInactiveSec=10s
 AccuracySec=1s
 Unit=menor-deploy.service
 

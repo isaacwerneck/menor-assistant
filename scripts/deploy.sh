@@ -45,8 +45,8 @@ main() {
         echo "Deploy requer a branch main." >&2
         return 1
     fi
-    if [[ -n "$(git status --porcelain)" ]]; then
-        echo "Deploy bloqueado: há alterações locais. Salve-as antes de atualizar." >&2
+    if [[ -n "$(git status --porcelain -uno)" ]]; then
+        echo "Deploy bloqueado: há alterações locais em arquivos rastreados. Salve-as antes de atualizar." >&2
         return 1
     fi
 
