@@ -1317,6 +1317,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         function clearSpeechQueue() {
             speechQueue = [];
             isProcessingQueue = false;
+            window.activeUtterance = null;
             if (window.speechSynthesis) {
                 window.speechSynthesis.cancel();
             }
@@ -1338,6 +1339,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             isProcessingQueue = true;
             isSpeakingTTS = true;
 
+            // Silenciar microfone imediatamente durante a fala do assistente (evita auto-interrupção acústica)
+            if (recognition && isRecording) {
+                try { recognition.abort(); } catch (_) {}
+            }
+
             const clean = item.text
                 .replace(/```[\s\S]*?```/g, 'Bloco de código omitido na fala.')
                 .replace(/`([^`]+)`/g, '$1')
@@ -1353,6 +1359,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             }
 
             const utterance = new SpeechSynthesisUtterance(clean);
+            window.activeUtterance = utterance; // Previne Chromium GC prematuro
             const bestVoice = getBestNaturalVoice();
             if (bestVoice) {
                 utterance.voice = bestVoice;
@@ -1363,20 +1370,37 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
             utterance.onend = function() {
                 isProcessingQueue = false;
-                if (item.onComplete) item.onComplete();
+                window.activeUtterance = null;
+                if (item.onComplete) {
+                    try { item.onComplete(); } catch (_) {}
+                }
                 if (speechQueue.length > 0) {
                     processSpeechQueue();
                 } else {
                     isSpeakingTTS = false;
+                    if (handsFreeVoiceEnabled && !isGenerating) {
+                        setTimeout(() => {
+                            if (!isSpeakingTTS && !isGenerating) resumeListening();
+                        }, 350);
+                    }
                 }
             };
-            utterance.onerror = function() {
+            utterance.onerror = function(err) {
+                console.warn('TTS utterance erro:', err);
                 isProcessingQueue = false;
-                if (item.onComplete) item.onComplete();
+                window.activeUtterance = null;
+                if (item.onComplete) {
+                    try { item.onComplete(); } catch (_) {}
+                }
                 if (speechQueue.length > 0) {
                     processSpeechQueue();
                 } else {
                     isSpeakingTTS = false;
+                    if (handsFreeVoiceEnabled && !isGenerating) {
+                        setTimeout(() => {
+                            if (!isSpeakingTTS && !isGenerating) resumeListening();
+                        }, 350);
+                    }
                 }
             };
 
@@ -1407,7 +1431,8 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
             rec.onresult = function(event) {
                 if (isSpeakingTTS) {
-                    stopTTS();
+                    // Ignora eco acústico das caixas de som enquanto o assistente fala
+                    return;
                 }
 
                 let interim = '';
@@ -1434,7 +1459,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
                 if (handsFreeVoiceEnabled && input && input.value.trim()) {
                     speechSilenceTimer = setTimeout(() => {
-                        if (!isGenerating && input.value.trim()) {
+                        if (!isGenerating && !isSpeakingTTS && input.value.trim()) {
                             sendMsg();
                         }
                     }, 750);
@@ -1467,7 +1492,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         }
 
         function resumeListening() {
-            if (!handsFreeVoiceEnabled) return;
+            if (!handsFreeVoiceEnabled || isSpeakingTTS || isGenerating) return;
             if (!recognition) recognition = initSpeechRecognition();
             if (recognition && !isRecording) {
                 try { recognition.start(); } catch (_) {}
@@ -2138,14 +2163,14 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 const localGroup = document.createElement('optgroup');
                 localGroup.id = 'localModelGroup';
                 localGroup.label = 'PC Local (GPU GTX 1650)';
-                const localOpt4b = document.createElement('option');
-                localOpt4b.value = 'local:qwen3.5:4b';
-                localOpt4b.textContent = '⚡ PC Local (Qwen 3.5 4B GPU)';
-                localGroup.appendChild(localOpt4b);
                 const localOpt3b = document.createElement('option');
                 localOpt3b.value = 'local:qwen2.5:3b';
                 localOpt3b.textContent = '⚡ PC Local Ultra-Rápido (Qwen 2.5 3B GPU - ~45 tok/s)';
                 localGroup.appendChild(localOpt3b);
+                const localOpt4b = document.createElement('option');
+                localOpt4b.value = 'local:qwen3.5:4b';
+                localOpt4b.textContent = '⚡ PC Local (Qwen 3.5 4B GPU)';
+                localGroup.appendChild(localOpt4b);
                 const localOpt7b = document.createElement('option');
                 localOpt7b.value = 'local:qwen2.5:7b';
                 localOpt7b.textContent = '🚀 PC Local (Qwen 2.5 7B GPU - ~22 tok/s)';
@@ -2690,6 +2715,31 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 content.textContent = '';
                 document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '3B'}) gerando resposta…`;
                 try {
+                    let systemPrompt = 'Você é o Menor v2, assistente pessoal e executivo de software do Isaac.\n'
+                        + 'Diretrizes OBRIGATÓRIAS:\n'
+                        + '1. Responda SEMPRE em português do Brasil, de forma direta, natural e EXTREMAMENTE concisa (no máximo 1 a 3 frases curtas).\n'
+                        + '2. Sem enrolação, sem divagações filosóficas, sem introduções desnecessárias, sem gírias forçadas repetitivas.\n'
+                        + '3. NUNCA invente fatos nem simule aprendizados fictícios. Seja claro, objetivo e útil como um assistente de voz nativo de alta precisão.';
+
+                    const isStudyQuery = /\b(estud(o|ou|os|ar)|aprend(eu|e|idos?|izados?)|ciclo|relat[oó]rio|melhor(ou|as?)|ast|sandbox|diagn[oó]stico|evolu(ir|[cç][aã]o))\b/i.test(message);
+                    if (isStudyQuery) {
+                        try {
+                            const repResp = await turnFetch('/api/study/report');
+                            if (repResp.ok) {
+                                const repData = await repResp.json();
+                                if (repData && repData.has_report && repData.report_markdown) {
+                                    systemPrompt += '\n\n[DADOS REAIS DO ÚLTIMO CICLO DE ESTUDO NO SERVIDOR HUB]:\n'
+                                        + repData.report_markdown.slice(0, 1500)
+                                        + '\n(Atenção: Baseie sua resposta estritamente nos dados reais acima. Responda em no máximo 2 frases curtas e diretas.)';
+                                } else {
+                                    systemPrompt += '\n\n[INFORMAÇÃO]: Não há relatório de estudos registrado no hub ainda. Responda que o ciclo ainda não gerou relatório.';
+                                }
+                            }
+                        } catch (_) {}
+                    }
+
+                    const localHistory = history.slice(-6);
+
                     const localResp = await fetch('http://localhost:11434/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2698,14 +2748,14 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                             messages: [
                                 {
                                     role: 'system',
-                                    content: 'Você é o Menor v2, assistente do Isaac. Responda em português brasileiro de forma direta, amigável e descontraída (usando gírias leves como mano, suave, blz). Nunca use inglês nem pense em voz alta.'
+                                    content: systemPrompt
                                 },
-                                ...history,
+                                ...localHistory,
                                 { role: 'user', content: message }
                             ],
                             options: {
-                                temperature: 0.6,
-                                num_predict: 120,
+                                temperature: 0.4,
+                                num_predict: 80,
                                 stop: ['\nThinking Process:', 'Thinking Process:', '<think>', 'Okay, let\'s']
                             },
                             stream: true
@@ -2765,11 +2815,9 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     if (handsFreeVoiceEnabled && finalLocal) {
                         const leftover = finalLocal.substring(spokenIndex).trim();
                         if (leftover) {
-                            enqueueSpeech(leftover, () => {
-                                if (handsFreeVoiceEnabled) resumeListening();
-                            });
-                        } else {
-                            if (handsFreeVoiceEnabled && !isSpeakingTTS) resumeListening();
+                            enqueueSpeech(leftover);
+                        } else if (!isSpeakingTTS) {
+                            resumeListening();
                         }
                     }
 
@@ -3640,11 +3688,9 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 if (handsFreeVoiceEnabled && finalReply) {
                     const leftover = finalReply.substring(streamSpokenIdx).trim();
                     if (leftover) {
-                        enqueueSpeech(leftover, () => {
-                            if (handsFreeVoiceEnabled) resumeListening();
-                        });
-                    } else {
-                        if (handsFreeVoiceEnabled && !isSpeakingTTS) resumeListening();
+                        enqueueSpeech(leftover);
+                    } else if (!isSpeakingTTS) {
+                        resumeListening();
                     }
                 }
                 const wallMs = Date.now() - generation.started;
