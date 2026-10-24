@@ -276,7 +276,142 @@
             flex-shrink: 0;
         }
 
-        .avatar.bot-avatar { background: var(--accent); color: var(--bg-primary); }
+        .avatar.bot-avatar {
+            background: var(--accent);
+            color: var(--bg-primary);
+            position: relative;
+            cursor: default;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .avatar.bot-avatar[data-time]:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 12px rgba(118, 100, 192, 0.5);
+            cursor: help;
+        }
+        .avatar.bot-avatar[data-time]::after {
+            content: "⚡ " attr(data-time);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1b1828;
+            color: #e2e8f0;
+            border: 1px solid rgba(145, 126, 204, 0.45);
+            padding: 3px 9px;
+            border-radius: 7px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+            letter-spacing: 0.02em;
+        }
+        .avatar.bot-avatar[data-time]::before {
+            content: "";
+            position: absolute;
+            bottom: calc(100% + 2px);
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px 6px 0 6px;
+            border-style: solid;
+            border-color: #1b1828 transparent transparent transparent;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.15s ease;
+            z-index: 1001;
+            pointer-events: none;
+        }
+        .avatar.bot-avatar[data-time]:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-2px);
+        }
+        .avatar.bot-avatar[data-time]:hover::before {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Feedback visual de atividade (Live Feed) */
+        .activity-live-box {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 10px 14px;
+            background: rgba(26, 24, 38, 0.75);
+            border: 1px solid rgba(145, 126, 204, 0.22);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 0.84rem;
+            max-width: 440px;
+            backdrop-filter: blur(8px);
+        }
+        .activity-live-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #c4b5fd;
+        }
+        .activity-live-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(145, 126, 204, 0.3);
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: actSpin 0.75s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes actSpin { to { transform: rotate(360deg); } }
+        .activity-live-timer {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            background: rgba(145, 126, 204, 0.15);
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+        .activity-steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 2px;
+        }
+        .activity-step-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+        .activity-step-row.done { color: #cbd5e1; }
+        .activity-step-row.done .step-check {
+            color: #34d399;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .activity-step-row.active {
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+        .activity-step-row.active .step-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #a78bfa;
+            box-shadow: 0 0 8px #a78bfa;
+            animation: actPulse 1.2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes actPulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.85); }
+            50% { opacity: 1; transform: scale(1.3); }
+        }
         .avatar.user-avatar { background: #7c3aed; color: #fff; }
 
         .message-content {
@@ -1736,7 +1871,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
             conv.messages.forEach((m, i) => appendMessage(m.role, m.content, false, m.image, m.artifact,
-                m.approval, i === conv.messages.length - 1));
+                m.approval, i === conv.messages.length - 1, m.timing));
             scrollToBottom();
         }
 
@@ -1856,7 +1991,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         }
 
         function appendMessage(role, text, animate = false, imageUrl = '', artifact = null,
-                               approval = null, activeApproval = false) {
+                               approval = null, activeApproval = false, timing = null) {
             const container = document.getElementById('messagesContainer');
             const row = document.createElement('div');
             row.className = `message-row ${role}`;
@@ -1883,7 +2018,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 content.appendChild(image);
             }
 
-            row.innerHTML = `<div class="avatar ${avatarClass}">${avatarText}</div>`;
+            const wallMs = timing?.browser_request_wall_ms || timing?.agent_wall_ms || timing?.duration_ms;
+            const timeAttr = (role === 'bot' && wallMs)
+                ? ` data-time="${(wallMs / 1000).toFixed(1)}s" title="Gerado em ${(wallMs / 1000).toFixed(1)}s"`
+                : '';
+            row.innerHTML = `<div class="avatar ${avatarClass}"${timeAttr}>${avatarText}</div>`;
             row.appendChild(content);
             container.appendChild(row);
             scrollToBottom();
@@ -2025,7 +2164,15 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         }
                     }
                     assertLiveTurn(conv);
-                    conv.messages.push({ role: 'bot', content: fullText });
+                    const wallMs = activeGeneration ? Date.now() - activeGeneration.started : 0;
+                    const secs = (wallMs / 1000).toFixed(1) + 's';
+                    const avatar = content.parentElement?.querySelector?.('.avatar.bot-avatar');
+                    if (avatar && wallMs > 0) {
+                        if (avatar.dataset) avatar.dataset.time = secs;
+                        if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
+                        avatar.title = `Gerado em ${secs}`;
+                    }
+                    conv.messages.push({ role: 'bot', content: fullText, timing: { browser_request_wall_ms: wallMs } });
                     save();
                     return true;
                 } catch (err) {
@@ -2046,7 +2193,11 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             };
             conv.pendingAgentRequest = payload;
             save();
-            content.textContent = 'Interpretando contexto e escolhendo a próxima ação...';
+            if (activeGeneration?.activity) {
+                activeGeneration.activity.addStep('Analisando intenção e ferramentas no agente...');
+            } else {
+    content.textContent = 'Interpretando contexto e escolhendo a próxima ação...';
+            }
             document.getElementById('generationStatus').textContent =
                 'Analisando a intenção com o modelo local…';
             const requestStart = Date.now();
@@ -2092,6 +2243,22 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const notice = result.reply + (events ? '\n\n' + events : '');
             const timing = safeTiming(result.agent_metrics);
             if (timing) timing.browser_request_wall_ms = Math.max(0, Date.now() - requestStart);
+            if (result.tools_executed && Array.isArray(result.tools_executed) && result.tools_executed.length > 0) {
+                result.tools_executed.forEach(tool => {
+                    const name = typeof tool === 'string' ? tool : tool.tool;
+                    if (name === 'grounded_search' || name === 'web_search') {
+                        activeGeneration?.activity?.addStep('Pesquisou na Web (grounding factual)');
+                    } else if (name === 'fs_read') {
+                        activeGeneration?.activity?.addStep('Leu arquivo do sistema');
+                    } else if (name === 'terminal_run') {
+                        activeGeneration?.activity?.addStep('Executou comando no terminal');
+                    } else if (name === 'update_core_memory') {
+                        activeGeneration?.activity?.addStep('Atualizou memória permanente');
+                    } else if (name) {
+                        activeGeneration?.activity?.addStep('Executou ferramenta: ' + name);
+                    }
+                });
+            }
             imageReply(conv, content, notice, result.image || '', result.artifact || null,
                 result.phase === 'approval' ? result.approval : null, timing);
             return true;
@@ -2238,11 +2405,21 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 }
                 content.appendChild(image);
             }
+            const wallMs = timing?.browser_request_wall_ms || timing?.agent_wall_ms || (activeGeneration ? Date.now() - activeGeneration.started : null);
+            if (wallMs) {
+                const secs = (wallMs / 1000).toFixed(1) + 's';
+                const avatar = content.parentElement?.querySelector?.('.avatar.bot-avatar');
+                if (avatar) {
+                    if (avatar.dataset) avatar.dataset.time = secs;
+                    if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
+                    avatar.title = `Gerado em ${secs}`;
+                }
+            }
             conv.messages.push({ role: 'bot', content: message,
                 ...(imageUrl ? { image: imageUrl } : {}),
                 ...(artifact ? { artifact } : {}),
                 ...(approval ? { approval } : {}),
-                ...(timing ? { timing } : {}) });
+                ...(timing || (wallMs ? { timing: { browser_request_wall_ms: wallMs } } : {})) });
             save();
             scrollToBottom();
         }
@@ -2540,13 +2717,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 conv: null, content: null,
             };
             activeGeneration = generation;
-            generation.timer = setInterval(() => {
-                if (activeGeneration === generation) {
-                    const seconds = Math.floor((Date.now() - generation.started) / 1000);
-                    document.getElementById('generationStatus').textContent =
-                        'Menor está processando há ' + seconds + 's. Você pode parar ou trocar de chat.';
-                }
-            }, 1000);
+            
             document.getElementById('cancelBtn').hidden = false;
             document.getElementById('generationStatus').hidden = false;
             document.getElementById('generationStatus').textContent = 'Processando mensagem…';
@@ -2559,7 +2730,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             showMessages();
             document.getElementById('messagesContainer').replaceChildren();
             getActiveConv().messages.forEach((m, i, all) =>
-                appendMessage(m.role, m.content, false, m.image, m.artifact, m.approval, i === all.length - 1));
+                appendMessage(m.role, m.content, false, m.image, m.artifact, m.approval, i === all.length - 1, m.timing));
 
             const conv = getActiveConv();
             const history = buildHistory(conv.messages, msg);
@@ -2571,6 +2742,63 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const botContent = appendMessage('bot', '', true);
             generation.conv = conv;
             generation.content = botContent;
+
+            const activity = {
+                steps: ['Interpretando mensagem e contexto...'],
+                started: Date.now(),
+                box: null,
+                addStep(step) {
+                    if (!this.steps.includes(step)) {
+                        this.steps.push(step);
+                        this.render();
+                    }
+                },
+                render() {
+                    if (typeof HTMLElement === 'undefined' || !(botContent instanceof HTMLElement)) return;
+                    if (!this.box) {
+                        this.box = document.createElement('div');
+                        this.box.className = 'activity-live-box';
+                        botContent.innerHTML = '';
+                        botContent.appendChild(this.box);
+                    }
+                    const elapsed = ((Date.now() - this.started) / 1000).toFixed(1);
+                    let html = `<div class="activity-live-header">`
+                        + `<span class="activity-live-spinner"></span>`
+                        + `<span>Pensando com o Menor...</span>`
+                        + `<span class="activity-live-timer">${elapsed}s</span>`
+                        + `</div><div class="activity-steps-container">`;
+                    this.steps.forEach((s, idx) => {
+                        const isLast = idx === this.steps.length - 1;
+                        if (isLast) {
+                            html += `<div class="activity-step-row active"><span class="step-dot"></span><span>${s}</span></div>`;
+                        } else {
+                            html += `<div class="activity-step-row done"><span class="step-check">✓</span><span>${s}</span></div>`;
+                        }
+                    });
+                    html += `</div>`;
+                    this.box.innerHTML = html;
+                    scrollToBottom();
+                }
+            };
+            generation.activity = activity;
+            activity.render();
+
+            generation.timer = setInterval(() => {
+                if (activeGeneration === generation) {
+                    const seconds = Math.floor((Date.now() - generation.started) / 1000);
+                    document.getElementById('generationStatus').textContent =
+                        'Menor está processando há ' + seconds + 's. Você pode parar ou trocar de chat.';
+                    if (seconds >= 2 && seconds < 4) {
+                        activity.addStep('Consultando Core Memory e preferências...');
+                    } else if (seconds >= 4 && seconds < 10) {
+                        const target = getSelectedComputeTarget();
+                        activity.addStep(target.node === 'local' ? 'Raciocinando na GPU Local (GTX 1650)...' : 'Raciocinando com modelo no Servidor Ubuntu...');
+                    } else if (seconds >= 10) {
+                        activity.addStep('Sintetizando resposta...');
+                    }
+                    activity.render();
+                }
+            }, 500);
 
             try {
                 const recent = recentImage(conv);
@@ -2764,7 +2992,19 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 generation.reader = null;
                 botContent.textContent = routeNotice + fullReply;
                 if (!fullReply.trim()) throw new Error('O modelo retornou uma resposta vazia.');
-                conv.messages.push({ role: 'bot', content: routeNotice + fullReply });
+                const wallMs = Date.now() - generation.started;
+                const secs = (wallMs / 1000).toFixed(1) + 's';
+                const avatar = botContent.parentElement?.querySelector?.('.avatar.bot-avatar');
+                if (avatar) {
+                    if (avatar.dataset) avatar.dataset.time = secs;
+                    if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
+                    avatar.title = `Gerado em ${secs}`;
+                }
+                conv.messages.push({
+                    role: 'bot',
+                    content: routeNotice + fullReply,
+                    timing: { browser_request_wall_ms: wallMs },
+                });
                 save();
             } catch (err) {
                 if (activeGeneration === generation && err.name !== 'AbortError') {
