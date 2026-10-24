@@ -95,6 +95,43 @@ class TestApiV2(unittest.TestCase):
         tasks = resp_list.json().get("tasks", [])
         self.assertTrue(len(tasks) > 0)
 
+        # Consultar tarefa específica
+        resp_get = self.client.get(
+            f"/api/tasks/{data['task_id']}",
+            cookies={"menor_session": session_cookie} if session_cookie else {},
+        )
+        self.assertEqual(resp_get.status_code, 200)
+        task_info = resp_get.json()
+        self.assertEqual(task_info["id"], data["task_id"])
+        self.assertIn("status", task_info)
+
+    def test_memory_remember_and_search(self):
+        self.client.post("/auth/setup", json={"password": "minhasenhadeproprietario123"})
+        login_resp = self.client.post("/auth/login", json={"password": "minhasenhadeproprietario123"})
+        self.assertEqual(login_resp.status_code, 200)
+        session_cookie = login_resp.cookies.get("menor_session")
+        cookies = {"menor_session": session_cookie} if session_cookie else {}
+
+        # 1. Salvar preferência
+        resp_remember = self.client.post(
+            "/memory/remember",
+            json={"text": "O Isaac prefere terminal bash ao zsh", "kind": "preference"},
+            cookies=cookies,
+        )
+        self.assertEqual(resp_remember.status_code, 200)
+        data_remember = resp_remember.json()
+        self.assertTrue(data_remember.get("saved"))
+
+        # 2. Buscar no índice
+        resp_search = self.client.post(
+            "/memory/search",
+            json={"query": "terminal bash", "limit": 3},
+            cookies=cookies,
+        )
+        self.assertEqual(resp_search.status_code, 200)
+        data_search = resp_search.json()
+        self.assertIn("items", data_search)
+
 
 if __name__ == "__main__":
     unittest.main()

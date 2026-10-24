@@ -6,6 +6,7 @@ Suporta streaming SSE e execução de ferramentas reais do sistema operacional.
 import json
 import logging
 import os
+import re
 from typing import Any, Dict, List, Optional
 import requests
 
@@ -34,16 +35,12 @@ Regras Inegociáveis e Diretrizes de Execução:
 - Responda sempre em português brasileiro fluente, natural e direto, sem rodeios ou formalidades vazias.
 """
 
-CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, o parceiro inteligente de software e tecnologia do Isaac.
-Diretrizes Rigorosas de Conversação (Estilo ChatGPT / Colega de Equipe):
-1. Espelhamento de Energia: Em cumprimentos ("oi", "e aí"), frases curtas ou vagas, responda
-   de forma CURTA e NATURAL (máximo 1 a 2 frases amigáveis).
-2. Proibição de Auto-Propaganda: NUNCA recite listas de projetos nem ofereça ferramentas sem o Isaac pedir.
-   Seja receptivo: apenas pergunte no que ele está pensando.
-3. Zero Suposição de Rotina: NUNCA presuma nem invente reuniões, compromissos, tarefas, cansaço ou horários fictícios.
-4. Linguagem Humana e Direta: Fale em português brasileiro fluente, descontraído e parceiro (use gírias como mano,
-   cara, blz, suave com naturalidade). Evite excesso de emojis e nunca use emojis de robô ou ferramentas.
-5. Se o Isaac não trouxer um assunto técnico, NUNCA puxe assunto sobre código ou trabalho.
+CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, o assistente inteligente e parceiro de tecnologia do Isaac.
+Diretrizes Rigorosas de Conversação:
+1. Responda sempre de forma curta, natural, descontraída e amigável em português brasileiro (use gírias leves como mano, suave, blz).
+2. Em saudações ("e aí", "oi", "fala"), responda em 1 frase acolhedora sem puxar assuntos técnicos ou inventar tarefas.
+3. Se o Isaac não pedir código ou ferramentas, apenas converse com ele amigavelmente.
+4. NUNCA gere blocos de pensamento interno, tags <think> ou explicações sobre o processo de raciocínio. Responda diretamente.
 """
 
 
@@ -269,9 +266,9 @@ class Orchestrator:
                     "temperature": 0.6 if not should_use_tools else 0.2,
                     "top_p": 0.9,
                     "repeat_penalty": 1.1,
-                    "num_predict": 80 if not should_use_tools else 250,
+                    "num_predict": 120 if not should_use_tools else 250,
                     "num_thread": get_optimal_threads(),
-                    "num_ctx": 512 if not should_use_tools else 2048,
+                    "num_ctx": 2048 if not should_use_tools else 4096,
                 },
                 "keep_alive": "60m",
             }
@@ -284,23 +281,35 @@ class Orchestrator:
                 data = resp.json()
             except requests.HTTPError as http_err:
                 # Blindagem: se o modelo retornar 400 Bad Request por incompatibilidade com tools=[...],
-                # remove tools e tenta novamente como texto puro
+                # remove tools e tenta novamente como texto puro com histórico enxuto
                 status_code = getattr(http_err.response, "status_code", None)
+                err_text = getattr(http_err.response, "text", "")
                 if tools_schema and status_code == 400:
-                    LOGGER.warning("Modelo %s retornou 400 com tools. Tentando fallback sem tools.", target_model)
+                    LOGGER.warning("Modelo %s retornou 400 com tools (%s). Tentando fallback sem tools.", target_model, err_text[:80])
                     payload.pop("tools", None)
-                    payload["options"]["num_ctx"] = 1024
+                    payload["options"]["num_ctx"] = 2048
                     try:
                         resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
                         resp.raise_for_status()
                         data = resp.json()
                     except Exception as retry_exc:
-                        LOGGER.error("Falha no retry sem tools (%s): %s", target_url, retry_exc)
-                        return {
-                            "success": False,
-                            "reply": f"Erro de comunicação com o modelo ({target_model}): {str(retry_exc)}",
-                            "tools_executed": executed_tools_log,
-                        }
+                        LOGGER.warning("Fallback padrão sem tools falhou (%s). Tentando fallback com prompt simplificado.", retry_exc)
+                        # Segundo fallback: simplifica mensagens para evitar overflow de contexto
+                        payload["messages"] = [
+                            {"role": "system", "content": CASUAL_SYSTEM_PROMPT},
+                            {"role": "user", "content": last_user},
+                        ]
+                        try:
+                            resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
+                            resp.raise_for_status()
+                            data = resp.json()
+                        except Exception as final_exc:
+                            LOGGER.error("Falha final no retry sem tools (%s): %s", target_url, final_exc)
+                            return {
+                                "success": False,
+                                "reply": f"Erro de comunicação com o modelo ({target_model}): {str(final_exc)}",
+                                "tools_executed": executed_tools_log,
+                            }
                 else:
                     LOGGER.error("Falha ao comunicar com Ollama (%s): %s", target_url, http_err)
                     return {
@@ -318,15 +327,25 @@ class Orchestrator:
 
             msg = data.get("message", {})
             content = msg.get("content", "")
+            thinking = msg.get("thinking", "")
             tool_calls = msg.get("tool_calls", [])
 
             # Adiciona resposta do assistente ao histórico
             chat_history.append(msg)
 
             if not tool_calls:
+                reply_text = content.strip()
+                if not reply_text and thinking:
+                    # Se content for vazio mas thinking possuir texto útil, aproveita a conclusão
+                    clean_think = re.sub(r"<think>.*?</think>", "", thinking, flags=re.DOTALL).strip()
+                    if clean_think:
+                        reply_text = clean_think
+                if not reply_text:
+                    LOGGER.warning("Modelo %s retornou resposta vazia. Aplicando fallback casual.", target_model)
+                    reply_text = "E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?"
                 return {
                     "success": True,
-                    "reply": content,
+                    "reply": reply_text,
                     "tools_executed": executed_tools_log,
                     "model_used": target_model,
                     "node_url": target_url,

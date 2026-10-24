@@ -448,6 +448,61 @@
 
         @keyframes blink { 0%, 50% { opacity: 1; } 50.1%, 100% { opacity: 0; } }
 
+        /* Voice Mode & Dual-Brain Hub Styles */
+        .mic-btn.active-voice {
+            background: #ef4444 !important;
+            color: #ffffff !important;
+            border-radius: 8px;
+            animation: voicePulse 1.2s infinite ease-in-out;
+        }
+        @keyframes voicePulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { transform: scale(1.18); box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.5); }
+        }
+        .voice-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: rgba(239, 68, 68, 0.16);
+            color: #fca5a5;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .hub-dispatch-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: rgba(30, 27, 46, 0.85);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            border-radius: 12px;
+            font-size: 0.82rem;
+            color: #c4b5fd;
+            margin: 10px 0;
+            max-width: 600px;
+            backdrop-filter: blur(8px);
+        }
+        .hub-task-card {
+            background: rgba(26, 24, 38, 0.8);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin: 12px 0;
+            max-width: 720px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+        .hub-task-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: #a78bfa;
+            margin-bottom: 8px;
+        }
+
         /* ========== INPUT BAR ========== */
         .input-area {
             padding: 16px 20px 24px;
@@ -977,8 +1032,9 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             </div>
             <div class="topbar-actions" role="group" aria-label="Ações da conversa">
                 <select id="nodeSelector" class="toggle-sidebar-btn" style="font-size: 13px; font-weight: 500; padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Escolha onde processar a inteligência">
-                    <option value="server">Servidor (Qwen 7B CPU)</option>
-                    <option value="local">PC Local (Qwen 7B GPU)</option>
+                    <option value="server">Servidor (Notebook CPU)</option>
+                    <option value="local:qwen2.5:3b">⚡ PC Local (Qwen 3B GPU - ~45 tok/s)</option>
+                    <option value="local:qwen2.5:7b">🚀 PC Local (Qwen 7B GPU)</option>
                 </select>
                 <button type="button" class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
                     aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
@@ -1037,6 +1093,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     aria-label="Parar resposta em andamento" onclick="cancelGeneration()" hidden>Parar</button>
             </div>
             <div class="composer-meta">
+                <div class="input-footer voice-status-pill" id="voiceStatusPill" hidden>🎙️ Voz Contínua Ativa</div>
                 <div class="input-footer" id="imageAttachmentName" hidden></div>
                 <div class="input-footer attachment-status" id="documentStatus" role="status"
                     aria-live="polite" hidden></div>
@@ -1207,12 +1264,145 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
     </section>
     <script>
         
-        // --- Menor v2: Suporte a Voz e Seletor de Cérebro ---
+        // --- Menor v2: Suporte a Voz Hands-Free & ChatGPT-style Loop ---
         let recognition = null;
         let isRecording = false;
+        let handsFreeVoiceEnabled = false;
+        let isSpeakingTTS = false;
+        let speechSilenceTimer = null;
+
+        function speakText(text, onComplete) {
+            if (!window.speechSynthesis) {
+                if (onComplete) onComplete();
+                return;
+            }
+            window.speechSynthesis.cancel();
+            const clean = text
+                .replace(/```[\s\S]*?```/g, 'Bloco de código omitido na fala.')
+                .replace(/`([^`]+)`/g, '$1')
+                .replace(/https?:\/\/\S+/g, 'link')
+                .replace(/[*#_~>]/g, '')
+                .trim();
+            if (!clean) {
+                if (onComplete) onComplete();
+                return;
+            }
+            const utterance = new SpeechSynthesisUtterance(clean);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 1.05;
+            utterance.pitch = 1.0;
+            isSpeakingTTS = true;
+            utterance.onend = function() {
+                isSpeakingTTS = false;
+                if (onComplete) onComplete();
+            };
+            utterance.onerror = function() {
+                isSpeakingTTS = false;
+                if (onComplete) onComplete();
+            };
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopTTS() {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            isSpeakingTTS = false;
+        }
+
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return null;
+            const rec = new SpeechRecognition();
+            rec.lang = 'pt-BR';
+            rec.continuous = true;
+            rec.interimResults = true;
+
+            rec.onstart = function() {
+                isRecording = true;
+                updateVoiceUI();
+            };
+
+            rec.onresult = function(event) {
+                if (isSpeakingTTS) {
+                    stopTTS();
+                }
+
+                let interim = '';
+                let final = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        final += event.results[i][0].transcript;
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+
+                const input = document.getElementById('userInput');
+                if (input) {
+                    if (final) {
+                        input.value = (input.value ? input.value + ' ' : '') + final;
+                    } else if (interim) {
+                        input.placeholder = 'Ouvindo: ' + interim;
+                    }
+                    autoResize(input);
+                }
+
+                if (speechSilenceTimer) clearTimeout(speechSilenceTimer);
+
+                if (handsFreeVoiceEnabled && input && input.value.trim()) {
+                    speechSilenceTimer = setTimeout(() => {
+                        if (!isGenerating && input.value.trim()) {
+                            sendMsg();
+                        }
+                    }, 1400);
+                }
+            };
+
+            rec.onerror = function(event) {
+                console.warn('Reconhecimento de voz:', event.error);
+                if (event.error === 'not-allowed') {
+                    handsFreeVoiceEnabled = false;
+                    updateVoiceUI();
+                    alert('Acesso ao microfone foi negado pelo navegador. Conceda a permissão para usar o modo de voz.');
+                }
+            };
+
+            rec.onend = function() {
+                isRecording = false;
+                if (handsFreeVoiceEnabled && !isGenerating && !isSpeakingTTS) {
+                    try { rec.start(); } catch (_) {}
+                }
+                updateVoiceUI();
+            };
+
+            return rec;
+        }
+
+        function resumeListening() {
+            if (!handsFreeVoiceEnabled) return;
+            if (!recognition) recognition = initSpeechRecognition();
+            if (recognition && !isRecording) {
+                try { recognition.start(); } catch (_) {}
+            }
+        }
+
+        function updateVoiceUI() {
+            const micBtn = document.getElementById('micBtn');
+            const pill = document.getElementById('voiceStatusPill');
+            if (micBtn) {
+                micBtn.classList.toggle('active-voice', handsFreeVoiceEnabled);
+                micBtn.title = handsFreeVoiceEnabled
+                    ? '🎙️ Modo Voz Contínua ATIVO (Clique para pausar)'
+                    : '🎙️ Ativar Modo Voz Contínua (ChatGPT-style)';
+            }
+            if (pill) {
+                pill.hidden = !handsFreeVoiceEnabled;
+                pill.textContent = isRecording ? '🎙️ Ouvindo Isaac...' : '🎙️ Voz Contínua Ativa';
+            }
+        }
 
         function toggleVoice() {
-            const micBtn = document.getElementById('micBtn');
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
                 alert('Seu navegador não suporta reconhecimento de voz nativo. Use Chrome, Edge ou Safari.');
@@ -1220,39 +1410,21 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             }
 
             if (!recognition) {
-                recognition = new SpeechRecognition();
-                recognition.lang = 'pt-BR';
-                recognition.continuous = false;
-                recognition.interimResults = false;
-
-                recognition.onstart = function() {
-                    isRecording = true;
-                    if (micBtn) micBtn.style.color = '#ef4444';
-                };
-
-                recognition.onresult = function(event) {
-                    const transcript = event.results[0][0].transcript;
-                    const input = document.getElementById('userInput');
-                    if (input) {
-                        input.value = (input.value ? input.value + ' ' : '') + transcript;
-                        autoResize(input);
-                    }
-                };
-
-                recognition.onerror = function(event) {
-                    console.warn('Erro no reconhecimento de voz:', event.error);
-                };
-
-                recognition.onend = function() {
-                    isRecording = false;
-                    if (micBtn) micBtn.style.color = '';
-                };
+                recognition = initSpeechRecognition();
             }
 
-            if (isRecording) {
-                recognition.stop();
+            handsFreeVoiceEnabled = !handsFreeVoiceEnabled;
+            updateVoiceUI();
+
+            if (handsFreeVoiceEnabled) {
+                if (!isRecording) {
+                    try { recognition.start(); } catch (_) {}
+                }
             } else {
-                recognition.start();
+                stopTTS();
+                if (isRecording) {
+                    try { recognition.stop(); } catch (_) {}
+                }
             }
         }
 
@@ -1877,10 +2049,14 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
                 const localGroup = document.createElement('optgroup');
                 localGroup.label = 'PC Local (GPU GTX 1650)';
-                const localOpt = document.createElement('option');
-                localOpt.value = 'local:qwen2.5:7b';
-                localOpt.textContent = '🚀 PC Local (Qwen 7B GPU - Tempo Real)';
-                localGroup.appendChild(localOpt);
+                const localOpt3b = document.createElement('option');
+                localOpt3b.value = 'local:qwen2.5:3b';
+                localOpt3b.textContent = '⚡ PC Local Ultra-Rápido (Qwen 3B GPU - ~45 tok/s)';
+                localGroup.appendChild(localOpt3b);
+                const localOpt7b = document.createElement('option');
+                localOpt7b.value = 'local:qwen2.5:7b';
+                localOpt7b.textContent = '🚀 PC Local (Qwen 7B GPU - ~22 tok/s)';
+                localGroup.appendChild(localOpt7b);
                 selector.appendChild(localGroup);
 
                 const optionsList = Array.from(selector.options || []);
@@ -2420,7 +2596,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     ? 'Operação concluída e registrada.'
                     : item.status === 'planned' ? 'Ação apenas planejada, não executada.'
                         : 'Uma operação não foi concluída.').join('\n') : '';
-            const notice = result.reply + (events ? '\n\n' + events : '');
+            let notice = (result.reply || '').trim() + (events ? '\n\n' + events : '');
+            if (!notice && !result.image && !result.artifact && !result.approval) {
+                notice = 'E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?';
+            }
             const timing = safeTiming(result.agent_metrics);
             if (timing) timing.browser_request_wall_ms = Math.max(0, Date.now() - requestStart);
             if (result.tools_executed && Array.isArray(result.tools_executed) && result.tools_executed.length > 0) {

@@ -329,9 +329,12 @@ def agent_run(body: AgentRunRequest, request: Request, response: Response):
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
     messages = [item.model_dump() for item in body.history] + [{"role": "user", "content": body.message}]
     result = orchestrator.run_turn(messages=messages, model=target_model, ollama_url=target_url)
+    reply_text = str(result.get("reply", "") or "").strip()
+    if not reply_text and not result.get("tools_executed"):
+        reply_text = "E aí Isaac! Tô na escuta, mano. O que tá pegando hoje?"
     return {
         "handled": True,
-        "reply": result.get("reply", ""),
+        "reply": reply_text,
         "tools_executed": result.get("tools_executed", []),
         "model_used": result.get("model_used"),
         "node_url": result.get("node_url"),
@@ -472,7 +475,7 @@ def memory_remember(body: RememberRequest, request: Request):
     try:
         store = BrainStore()
         store.initialize()
-        safe_name = f"memoria_{int(asyncio.get_event_loop().time() * 1000)}.md"
+        safe_name = f"memoria_{int(time.time() * 1000)}.md"
         rel_path = f"conhecimentos/{safe_name}" if body.kind == "knowledge" else f"preferencias/{safe_name}"
         store.write_note(rel_path, body.text)
         return {"saved": True, "path": rel_path}
@@ -495,6 +498,16 @@ def list_tasks(request: Request):
     auth.require_owner(request)
     queue = get_task_queue()
     return {"tasks": queue.list_tasks()}
+
+
+@app.get("/api/tasks/{task_id}")
+def get_task_status(task_id: int, request: Request):
+    auth.require_owner(request)
+    queue = get_task_queue()
+    task = queue.get_task(task_id)
+    if not task:
+        raise HTTPException(404, "Tarefa não encontrada.")
+    return task
 
 
 # --- ENDPOINTS DE ESTUDO & AUTO-DIAGNÓSTICO ---

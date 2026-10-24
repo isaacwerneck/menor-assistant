@@ -369,7 +369,7 @@ class StudyWorker:
                         "num_ctx": 1024,
                     },
                 },
-                timeout=(3, 18),
+                timeout=(5, 60),
             )
             if resp.status_code == 200:
                 card = resp.json().get("message", {}).get("content", "").strip()
@@ -378,7 +378,22 @@ class StudyWorker:
         except Exception as exc:
             LOGGER.debug("Destilação via LLM falhou (%s), usando fallback estruturado.", exc)
 
-        sample = combined_text.splitlines()[0] if combined_text.splitlines() else "Padrão de engenharia verificado."
+        AD_INDICATORS = (
+            "seminovo", "0km", "ofertas", "comprar carro", "reclame aqui",
+            "cookies", "politica de privacidade", "login", "cadastre-se", "compre online"
+        )
+        cleaned_lines = [
+            line.strip() for line in combined_text.splitlines()
+            if line.strip() and not any(ad in line.lower() for ad in AD_INDICATORS)
+        ]
+        sample = ""
+        for line in cleaned_lines:
+            if len(line) >= 20 and not line.startswith("<") and not line.startswith("http"):
+                sample = line
+                break
+        if not sample:
+            sample = f"Padrão de engenharia e boas práticas para {topic}."
+
         return (
             f"### {topic}\n"
             f"- Conceito Central: {topic} implementado de acordo com as especificações modernas.\n"
@@ -541,7 +556,7 @@ class DiagnosticEngine:
                     ],
                     "stream": False,
                 },
-                timeout=(3, 18),
+                timeout=(5, 45),
             )
             if resp.status_code == 200:
                 student_answer = resp.json().get("message", {}).get("content", "")
@@ -589,7 +604,7 @@ class DiagnosticEngine:
                         "num_ctx": 1024,
                     },
                 },
-                timeout=(3, 18),
+                timeout=(5, 45),
             )
             if resp_judge.status_code == 200:
                 data = json.loads(resp_judge.json().get("message", {}).get("content", "{}"))
