@@ -754,7 +754,7 @@ def run_autonomous_cycle(
 
     try:
         print("[3/5] [INSPECAO] Inspecionando saude do codigo e cobertura de testes (AST)...")
-        cycle_mon.set_phase(3, "Inspecionando saúde do código e cobertura de testes (AST)...")
+        cycle_mon.set_phase(3, "Inspecionando saúde do código e auto-refatorando em sandbox...")
         from src.agent.inspector import CodebaseInspector
         inspector = CodebaseInspector()
         cycle_report["inspection"] = inspector.audit()
@@ -763,6 +763,53 @@ def run_autonomous_cycle(
         cycle_mon.update_metrics(coverage_percentage=cov, uncovered_gaps=gaps)
         cycle_mon.log(f"Inspeção AST concluída: Cobertura {cov}%, {gaps} gaps mapeados", level="ok", phase=3)
         print(f"      OK: Inspeção concluida (Cobertura: {cov}%, {gaps} gaps mapeados)")
+
+        # Auto-Refatoração em Sandbox (Fase 3.2): Resolve gaps em ferramentas reais com rollback garantido
+        proposals = []
+        uncovered_items = (cycle_report["inspection"] or {}).get("uncovered_items", [])
+        if uncovered_items:
+            try:
+                from src.agent.sandbox_refactor import SandboxRefactorEngine
+                engine = SandboxRefactorEngine(store=st)
+                if engine.is_tree_clean():
+                    # Prioriza gaps em ferramentas reais (src/tools/)
+                    tool_gaps = [g for g in uncovered_items if "tools" in g.get("module", "")]
+                    target_gap = tool_gaps[0] if tool_gaps else uncovered_items[0]
+                    target_sym = target_gap.get("function") or target_gap.get("class")
+                    target_mod = target_gap.get("module")
+                    if target_sym and target_mod:
+                        cycle_mon.log(
+                            f"[SANDBOX] Validando teste sintético para '{target_sym}' ({target_mod})...",
+                            level="step",
+                            phase=3,
+                        )
+                        test_code = inspector.synthesize_test_stub(target_mod, target_sym)
+                        trial_res = engine.run_test_stub_trial(target_mod, target_sym, test_code)
+                        if trial_res.get("success"):
+                            proposals.append(trial_res)
+                            cycle_mon.update_metrics(sandbox_proposals_count=len(proposals))
+                            cycle_mon.log(
+                                f"[SANDBOX] Proposta validada com 100% de testes verdes: '{target_sym}' "
+                                f"na branch {trial_res['trial_branch']}",
+                                level="ok",
+                                phase=3,
+                            )
+                            print(f"      OK: Proposta em sandbox gerada com sucesso ({trial_res['trial_branch']})")
+                        elif trial_res.get("rolled_back"):
+                            cycle_mon.log(
+                                f"[SANDBOX] Rollback executado: stub para '{target_sym}' rejeitado nos testes.",
+                                level="warn",
+                                phase=3,
+                            )
+                else:
+                    cycle_mon.log(
+                        "[SANDBOX] Árvore git com alterações não salvas; sandbox pulada por segurança.",
+                        level="info",
+                        phase=3,
+                    )
+            except Exception as s_exc:
+                LOGGER.debug("Erro na refatoração em sandbox: %s", s_exc)
+        cycle_report["sandbox_proposals"] = proposals
     except Exception as exc:
         LOGGER.debug("Erro na inspeção do ciclo: %s", exc)
         cycle_mon.log(f"Erro na inspeção: {exc}", level="warn", phase=3)
@@ -847,6 +894,23 @@ def run_autonomous_cycle(
     insp_gaps = (cycle_report["inspection"] or {}).get("uncovered_count", "N/A")
     gold_created = (cycle_report["diagnostic"] or {}).get("golden_example_created", False)
 
+    sandbox_proposals = cycle_report.get("sandbox_proposals", [])
+    if sandbox_proposals:
+        prop_lines = []
+        for p in sandbox_proposals:
+            branch = p.get("trial_branch", "sandbox")
+            sym = p.get("target_name", "símbolo")
+            prop_lines.append(f"- **Proposta Validada ({sym}):** Branch `{branch}` (Mesclar: `git merge {branch}`)")
+        proposals_block = (
+            "\n\n### 5. Propostas de Refatoração Validadas em Sandbox (Prontas para Aprovação)\n"
+            + "\n".join(prop_lines)
+        )
+    else:
+        proposals_block = (
+            "\n\n### 5. Propostas de Refatoração em Sandbox\n"
+            "- Nenhuma proposta nova pendente nesta rodada."
+        )
+
     md_content = (
         f"# Relatório da Sessão de Auto-Evolução do Menor v2\n"
         f"**Concluído em:** {now_human}\n\n"
@@ -862,7 +926,8 @@ def run_autonomous_cycle(
         f"- Nota de Auto-Avaliação: {diag_score}/10\n"
         f"- Ponto Fraco / Gap Identificado: {diag_gap}\n"
         f"- Exemplo de Ouro (Golden Example): {'Gerado e gravado' if gold_created else 'Não necessário'}"
-        f"{facts_block}\n"
+        f"{facts_block}"
+        f"{proposals_block}\n"
     )
     md_path.write_text(md_content, encoding="utf-8")
     cycle_report["report_markdown"] = md_content

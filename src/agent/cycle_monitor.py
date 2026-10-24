@@ -19,7 +19,7 @@ class CycleMonitor:
         0: "Inativo",
         1: "Reflexão de Tarefas & Anti-Padrões",
         2: "Pesquisa & Assimilação Web",
-        3: "Inspeção AST & Cobertura de Código",
+        3: "Inspeção AST & Auto-Refatoração em Sandbox",
         4: "Auto-Crítica & Self-Refinement (Reflexion)",
         5: "Consolidação do Relatório de Evolução",
     }
@@ -48,6 +48,7 @@ class CycleMonitor:
             "uncovered_gaps": 0,
             "judge_score": "N/A",
             "golden_example_created": False,
+            "sandbox_proposals_count": 0,
         }
         self._last_report_summary: Dict[str, Any] = {}
 

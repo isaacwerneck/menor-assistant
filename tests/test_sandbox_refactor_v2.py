@@ -123,6 +123,71 @@ class TestSandboxRefactorV2(unittest.TestCase):
         props = list(prop_dir.glob("refatoracao_*.md"))
         self.assertEqual(len(props), 1)
 
+    @patch("subprocess.run")
+    def test_run_test_stub_trial_success(self, mock_run):
+        def side_effect(cmd, **kwargs):
+            m = MagicMock()
+            if "rev-parse" in cmd:
+                m.returncode = 0
+                m.stdout = "main\n"
+            elif "diff" in cmd:
+                m.returncode = 0
+                m.stdout = "+ class TestAutoFoo(unittest.TestCase):\n"
+            else:
+                m.returncode = 0
+                m.stdout = "OK"
+                m.stderr = ""
+            return m
+
+        mock_run.side_effect = side_effect
+
+        engine = SandboxRefactorEngine(root_dir=str(self.repo), store=self.store)
+        engine.is_tree_clean = MagicMock(return_value=True)
+
+        res = engine.run_test_stub_trial(
+            module_rel_path="src/tools/core.py",
+            target_name="dummy_tool",
+            test_code="import unittest\n",
+        )
+        self.assertTrue(res["success"])
+        self.assertIn("trial_branch", res)
+        self.assertIn("dummy_tool", res["target_name"])
+
+        # Confirma markdown gerado
+        prop_dir = self.store.brain_dir / "propostas" / "melhorias"
+        props = list(prop_dir.glob("teste_dummy_tool_*.md"))
+        self.assertEqual(len(props), 1)
+
+    @patch("subprocess.run")
+    def test_run_test_stub_trial_failure_rollback(self, mock_run):
+        def side_effect(cmd, **kwargs):
+            m = MagicMock()
+            if "unittest" in cmd:
+                m.returncode = 1
+                m.stdout = "FAILED (errors=1)"
+                m.stderr = "ImportError"
+            elif "rev-parse" in cmd:
+                m.returncode = 0
+                m.stdout = "main\n"
+            else:
+                m.returncode = 0
+                m.stdout = ""
+                m.stderr = ""
+            return m
+
+        mock_run.side_effect = side_effect
+
+        engine = SandboxRefactorEngine(root_dir=str(self.repo), store=self.store)
+        engine.is_tree_clean = MagicMock(return_value=True)
+
+        res = engine.run_test_stub_trial(
+            module_rel_path="src/tools/core.py",
+            target_name="broken_tool",
+            test_code="broken python code",
+        )
+        self.assertFalse(res["success"])
+        self.assertTrue(res.get("rolled_back"))
+
     def test_tool_trial_code_refactoring(self):
         res = trial_code_refactoring(
             target_file="arquivo_inexistente.py",

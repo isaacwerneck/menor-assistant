@@ -147,6 +147,107 @@ class SandboxRefactorEngine:
             self._run_git(["branch", "-D", trial_branch])
             return {"success": False, "error": f"Erro inesperado no sandbox: {exc}"}
 
+    def run_test_stub_trial(
+        self,
+        module_rel_path: str,
+        target_name: str,
+        test_code: str,
+    ) -> Dict[str, Any]:
+        """Tenta validar um teste sintético gerado em branch isolada para cobrir um gap."""
+        if not self.is_tree_clean():
+            return {
+                "success": False,
+                "error": "A árvore git possui alterações locais pendentes. Salve ou commite antes de refatorar.",
+            }
+
+        orig_branch = self.current_branch()
+        trial_id = int(time.time())
+        clean_name = "".join(c for c in target_name if c.isalnum() or c == "_")
+        trial_branch = f"auto-refactor/gap-{clean_name}-{trial_id}"
+
+        checkout_res = self._run_git(["checkout", "-b", trial_branch])
+        if checkout_res.returncode != 0:
+            return {"success": False, "error": f"Falha ao criar branch de sandbox: {checkout_res.stderr}"}
+
+        test_file = self.root_dir / "tests" / f"test_stub_{clean_name}.py"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            test_file.write_text(test_code, encoding="utf-8")
+
+            test_proc = subprocess.run(
+                ["python", "-m", "unittest", f"tests/{test_file.name}", "-v"],
+                cwd=str(self.root_dir),
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+
+            if test_proc.returncode != 0:
+                self._run_git(["checkout", orig_branch])
+                self._run_git(["branch", "-D", trial_branch])
+                if test_file.exists():
+                    test_file.unlink()
+
+                self.store.improve_knowledge(
+                    domain="engenharia_software",
+                    topic="anti_padroes_refatoracao",
+                    content=(
+                        f"- Teste sintético rejeitado para '{target_name}' em '{module_rel_path}'. "
+                        f"Erro: {test_proc.stderr[-300:] if test_proc.stderr else test_proc.stdout[-300:]}"
+                    ),
+                    mode="append",
+                )
+                return {
+                    "success": False,
+                    "rolled_back": True,
+                    "reason": "Testes unitários falharam durante a validação em sandbox.",
+                    "test_output": test_proc.stdout[-1000:],
+                }
+
+            self._run_git(["add", f"tests/{test_file.name}"])
+            self._run_git(["commit", "-m", f"test: cobertura de gap para {target_name} ({module_rel_path})"])
+
+            diff_proc = self._run_git(["diff", "HEAD~1..HEAD"])
+            diff_text = diff_proc.stdout
+
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            proposal_md = (
+                f"# Proposta de Teste Validada em Sandbox: `{target_name}`\n"
+                f"**Data:** {now_str}  \n"
+                f"**Branch Isolada:** `{trial_branch}`  \n"
+                f"**Módulo Coberto:** `{module_rel_path}`  \n"
+                f"**Status dos Testes:** 100% dos testes unitários passaram!\n\n"
+                f"## Diff do Teste Proposto\n```diff\n{diff_text}\n```\n"
+                f"Para mesclar na branch principal: `git merge {trial_branch}`\n"
+            )
+
+            prop_dir = self.store.brain_dir / "propostas" / "melhorias"
+            prop_dir.mkdir(parents=True, exist_ok=True)
+            prop_file = prop_dir / f"teste_{clean_name}_{trial_id}.md"
+            prop_file.write_text(proposal_md, encoding="utf-8")
+
+            self._run_git(["checkout", orig_branch])
+
+            return {
+                "success": True,
+                "trial_branch": trial_branch,
+                "proposal_report": str(prop_file),
+                "diff": diff_text,
+                "target_name": target_name,
+                "module": module_rel_path,
+                "message": (
+                    f"Teste para '{target_name}' validado com sucesso na branch '{trial_branch}'. "
+                    "Proposta pronta para aprovação."
+                ),
+            }
+
+        except Exception as exc:
+            self._run_git(["checkout", orig_branch])
+            self._run_git(["branch", "-D", trial_branch])
+            if test_file.exists():
+                test_file.unlink()
+            return {"success": False, "error": f"Erro inesperado no sandbox: {exc}"}
+
 
 def trial_code_refactoring(
     target_file: str,

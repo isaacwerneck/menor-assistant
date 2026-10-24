@@ -231,6 +231,33 @@ class TestStudyEngine(unittest.TestCase):
         rep_file = self.store.brain_dir / "relatorios" / "ultimo_estudo.md"
         self.assertTrue(rep_file.exists())
 
+    @patch("src.agent.sandbox_refactor.SandboxRefactorEngine.is_tree_clean", return_value=True)
+    @patch("src.agent.sandbox_refactor.SandboxRefactorEngine.run_test_stub_trial")
+    @patch("src.agent.study.DiagnosticEngine.run_self_eval")
+    @patch("src.agent.study.StudyWorker.study_cycle")
+    @patch("src.agent.reflection.ReflectionWorker.reflect")
+    def test_run_autonomous_cycle_with_sandbox_proposal(
+        self, mock_refl, mock_study, mock_diag, mock_trial, mock_clean
+    ):
+        from src.agent.study import run_autonomous_cycle
+        mock_refl.return_value = {"learnings_added": 1, "anti_patterns_added": 0}
+        mock_study.return_value = {"topics": ["Rust Async"], "studied": 1}
+        mock_diag.return_value = {"score": 9.0, "gap_identified": ""}
+        mock_trial.return_value = {
+            "success": True,
+            "trial_branch": "auto-refactor/gap-test_sample-12345",
+            "target_name": "sample_tool",
+            "module": "src/tools/core.py",
+            "diff": "+ def test_sample(): pass\n",
+        }
+
+        res = run_autonomous_cycle(store=self.store)
+        self.assertIsNotNone(res)
+        self.assertIn("sandbox_proposals", res)
+        self.assertEqual(len(res["sandbox_proposals"]), 1)
+        self.assertIn("auto-refactor/gap-test_sample-12345", res["report_markdown"])
+        self.assertIn("git merge auto-refactor/gap-test_sample-12345", res["report_markdown"])
+
     def test_dynamic_study_anchors_from_core_memory(self):
         from src.memory.core_memory import CoreMemoryManager
         cm = CoreMemoryManager(store=self.store)
