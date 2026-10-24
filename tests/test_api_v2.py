@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -132,6 +133,33 @@ class TestApiV2(unittest.TestCase):
         self.assertEqual(resp_search.status_code, 200)
         data_search = resp_search.json()
         self.assertIn("items", data_search)
+
+    @patch("src.api.main.Orchestrator.run_turn")
+    def test_agent_run_local_node_fallback(self, mock_run_turn):
+        self.client.post("/auth/setup", json={"password": "minhasenhadeproprietario123"})
+        resp_login = self.client.post("/auth/login", json={"password": "minhasenhadeproprietario123"})
+        cookies = {"menor_session": resp_login.cookies.get("menor_session")}
+
+        mock_run_turn.return_value = {
+            "success": True,
+            "reply": "Resposta com modelo ativo do servidor",
+            "tools_executed": [],
+        }
+
+        resp = self.client.post(
+            "/agent/run",
+            json={
+                "message": "Olá",
+                "node": "local",
+                "model": "qwen3.5:4b",
+                "ollama_url": "http://localhost:11434",
+            },
+            cookies=cookies,
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get("handled"))
+        self.assertIn("servidor", data.get("reply"))
 
 
 if __name__ == "__main__":

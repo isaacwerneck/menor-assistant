@@ -213,10 +213,11 @@ class TopicManager:
         if ollama_url and model:
             prompt = (
                 "Você é o planejador de estudos do Menor v2. "
-                f"Gere {count} novos tópicos de estudo avançados e extremamente práticos para engenharia de software.\n"
+                f"Gere {count} novos tópicos de estudo avançados e extremamente práticos "
+                "para engenharia de software.\n"
                 "Âncoras estritas de domínio:\n"
                 + "\n".join(f"- {d}" for d in anchors_list)
-                + "\nProibido: culinária, curiosidades genéricas, assuntos não relacionados a código, bancos de dados ou UI/UX.\n"
+                + "\nProibido: culinária, curiosidades genéricas, assuntos não relacionados a código ou UI/UX.\n"
                 "Responda estritamente em JSON: {\"topics\": [\"Tópico 1\", \"Tópico 2\"]}"
             )
             try:
@@ -916,21 +917,26 @@ def run_autonomous_cycle(
         cycle_mon.set_phase(4, "Executando auto-diagnóstico crítico e refinamento (Reflexion)...")
         de = DiagnosticEngine(store=st, ollama_url=url, model=mdl)
 
-        # Desafio dinâmico: se estudou tópicos na Fase 2, avalia sobre o tópico estudado; senão rotaciona desafios sênior
+        # Desafio dinâmico: se estudou tópicos na Fase 2, avalia sobre o tópico; senão rotaciona
         eval_question = None
         studied_topics_phase2 = (cycle_report["study"] or {}).get("topics", [])
         if studied_topics_phase2:
-            clean_stud_title = normalize_topic_key(studied_topics_phase2[0])
             eval_question = (
                 f"Explique a arquitetura técnica recomendada, boas práticas e armadilhas ao implementar: "
                 f"{studied_topics_phase2[0]}."
             )
         else:
             senior_challenges = [
-                "Como tratar concorrência em FastAPI com operações assíncronas e I/O bloqueante sem travar o EventLoop no Python?",
+                (
+                    "Como tratar concorrência em FastAPI com operações assíncronas e I/O bloqueante "
+                    "sem travar o EventLoop no Python?"
+                ),
                 "Como estruturar índices FTS5 com busca vetorial híbrida e BM25 em SQLite no Python?",
                 "Como implementar preempção atômica e cancelamento limpo de threads e processos em segundo plano?",
-                "Como garantir consistência de cache e evitar vazamento de memória em microsserviços Python assíncronos?",
+                (
+                    "Como garantir consistência de cache e evitar vazamento de memória em microsserviços "
+                    "Python assíncronos?"
+                ),
                 "Como otimizar a inferência de LLMs locais via llama.cpp ajustando contagem de threads e num_ctx?",
             ]
             import time

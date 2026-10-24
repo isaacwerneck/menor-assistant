@@ -37,7 +37,8 @@ Regras Inegociáveis e Diretrizes de Execução:
 """
 
 CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, assistente pessoal e parceiro de tecnologia do Isaac.
-Converse diretamente em português brasileiro, de forma natural, amigável e descontraída (usando gírias leves como mano, suave, blz).
+Converse diretamente em português brasileiro, de forma natural, amigável e descontraída
+(usando gírias leves como mano, suave, blz).
 
 Exemplos de como você responde:
 Usuário: eai menor
@@ -290,11 +291,29 @@ class Orchestrator:
                 resp.raise_for_status()
                 data = resp.json()
             except requests.HTTPError as http_err:
-                # Blindagem: se o modelo retornar 400 Bad Request por incompatibilidade com tools=[...],
-                # remove tools e tenta novamente como texto puro com histórico enxuto
                 status_code = getattr(http_err.response, "status_code", None)
                 err_text = getattr(http_err.response, "text", "")
-                if tools_schema and status_code == 400:
+                if status_code == 404 and target_model != self.default_model:
+                    LOGGER.warning(
+                        "Modelo %s não encontrado em %s (404). Tentando fallback para modelo padrão %s.",
+                        target_model,
+                        target_url,
+                        self.default_model,
+                    )
+                    target_model = self.default_model
+                    payload["model"] = target_model
+                    try:
+                        resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
+                        resp.raise_for_status()
+                        data = resp.json()
+                    except Exception as fallback_exc:
+                        LOGGER.error("Fallback para %s falhou: %s", target_model, fallback_exc)
+                        return {
+                            "success": False,
+                            "reply": f"Erro de comunicação com o modelo ({target_model}): {str(fallback_exc)}",
+                            "tools_executed": executed_tools_log,
+                        }
+                elif tools_schema and status_code == 400:
                     LOGGER.warning(
                         "Modelo %s retornou 400 com tools (%s). Tentando fallback sem tools.",
                         target_model,

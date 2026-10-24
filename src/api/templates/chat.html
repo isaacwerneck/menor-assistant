@@ -1033,8 +1033,9 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             <div class="topbar-actions" role="group" aria-label="Ações da conversa">
                 <select id="nodeSelector" class="toggle-sidebar-btn" style="font-size: 13px; font-weight: 500; padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Escolha onde processar a inteligência">
                     <option value="server">Servidor (Notebook CPU)</option>
-                    <option value="local:qwen2.5:3b">⚡ PC Local (Qwen 3B GPU - ~45 tok/s)</option>
-                    <option value="local:qwen2.5:7b">🚀 PC Local (Qwen 7B GPU)</option>
+                    <option value="local:qwen3.5:4b">⚡ PC Local (Qwen 3.5 4B GPU)</option>
+                    <option value="local:qwen2.5:3b">⚡ PC Local (Qwen 2.5 3B GPU - ~45 tok/s)</option>
+                    <option value="local:qwen2.5:7b">🚀 PC Local (Qwen 2.5 7B GPU)</option>
                 </select>
                 <button type="button" class="toggle-sidebar-btn" id="projectButton" onclick="openProjects()"
                     aria-label="Abrir projetos" title="Selecionar projeto">Projetos</button>
@@ -1520,6 +1521,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     localStorage.setItem('menor_selected_node', e.target.value);
                 }
             });
+            discoverLocalOllamaModels();
         }
 
         // ========== AUTENTICACAO DO PROPRIETARIO ==========
@@ -2015,7 +2017,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 const parts = raw.split(':');
                 return {
                     node: 'local',
-                    model: parts.length > 1 ? parts.slice(1).join(':') : 'qwen2.5:3b',
+                    model: parts.length > 1 ? parts.slice(1).join(':') : 'qwen3.5:4b',
                     url: 'http://localhost:11434',
                 };
             }
@@ -2053,14 +2055,19 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 selector.appendChild(serverGroup);
 
                 const localGroup = document.createElement('optgroup');
+                localGroup.id = 'localModelGroup';
                 localGroup.label = 'PC Local (GPU GTX 1650)';
+                const localOpt4b = document.createElement('option');
+                localOpt4b.value = 'local:qwen3.5:4b';
+                localOpt4b.textContent = '⚡ PC Local (Qwen 3.5 4B GPU)';
+                localGroup.appendChild(localOpt4b);
                 const localOpt3b = document.createElement('option');
                 localOpt3b.value = 'local:qwen2.5:3b';
-                localOpt3b.textContent = '⚡ PC Local Ultra-Rápido (Qwen 3B GPU - ~45 tok/s)';
+                localOpt3b.textContent = '⚡ PC Local Ultra-Rápido (Qwen 2.5 3B GPU - ~45 tok/s)';
                 localGroup.appendChild(localOpt3b);
                 const localOpt7b = document.createElement('option');
                 localOpt7b.value = 'local:qwen2.5:7b';
-                localOpt7b.textContent = '🚀 PC Local (Qwen 7B GPU - ~22 tok/s)';
+                localOpt7b.textContent = '🚀 PC Local (Qwen 2.5 7B GPU - ~22 tok/s)';
                 localGroup.appendChild(localOpt7b);
                 selector.appendChild(localGroup);
 
@@ -2069,6 +2076,47 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     selector.value = currentVal;
                 } else if (defaultModel && optionsList.some(o => o.value === 'server:' + defaultModel)) {
                     selector.value = 'server:' + defaultModel;
+                }
+            } catch (_) {}
+
+            discoverLocalOllamaModels();
+        }
+
+        async function discoverLocalOllamaModels() {
+            try {
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const timeoutId = controller ? setTimeout(() => controller.abort(), 2000) : null;
+                const res = await fetch('http://localhost:11434/api/tags', {
+                    signal: controller ? controller.signal : undefined
+                });
+                if (timeoutId) clearTimeout(timeoutId);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!Array.isArray(data.models) || data.models.length === 0) return;
+                const localGroup = document.getElementById('localModelGroup');
+                const selector = document.getElementById('nodeSelector');
+                if (!localGroup || !selector) return;
+
+                const currentVal = selector.value;
+                localGroup.innerHTML = '';
+                for (const m of data.models) {
+                    const name = m.name || m.model || '';
+                    if (!name) continue;
+                    const opt = document.createElement('option');
+                    opt.value = 'local:' + name;
+                    opt.textContent = '⚡ PC Local (' + name + ' GPU)';
+                    localGroup.appendChild(opt);
+                }
+                const optionsList = Array.from(selector.options || []);
+                if (optionsList.some(o => o.value === currentVal)) {
+                    selector.value = currentVal;
+                } else if (currentVal && currentVal.startsWith('local')) {
+                    const pref4b = optionsList.find(o => o.value.includes('qwen3.5:4b'));
+                    if (pref4b) {
+                        selector.value = pref4b.value;
+                    } else if (localGroup.firstChild) {
+                        selector.value = localGroup.firstChild.value;
+                    }
                 }
             } catch (_) {}
         }
@@ -2552,15 +2600,16 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 conv.pendingCapabilityOffer || selectedImageFile) return false;
 
             const target = getSelectedComputeTarget();
+            let fallbackToServer = false;
             if (target.node === 'local') {
                 content.textContent = '';
-                document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '7B'}) gerando resposta…`;
+                document.getElementById('generationStatus').textContent = `GPU Local (${target.model || '4B'}) gerando resposta…`;
                 try {
                     const localResp = await fetch('http://localhost:11434/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            model: target.model || 'qwen2.5:7b',
+                            model: target.model || 'qwen3.5:4b',
                             messages: [
                                 { role: 'system', content: 'Você é o Menor v2 rodando na GPU local. Responda com agilidade, precisão e clareza em pt-BR.' },
                                 ...history,
@@ -2625,15 +2674,16 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                     content.textContent = 'Aviso: Não foi possível conectar ao Ollama local em http://localhost:11434.\n'
                         + 'Dica: Verifique se o Ollama está em execução no seu computador com a variável OLLAMA_ORIGINS="*".\n'
                         + 'Redirecionando a tarefa para o Servidor Ubuntu...\n\n';
+                    fallbackToServer = true;
                 }
             }
 
             const previous = conv.pendingAgentRequest;
             const payload = previous && previous.message === message ? previous : {
                 session_id: conv.id, turn_id: genId(), message, history, project,
-                node: target.node,
-                model: target.model,
-                ollama_url: target.url,
+                node: fallbackToServer ? 'server' : target.node,
+                model: fallbackToServer ? null : target.model,
+                ollama_url: fallbackToServer ? null : target.url,
             };
             conv.pendingAgentRequest = payload;
             save();

@@ -100,6 +100,32 @@ class TestOrchestratorV2(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertIn("Resposta obtida via fallback", result["reply"])
 
+    @patch("src.agent.orchestrator.requests.post")
+    def test_run_turn_404_model_fallback(self, mock_post):
+        import requests
+        err_resp = MagicMock()
+        err_resp.status_code = 404
+        http_err = requests.HTTPError(response=err_resp)
+
+        success_resp = MagicMock()
+        success_resp.status_code = 200
+        success_resp.json.return_value = {
+            "message": {
+                "role": "assistant",
+                "content": "Resposta obtida via fallback para modelo padrão!",
+            }
+        }
+        mock_post.side_effect = [http_err, success_resp]
+
+        orchestrator = Orchestrator(default_model="qwen2.5:14b")
+        result = orchestrator.run_turn(
+            messages=[{"role": "user", "content": "Olá menor"}],
+            model="qwen3.5:4b",
+        )
+
+        self.assertTrue(result["success"])
+        self.assertIn("Resposta obtida via fallback para modelo padrão", result["reply"])
+
 
 if __name__ == "__main__":
     unittest.main()

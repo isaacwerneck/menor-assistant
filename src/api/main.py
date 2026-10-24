@@ -277,7 +277,7 @@ def list_nodes():
         "local": {
             "name": "PC Principal (GPU GTX 1650)",
             "ollama_url": "http://localhost:11434",
-            "recommended_model": "qwen2.5:7b",
+            "recommended_model": "qwen3.5:4b",
             "type": "local",
         },
     }
@@ -327,8 +327,12 @@ def agent_run(body: AgentRunRequest, request: Request, response: Response):
     _notify_user_active()
     auth.require_owner(request)
     response.headers["X-Menor-Fallback"] = "stream"
-    target_url = body.ollama_url or OLLAMA_SERVER_URL
-    target_model = body.model or get_active_model()
+    if body.node == "local" or (body.ollama_url and "localhost" in body.ollama_url):
+        target_url = OLLAMA_SERVER_URL
+        target_model = get_active_model()
+    else:
+        target_url = body.ollama_url or OLLAMA_SERVER_URL
+        target_model = body.model or get_active_model()
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
     messages = [item.model_dump() for item in body.history] + [{"role": "user", "content": body.message}]
     result = orchestrator.run_turn(messages=messages, model=target_model, ollama_url=target_url)
@@ -351,8 +355,12 @@ def agent_route(_req: AgentRouteRequest, _access=Depends(require_chat_access)):
 @app.post("/chat")
 def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
     _notify_user_active()
-    target_url = req.ollama_url or (OLLAMA_SERVER_URL if req.node != "local" else "http://localhost:11434")
-    target_model = req.model or (get_active_model() if req.node != "local" else "qwen2.5:7b")
+    if req.node == "local" or (req.ollama_url and "localhost" in req.ollama_url):
+        target_url = OLLAMA_SERVER_URL
+        target_model = get_active_model()
+    else:
+        target_url = req.ollama_url or OLLAMA_SERVER_URL
+        target_model = req.model or get_active_model()
     orchestrator = Orchestrator(ollama_url=target_url, default_model=target_model)
     messages = [item.model_dump() for item in req.history] + [{"role": "user", "content": req.message}]
     result = orchestrator.run_turn(messages=messages, model=target_model, ollama_url=target_url)
@@ -367,8 +375,12 @@ def chat_sync(req: ChatRequest, _access=Depends(require_chat_access)):
 @app.post("/chat/stream")
 def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
     _notify_user_active()
-    target_url = req.ollama_url or (OLLAMA_SERVER_URL if req.node != "local" else "http://localhost:11434")
-    target_model = req.model or (get_active_model() if req.node != "local" else "qwen2.5:7b")
+    if req.node == "local" or (req.ollama_url and "localhost" in req.ollama_url):
+        target_url = OLLAMA_SERVER_URL
+        target_model = get_active_model()
+    else:
+        target_url = req.ollama_url or OLLAMA_SERVER_URL
+        target_model = req.model or get_active_model()
 
     store = BrainStore()
     sections = []

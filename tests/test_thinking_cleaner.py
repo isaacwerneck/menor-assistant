@@ -1,6 +1,7 @@
 import unittest
 from src.agent.cleaner import sanitize_assistant_reply
 
+
 class TestThinkingCleaner(unittest.TestCase):
     def test_eai_menor_thinking_process(self):
         raw = """Thinking Process:
@@ -8,8 +9,8 @@ class TestThinkingCleaner(unittest.TestCase):
 1. **Analyze the Request:**
    * User: "eai menor" (Portuguese for "hey [Name]").
    * My Role: Menor v2 (Isaac's AI assistant).
-   * Directives: Short, natural, friendly, pt-BR (use slang like mano, suave, blz), respond to greetings in 1 sentence without technical topics. No internal thought blocks/tags.
-   * User Profile: Isaac Werneck (Founder/Lead Dev), specific hardware stack mentioned previously but not"""
+   * Directives: Short, natural, friendly, pt-BR (use slang like mano, suave, blz).
+   * User Profile: Isaac Werneck (Founder/Lead Dev)"""
         result = sanitize_assistant_reply(raw, "eai menor")
         self.assertNotIn("Thinking Process", result)
         self.assertIn("Isaac", result)
@@ -30,11 +31,13 @@ class TestThinkingCleaner(unittest.TestCase):
         self.assertEqual(result, "Tudo suave por aqui, mano! E com você, como estão as coisas?")
 
     def test_consegue_fazer_um_site_english_scratchpad(self):
-        raw = """Okay, let's tackle this user request. They're asking if I can make a website for them. First, I need to remember my role as Menor v2, the assistant for Isaac. The guidelines say to keep responses short, natural, friendly in Portuguese with some slang like "mano", "suave", etc. Also, if they don't ask for code or tools, just chat amiably. But here, they are asking about making a website, which is a technical request.
-
-Wait, the user might not know that I can actually build websites. My capabilities include generating HTML/CSS/JS, but maybe they need more guidance. However, according to the guidelines, if Isaac doesn't ask for code or tools, just chat. But in this case, the user is asking directly about making a site. So I should check if they want me to write code. Since they didn't specify, maybe I should offer help but keep it friendly.
-
-Wait, the third guideline says: "Se o Isaac não pedir código ou ferramentas, apenas converse com ele amigavelmente." But here, the user is asking if I can make a site. So I need to respond in a way that's helpful without being too technical"""
+        raw = (
+            "Okay, let's tackle this user request. They're asking if I can make a website for them. "
+            "First, I need to remember my role as Menor v2, the assistant for Isaac.\n\n"
+            "Wait, the user might not know that I can actually build websites. My capabilities include "
+            "generating HTML/CSS/JS.\n\n"
+            "Wait, the third guideline says: 'Se o Isaac não pedir código, apenas converse amigavelmente.'"
+        )
         result = sanitize_assistant_reply(raw, "consegue fazer um site pra mim?")
         self.assertNotIn("Okay, let's", result)
         self.assertNotIn("user request", result)
@@ -75,6 +78,7 @@ Fala meu parceiro, tudo na paz?"""
     def test_empty_reply_fallback(self):
         result = sanitize_assistant_reply("", "salve")
         self.assertIn("Isaac", result)
+
 
 if __name__ == "__main__":
     unittest.main()

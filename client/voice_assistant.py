@@ -4,14 +4,12 @@ Ouve comandos de voz, responde em alta velocidade usando o modelo 7B na GPU
 e despacha tarefas complexas para o Servidor Ubuntu do Menor v2.
 """
 import argparse
-import json
 import os
-import sys
 import requests
 
 SERVER_URL = os.environ.get("MENOR_SERVER_URL", "http://192.168.1.100:8000")
 LOCAL_OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
-LOCAL_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
+LOCAL_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3.5:4b")
 
 
 def speak_text(text: str):
@@ -82,7 +80,8 @@ def main():
                 break
 
             # Se for pedido de execução/projeto, avisa e despacha ao servidor
-            if any(term in user_input.lower() for term in ("crie o projeto", "inicie o projeto", "monte um app", "faça um plano")):
+            action_triggers = ("crie o projeto", "inicie o projeto", "monte um app", "faça um plano")
+            if any(term in user_input.lower() for term in action_triggers):
                 speak_text("Entendido! Despachando a estruturação do projeto para o servidor...")
                 res = dispatch_to_server(user_input)
                 if "task_id" in res:
