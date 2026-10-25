@@ -129,6 +129,27 @@ class DualTierVerifier:
         checks = []
         score = 50  # Base máxima do Tier 1
 
+        # Bloqueio imediato para erros de comunicação, rede ou exceções internas
+        err_indicators = [
+            "erro de comunicação com o modelo",
+            "400 client error",
+            "500 server error",
+            "connection refused",
+            "[erro]",
+            "[erro interno]",
+        ]
+        norm_reply = reply.strip().lower()
+        if any(ind in norm_reply for ind in err_indicators):
+            return {
+                "tier1_score": 0,
+                "tier1_checks": [{
+                    "name": "Comunicação & Execução do Modelo",
+                    "status": "FAIL",
+                    "detail": f"Execução falhou criticamente: {reply[:120]}",
+                }],
+                "tier1_pass": False,
+            }
+
         # 1. Checagem de palavras proibidas (recusas falsas)
         forbidden = probe.get("must_not_contain", [])
         found_forbidden = [f for f in forbidden if f.lower() in reply.lower()]
@@ -211,6 +232,22 @@ class DualTierVerifier:
         probe: Dict[str, Any], reply: str, objective_md: str, tier1_checks: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """Avaliação qualitativa (rubrica / conformidade de estilo e geração de aprendizado dinâmico)."""
+        err_indicators = [
+            "erro de comunicação com o modelo",
+            "400 client error",
+            "500 server error",
+            "connection refused",
+            "[erro]",
+            "[erro interno]",
+        ]
+        norm_reply = reply.strip().lower()
+        if any(ind in norm_reply for ind in err_indicators):
+            return {
+                "tier2_score": 0,
+                "critique": "Execução cancelada devido a erro de comunicação ou falha no modelo.",
+                "learning": "Nenhum aprendizado gerado: falha técnica na infraestrutura de execução.",
+            }
+
         score = 40  # Base média qualitativa
         critique = []
 

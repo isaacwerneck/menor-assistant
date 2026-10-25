@@ -83,6 +83,21 @@ class TestLabV2(unittest.TestCase):
         self.assertFalse(t1["tier1_pass"])
         self.assertLess(t1["tier1_score"], 50)
 
+    def test_dual_tier_verifier_zero_on_communication_error(self):
+        probe = {
+            "id": "test_err",
+            "category": "web_preview",
+            "expected_preview": True,
+        }
+        err_reply = "Erro de comunicação com o modelo (qwen): 400 Client Error: Bad Request"
+        t1 = DualTierVerifier.verify_tier1(probe, err_reply)
+        self.assertFalse(t1["tier1_pass"])
+        self.assertEqual(t1["tier1_score"], 0)
+
+        t2 = DualTierVerifier.verify_tier2_qualitative(probe, err_reply, "objetivo")
+        self.assertEqual(t2["tier2_score"], 0)
+        self.assertIn("Nenhum aprendizado gerado", t2["learning"])
+
     @patch("src.security.auth.require_owner")
     @patch("src.agent.orchestrator.Orchestrator.run_turn")
     def test_battery_start_and_control(self, mock_run_turn, mock_auth):

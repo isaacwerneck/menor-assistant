@@ -646,6 +646,31 @@ class Orchestrator:
                             resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
                             resp.raise_for_status()
                             data = resp.json()
+                        except requests.HTTPError as retry_http_err:
+                            # Se o modelo descoberto rejeitar tools com 400, tenta sem tools
+                            if getattr(retry_http_err.response, "status_code", None) in (400, 500):
+                                payload.pop("tools", None)
+                                payload["options"]["num_ctx"] = 2048
+                                try:
+                                    resp = requests.post(f"{target_url}/api/chat", json=payload, timeout=(15, 600))
+                                    resp.raise_for_status()
+                                    data = resp.json()
+                                except Exception as sec_exc:
+                                    return {
+                                        "success": False,
+                                        "reply": (
+                                            f"Erro de comunicação com o modelo ({target_model}): {sec_exc}"
+                                        ),
+                                        "tools_executed": executed_tools_log,
+                                    }
+                            else:
+                                return {
+                                    "success": False,
+                                    "reply": (
+                                        f"Erro de comunicação com o modelo ({target_model}): {retry_http_err}"
+                                    ),
+                                    "tools_executed": executed_tools_log,
+                                }
                         except Exception as fallback_exc:
                             LOGGER.error("Fallback para %s falhou: %s", target_model, fallback_exc)
                             return {

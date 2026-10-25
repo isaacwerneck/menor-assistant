@@ -60,6 +60,7 @@ class LabRunner:
             # 1. Execução da sonda através do orquestrador
             start_t = time.time()
             messages = [{"role": "user", "content": probe["prompt"]}]
+            is_comm_error = False
             try:
                 turn_res = self.orchestrator.run_turn(
                     messages=messages,
@@ -67,10 +68,13 @@ class LabRunner:
                     enable_tools=True,
                 )
                 reply = turn_res.get("reply", "")
+                if not turn_res.get("success", True) or "erro de comunicação com o modelo" in reply.lower():
+                    is_comm_error = True
                 elapsed = time.time() - start_t
             except Exception as exc:
                 logger.error("Erro na execução da sonda %s: %s", probe['id'], exc)
                 reply = f"[ERRO]: {exc}"
+                is_comm_error = True
                 elapsed = time.time() - start_t
 
             # 2. Verificações Dual-Tier
@@ -78,11 +82,11 @@ class LabRunner:
             t2 = DualTierVerifier.verify_tier2_qualitative(
                 probe, reply, session.objective_md, tier1_checks=t1["tier1_checks"]
             )
-            combined_score = round((t1["tier1_score"] + t2["tier2_score"]) / 10.0, 1)
+            combined_score = 0.0 if is_comm_error else round((t1["tier1_score"] + t2["tier2_score"]) / 10.0, 1)
 
-            # 3. Reflexion / Auto-Aprimoramento se a nota inicial for insuficiente
+            # 3. Reflexion / Auto-Aprimoramento se a nota inicial for insuficiente (apenas se não for erro de conexão)
             initial_score = combined_score
-            if combined_score < 7.0 and not session._abort_requested:
+            if not is_comm_error and combined_score < 7.0 and not session._abort_requested:
                 fail_points = [c["detail"] for c in t1.get("tier1_checks", []) if c.get("status") == "FAIL"]
                 critique_note = (
                     "; ".join(fail_points) if fail_points else t2.get("critique", "Critérios não atingidos.")

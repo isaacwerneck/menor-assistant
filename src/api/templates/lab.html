@@ -607,7 +607,34 @@
             return d.innerHTML;
         }
 
-        // Carrega objetivos inicialmente
+        async function loadAvailableModels() {
+            try {
+                const res = await fetch('/health');
+                if (res.ok) {
+                    const data = await res.json();
+                    const select = document.getElementById('selectModel');
+                    if (data.installed_models && data.installed_models.length > 0) {
+                        select.innerHTML = '';
+                        data.installed_models.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m;
+                            opt.textContent = `Hub Ubuntu · ${m}`;
+                            if (m === data.default_model) opt.selected = true;
+                            select.appendChild(opt);
+                        });
+                        const pcOpt = document.createElement('option');
+                        pcOpt.value = 'qwen3.5:4b';
+                        pcOpt.textContent = 'PC Local (GTX) · qwen3.5:4b';
+                        select.appendChild(pcOpt);
+                    }
+                }
+            } catch (e) {
+                console.warn('Não foi possível carregar modelos dinâmicos:', e);
+            }
+        }
+
+        // Carrega objetivos e modelos inicialmente
+        loadAvailableModels();
         loadObjectives();
         pollState();
     </script>
