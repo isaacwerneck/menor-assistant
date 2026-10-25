@@ -126,6 +126,39 @@ class TestOrchestratorV2(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertIn("Resposta obtida via fallback para modelo padrão", result["reply"])
 
+    @patch("src.tools.core.fs_write")
+    @patch("src.agent.orchestrator.requests.post")
+    def test_run_turn_intercept_simulated_fs_write(self, mock_post, mock_fs_write):
+        mock_fs_write.return_value = {"success": True, "filepath": "index.html"}
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "message": {
+                "role": "assistant",
+                "content": (
+                    "Tá, mano! Vamos programar esse site agora mesmo.\n\n"
+                    "```python\n"
+                    "fs_write(filepath='index.html', "
+                    "content='<!DOCTYPE html>\\n<html><body><h1>Site</h1></body></html>')\n"
+                    "```\n\n"
+                    "Arquivo `index.html` criado com sucesso no diretório atual."
+                ),
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        orchestrator = Orchestrator()
+        result = orchestrator.run_turn(
+            messages=[{"role": "user", "content": "vamos fazer um site"}],
+            enable_tools=True,
+        )
+
+        self.assertTrue(result["success"])
+        mock_fs_write.assert_called_once()
+        self.assertIn("fs_write:index.html", result["tools_executed"])
+        self.assertNotIn("fs_write(filepath=", result["reply"])
+        self.assertIn("```html", result["reply"])
+
 
 if __name__ == "__main__":
     unittest.main()

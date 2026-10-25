@@ -32,6 +32,8 @@ Regras Inegociáveis e Diretrizes de Execução:
   arquivos em blocos de texto ou markdown. Se precisar executar comandos ou ler/escrever arquivos, use
   OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
   diretamente sem inventar arquivos ou saídas fictícias.
+- NUNCA escreva código python simulando chamadas de ferramenta no texto (ex: ```python fs_write(...)```).
+  Ferramentas devem ser executadas exclusivamente via native tool calling da API.
 - NUNCA diga que é apenas um modelo ou assistente de texto, que não pode criar arquivos ou que não tem ferramentas.
   Você é o Menor v2 com ferramentas reais ativas no Hub e capacidade de criar arquivos e sites diretamente.
 - NUNCA finja que criou ou implementou algo se a ferramenta `fs_write` não foi executada no turno.
@@ -673,19 +675,67 @@ class Orchestrator:
                         reply_text = clean_think
                 reply_text = sanitize_assistant_reply(reply_text, last_user)
 
-                # Auto-escrita de arquivos solicitados explicitamente se o modelo gerou código/markdown
-                if any(w in norm_user for w in ("crie", "cria", "salve", "salva", "escreva", "escreve")):
-                    requested_files = re.findall(r"\b([a-zA-Z0-9_\-]+\.(?:html|css|js|py|md|json|txt))\b", last_user)
-                    code_blocks = re.findall(r"```[a-zA-Z0-9]*\n([\s\S]*?)```", reply_text)
+                # 1. Intercepta e executa simulações em texto de fs_write(filepath=..., content=...)
+                sim_pattern = (
+                    r"fs_write\(\s*(?:filepath\s*=\s*)?['\"](?P<file>[^'\"]+)['\"]\s*,\s*"
+                    r"(?:content\s*=\s*)?(?P<quote>['\"])(?P<content>[\s\S]*?)(?P=quote)\s*\)"
+                )
+                sim_match = re.search(sim_pattern, reply_text)
+                if sim_match:
+                    target_file = sim_match.group("file")
+                    raw_content = sim_match.group("content")
+                    try:
+                        raw_content = raw_content.encode("utf-8").decode("unicode_escape")
+                    except Exception:
+                        pass
+                    try:
+                        from src.tools.core import fs_write
+                        fs_write(filepath=target_file, content=raw_content)
+                        executed_tools_log.append(f"fs_write:{target_file}")
+                    except Exception as sim_err:
+                        LOGGER.warning("Execução de fs_write simulado falhou: %s", sim_err)
+
+                    lang = "html" if target_file.endswith((".html", ".htm")) else "python"
+                    clean_block = f"```{lang}\n{raw_content}\n```"
+                    reply_text = re.sub(
+                        r"```(?:python)?\s*\n\s*fs_write\([\s\S]*?\)\s*\n```",
+                        clean_block,
+                        reply_text,
+                    )
+
+                # 2. Auto-escrita de arquivos solicitados se o modelo gerou código/markdown
+                creation_triggers = (
+                    "crie", "cria", "salve", "salva", "escreva", "escreve",
+                    "fazer", "faz", "vamos fazer", "programar", "construir", "desenvolver", "site"
+                )
+                if any(w in norm_user for w in creation_triggers):
+                    requested_files = re.findall(
+                        r"\b([a-zA-Z0-9_\-]+\.(?:html|css|js|py|md|json|txt))\b", last_user
+                    )
+                    if not requested_files and any(
+                        w in norm_user for w in ("site", "landing page", "página", "pagina")
+                    ):
+                        requested_files = ["index.html"]
+
+                    code_blocks = re.findall(r"```(?:html|css|js|py|md|json|txt)?\n([\s\S]*?)```", reply_text)
+                    if not code_blocks:
+                        dt_match = re.search(r"(<!DOCTYPE html[\s\S]*?</html>)", reply_text, re.IGNORECASE)
+                        if dt_match:
+                            code_blocks = [dt_match.group(1)]
+
                     if requested_files and code_blocks:
                         for idx, rfile in enumerate(requested_files):
                             if idx < len(code_blocks):
-                                try:
-                                    from src.tools.core import fs_write
-                                    fs_write(filepath=rfile, content=code_blocks[idx].strip())
-                                    executed_tools_log.append(f"fs_write:{rfile}")
-                                except Exception as write_err:
-                                    LOGGER.debug("Auto fs_write falhou para %s: %s", rfile, write_err)
+                                if not any(
+                                    isinstance(t, str) and t.startswith(f"fs_write:{rfile}")
+                                    for t in executed_tools_log
+                                ):
+                                    try:
+                                        from src.tools.core import fs_write
+                                        fs_write(filepath=rfile, content=code_blocks[idx].strip())
+                                        executed_tools_log.append(f"fs_write:{rfile}")
+                                    except Exception as write_err:
+                                        LOGGER.debug("Auto fs_write falhou para %s: %s", rfile, write_err)
 
                 return {
                     "success": True,

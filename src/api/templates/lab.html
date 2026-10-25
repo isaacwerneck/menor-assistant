@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratório de Testes & Auto-Aprimoramento · Menor AI</title>
+    <style>
+        :root {
+            --bg-primary: #12101a;
+            --bg-secondary: #1a1726;
+            --bg-tertiary: #232033;
+            --bg-card: #28243c;
+            --border: rgba(184, 173, 226, 0.15);
+            --border-hover: rgba(184, 173, 226, 0.35);
+            --accent: #b2a2f5;
+            --accent-rgb: 178, 162, 245;
+            --text-primary: #f3f1fa;
+            --text-secondary: #b8b1ce;
+            --text-muted: #7d7596;
+            --success: #34d399;
+            --danger: #f87171;
+            --warning: #fbbf24;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px;
+            background: rgba(26, 23, 38, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .brand-badge {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            color: #12101a;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .brand-title { font-size: 1.1rem; font-weight: 650; letter-spacing: -0.02em; }
+        .brand-title span { color: var(--accent); font-weight: 400; font-size: 0.85rem; margin-left: 6px; }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 9px;
+            font-size: 0.85rem;
+            font-weight: 550;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+        .btn-primary { background: var(--accent); color: #12101a; }
+        .btn-primary:hover { background: #c5b8f8; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border); }
+        .btn-secondary:hover { background: var(--border-hover); }
+        .btn-danger { background: rgba(248, 113, 113, 0.15); color: var(--danger); border-color: rgba(248, 113, 113, 0.3); }
+        .btn-danger:hover { background: rgba(248, 113, 113, 0.25); }
+        .btn-success { background: rgba(52, 211, 153, 0.15); color: var(--success); border-color: rgba(52, 211, 153, 0.3); }
+        .btn-success:hover { background: rgba(52, 211, 153, 0.25); }
+        .layout {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar-ctrl {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        .section-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .category-group { display: flex; flex-direction: column; gap: 6px; }
+        .cat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 9px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.85rem;
+        }
+        .cat-item:hover { border-color: var(--border-hover); }
+        .cat-item input[type="checkbox"] { accent-color: var(--accent); }
+        .ctrl-panel {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ctrl-row { display: flex; flex-direction: column; gap: 4px; }
+        .ctrl-row label { font-size: 0.78rem; color: var(--text-secondary); }
+        .ctrl-row select {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .stat-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .stat-val { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+        .stat-lbl { font-size: 0.72rem; color: var(--text-muted); }
+        .main-content {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: var(--bg-tertiary);
+            color: var(--accent);
+            border: 1px solid var(--border);
+        }
+        .tab-pane { display: none; flex-direction: column; gap: 16px; }
+        .tab-pane.active { display: flex; }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-title { font-size: 1.05rem; font-weight: 650; }
+        .md-editor {
+            width: 100%;
+            min-height: 380px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: "Cascadia Code", Consolas, monospace;
+            font-size: 0.88rem;
+            line-height: 1.6;
+            padding: 14px;
+            resize: vertical;
+            outline: none;
+        }
+        .md-editor:focus { border-color: var(--accent); }
+        .step-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .step-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .step-badge {
+            background: rgba(178, 162, 245, 0.15);
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .qa-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .qa-title { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
+        .qa-content { font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); white-space: pre-wrap; }
+        .checks-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .check-pill {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .check-pill.pass { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+        .check-pill.fail { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+        .learning-box {
+            background: rgba(178, 162, 245, 0.08);
+            border: 1px solid rgba(178, 162, 245, 0.25);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .terminal-box {
+            background: #0d0c14;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            font-family: "Cascadia Code", Consolas, monospace;
+            font-size: 0.78rem;
+            color: #9cb3a8;
+            max-height: 180px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+        .terminal-line { margin-bottom: 2px; }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar-ctrl { border-right: none; border-bottom: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="header-brand" title="Voltar ao Chat">
+            <div class="brand-badge">🧪</div>
+            <div class="brand-title">Laboratório <span>Menor AI</span></div>
+        </a>
+        <div class="header-actions">
+            <span id="sessionStatusBadge" class="btn btn-secondary" style="cursor: default;">Ocioso</span>
+            <a href="/" class="btn btn-secondary">💬 Voltar ao Chat</a>
+        </div>
+    </header>
+
+    <div class="layout">
+        <!-- SIDEBAR DE CONTROLE -->
+        <aside class="sidebar-ctrl">
+            <div>
+                <div class="section-label">Categorias da Bateria</div>
+                <div class="category-group" id="categoryList">
+                    <label class="cat-item">
+                        <input type="checkbox" value="web_preview" checked> 🌐 Web & Previews
+                    </label>
+                    <label class="cat-item">
+                        <input type="checkbox" value="tools_files" checked> 🛠️ Ferramentas & Arquivos
+                    </label>
+                    <label class="cat-item">
+                        <input type="checkbox" value="architecture_mobile" checked> 📱 Mobile & Android Studio
+                    </label>
+                    <label class="cat-item">
+                        <input type="checkbox" value="database_design" checked> 🗄️ Modelagem de Banco
+                    </label>
+                    <label class="cat-item">
+                        <input type="checkbox" value="multimedia_creative" checked> 🎨 Áudio, Música & Arte
+                    </label>
+                    <label class="cat-item">
+                        <input type="checkbox" value="memory_preferences" checked> 🧠 Memória & Preferências
+                    </label>
+                    <label class="cat-item">
+                        <input type="checkbox" value="guardrails" checked> 🛡️ Blindagem de Respostas
+                    </label>
+                </div>
+            </div>
+
+            <div class="ctrl-panel">
+                <div class="section-label">Parâmetros de Treino</div>
+                <div class="ctrl-row">
+                    <label for="selectModel">Modelo Avaliado</label>
+                    <select id="selectModel">
+                        <option value="qwen2.5:14b">Servidor · qwen2.5:14b</option>
+                        <option value="qwen3.5:4b">PC Local · qwen3.5:4b</option>
+                        <option value="qwen2.5:3b">PC Local · qwen2.5:3b</option>
+                        <option value="qwen2.5:7b">PC Local · qwen2.5:7b</option>
+                    </select>
+                </div>
+                <div class="ctrl-row">
+                    <label for="selectMode">Modo de Avaliação</label>
+                    <select id="selectMode">
+                        <option value="manual">Controle Humano (Aprovar cada passo)</option>
+                        <option value="auto">Piloto Automático (Auto-Persistência)</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                    <button id="btnRun" class="btn btn-primary" style="flex: 1;" onclick="startRun()">▶ Iniciar</button>
+                    <button id="btnPause" class="btn btn-secondary" onclick="controlRun('pause')" title="Pausar">⏸</button>
+                    <button id="btnStep" class="btn btn-secondary" onclick="controlRun('step')" title="Avançar 1 Passo">⏯</button>
+                    <button id="btnAbort" class="btn btn-danger" onclick="controlRun('abort')" title="Interromper">⏹</button>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-val" id="statScore">—</div>
+                    <div class="stat-lbl">Pontuação Média</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="statProgress">0/0</div>
+                    <div class="stat-lbl">Passos Executados</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ÁREA PRINCIPAL -->
+        <main class="main-content">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('cockpit')">⚡ Cockpit de Treino ao Vivo</button>
+                <button class="tab-btn" onclick="switchTab('objectives')">📋 Objetivos & Benchmark (Markdown)</button>
+            </div>
+
+            <!-- TAB 1: COCKPIT AO VIVO -->
+            <div id="tabCockpit" class="tab-pane active">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Passo Atual de Inspeção</div>
+                        <span id="activeStepTag" class="step-badge">Aguardando início</span>
+                    </div>
+
+                    <div id="noActiveStepNotice" style="color: var(--text-muted); font-size: 0.9rem; padding: 20px 0;">
+                        Clique em <strong>"▶ Iniciar"</strong> na barra lateral para disparar a bateria de testes e visualizar as perguntas, respostas e aprendizados em tempo real.
+                    </div>
+
+                    <div id="activeStepCard" style="display: none; flex-direction: column; gap: 14px;">
+                        <div class="qa-box">
+                            <div class="qa-title">❓ PERGUNTA QUE O MENOR FEZ A SI MESMO</div>
+                            <div class="qa-content" id="stepQuestion">—</div>
+                        </div>
+
+                        <div class="qa-box">
+                            <div class="qa-title">💬 RESPOSTA EMITIDA PELO MODELO</div>
+                            <div class="qa-content" id="stepReply">—</div>
+                        </div>
+
+                        <div class="qa-box">
+                            <div class="qa-title">🔍 VERIFICAÇÕES DUAL-TIER & CRÍTICA</div>
+                            <div class="checks-row" id="stepChecks"></div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 6px;" id="stepCritique"></div>
+                        </div>
+
+                        <div class="learning-box">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: var(--accent);">💡 O QUE O MENOR APRENDEU NESTE PASSO</div>
+                            <div style="font-size: 0.88rem; line-height: 1.5;" id="stepLearning">—</div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;" id="stepTarget">—</div>
+                        </div>
+
+                        <div id="approvalActionRow" style="display: flex; gap: 10px; margin-top: 4px;">
+                            <button class="btn btn-success" onclick="approveCurrent('approve')">✅ Aprovar & Gravar no Cérebro</button>
+                            <button class="btn btn-secondary" onclick="approveCurrent('discard')">❌ Descartar Modificação</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title" style="font-size: 0.95rem;">Terminal de Eventos & Auditoria</div>
+                    </div>
+                    <div class="terminal-box" id="terminalLogs">
+                        <div class="terminal-line">[SISTEMA] Laboratório carregado e conectado ao Hub do Menor.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: OBJETIVOS EM MARKDOWN -->
+            <div id="tabObjectives" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Matriz de Objetivos & Critérios de Avaliação</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" onclick="loadObjectives()">Recarregar</button>
+                            <button class="btn btn-primary" onclick="saveObjectives()">Salvar Alterações</button>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Defina em Markdown os objetivos técnicos, comportamento esperado e regras de blindagem que o Menor deve seguir. As perguntas de teste sintéticas são avaliadas contra este documento.
+                    </p>
+                    <textarea id="txtObjectives" class="md-editor" placeholder="Carregando objetivos..."></textarea>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let pollTimer = null;
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            if (tabId === 'cockpit') {
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                document.getElementById('tabCockpit').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('tabObjectives').classList.add('active');
+                loadObjectives();
+            }
+        }
+
+        async function loadObjectives() {
+            try {
+                const res = await fetch('/api/lab/objectives');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('txtObjectives').value = data.content || '';
+                }
+            } catch (err) {
+                console.error("Erro ao carregar objetivos:", err);
+            }
+        }
+
+        async function saveObjectives() {
+            const content = document.getElementById('txtObjectives').value;
+            try {
+                const res = await fetch('/api/lab/objectives', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                if (res.ok) {
+                    alert("Objetivos salvos com sucesso no Cérebro do Menor!");
+                } else {
+                    alert("Erro ao salvar objetivos.");
+                }
+            } catch (err) {
+                alert("Erro de conexão ao salvar objetivos.");
+            }
+        }
+
+        async function startRun() {
+            const categories = Array.from(document.querySelectorAll('#categoryList input:checked')).map(c => c.value);
+            const model = document.getElementById('selectModel').value;
+            const mode = document.getElementById('selectMode').value;
+
+            try {
+                const res = await fetch('/api/lab/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ categories, model, mode })
+                });
+                if (res.ok) {
+                    pollState();
+                    if (!pollTimer) pollTimer = setInterval(pollState, 1500);
+                } else {
+                    const err = await res.json();
+                    alert(err.error || "Erro ao iniciar bateria.");
+                }
+            } catch (err) {
+                alert("Erro de rede ao disparar bateria.");
+            }
+        }
+
+        async function controlRun(action) {
+            try {
+                await fetch('/api/lab/control', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                pollState();
+            } catch (err) {
+                console.error("Erro no controle:", err);
+            }
+        }
+
+        async function approveCurrent(action) {
+            try {
+                await fetch('/api/lab/approve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                pollState();
+            } catch (err) {
+                console.error("Erro na aprovação:", err);
+            }
+        }
+
+        async function pollState() {
+            try {
+                const res = await fetch('/api/lab/state');
+                if (!res.ok) return;
+                const state = await res.json();
+
+                // Status Badge
+                const badge = document.getElementById('sessionStatusBadge');
+                badge.textContent = state.status.toUpperCase();
+                if (state.status === 'running') badge.style.color = 'var(--accent)';
+                else if (state.status === 'waiting_approval') badge.style.color = 'var(--warning)';
+                else if (state.status === 'completed') badge.style.color = 'var(--success)';
+                else badge.style.color = 'inherit';
+
+                // Stats
+                document.getElementById('statScore').textContent = state.average_score > 0 ? `${state.average_score}/10` : '—';
+                document.getElementById('statProgress').textContent = `${state.current_step}/${state.total_steps}`;
+
+                // Active Step Card
+                const notice = document.getElementById('noActiveStepNotice');
+                const card = document.getElementById('activeStepCard');
+                if (state.active_result) {
+                    notice.style.display = 'none';
+                    card.style.display = 'flex';
+                    const resData = state.active_result;
+                    document.getElementById('activeStepTag').textContent = `Passo ${resData.step}/${state.total_steps} · ${resData.category} (Nota: ${resData.final_score}/10)`;
+                    document.getElementById('stepQuestion').textContent = resData.question;
+                    document.getElementById('stepReply').textContent = resData.reply;
+                    document.getElementById('stepCritique').textContent = resData.tier2_critique;
+                    document.getElementById('stepLearning').textContent = resData.learning;
+                    document.getElementById('stepTarget').textContent = `Destino no Cérebro: ${resData.target_file}`;
+
+                    // Checks
+                    const checksEl = document.getElementById('stepChecks');
+                    checksEl.innerHTML = '';
+                    (resData.tier1_checks || []).forEach(chk => {
+                        const pill = document.createElement('span');
+                        pill.className = `check-pill ${chk.status.toLowerCase()}`;
+                        pill.textContent = `${chk.status === 'PASS' ? '✓' : '✗'} ${chk.name}: ${chk.detail}`;
+                        checksEl.appendChild(pill);
+                    });
+
+                    // Human in the loop row
+                    document.getElementById('approvalActionRow').style.display = (state.status === 'waiting_approval') ? 'flex' : 'none';
+                }
+
+                // Terminal Logs
+                const logBox = document.getElementById('terminalLogs');
+                if (state.logs && state.logs.length) {
+                    logBox.innerHTML = state.logs.map(l => `<div class="terminal-line">${escapeHtml(l)}</div>`).join('');
+                    logBox.scrollTop = logBox.scrollHeight;
+                }
+
+                if (state.status === 'completed' || state.status === 'aborted') {
+                    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+                }
+            } catch (err) {
+                console.error("Erro no polling:", err);
+            }
+        }
+
+        function escapeHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        // Carrega objetivos inicialmente
+        loadObjectives();
+        pollState();
+    </script>
+</body>
+</html>

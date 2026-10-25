@@ -1110,7 +1110,6 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             <button type="button" onclick="openProjects()">Projetos</button>
             <a href="/files/view">Arquivos</a>
             <a href="/lab/view" aria-label="Abrir Laboratório de testes">Laboratório · Testes</a>
-            <a href="/workspace/system#cycle-monitor" title="Auto-monitoramento de ciclos ao vivo">Auto-Monitor · Ciclos</a>
             <a href="/workspace/system">Sistema</a>
             <span class="sidebar-nav-label">PERSONALIZAÇÃO</span>
             <button type="button" onclick="openBrain()">Conhecimentos</button>
@@ -2733,13 +2732,13 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             card.innerHTML = `
                 <div class="artifact-preview-header">
                     <span class="artifact-title">🌐 <strong>Site Gerado:</strong> <code>${escapeHtml(cleanPath)}</code></span>
-                    <a href="/preview/${encodeURIComponent(cleanPath)}" target="_blank" class="artifact-btn">
+                    <a href="/preview/${encodeURIComponent(cleanPath)}?t=${Date.now()}" target="_blank" class="artifact-btn">
                         Abrir em Nova Aba ↗
                     </a>
                 </div>
                 ${isHtml ? `
                 <div class="artifact-iframe-wrapper">
-                    <iframe src="/preview/${encodeURIComponent(cleanPath)}" class="artifact-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+                    <iframe src="/preview/${encodeURIComponent(cleanPath)}?t=${Date.now()}" class="artifact-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
                 </div>` : ''}
             `;
             container.appendChild(card);
@@ -3119,7 +3118,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             imageReply(conv, content, notice, result.image || '', result.artifact || null,
                 result.phase === 'approval' ? result.approval : null, timing);
 
-            // Renderizar Card de Preview se algum arquivo HTML/Site foi gerado ou mencionado
+            // Renderizar Card de Preview SOMENTE se algum arquivo HTML/Site foi gerado ou alterado de fato no turno
             let createdHtmlFile = null;
             if (result.tools_executed && Array.isArray(result.tools_executed)) {
                 result.tools_executed.forEach(tool => {
@@ -3130,10 +3129,6 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                         createdHtmlFile = filepath;
                     }
                 });
-            }
-            if (!createdHtmlFile) {
-                const matchHtml = notice.match(/\b([a-zA-Z0-9_\-]+\.html)\b/i);
-                if (matchHtml) createdHtmlFile = matchHtml[1];
             }
             if (createdHtmlFile) {
                 renderArtifactPreview(content, createdHtmlFile);
