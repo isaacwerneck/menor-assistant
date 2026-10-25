@@ -21,14 +21,15 @@ def slugify(name):
     return slug
 
 
-def create_project(name, store=None):
+def create_project(name, store=None, instructions=None):
     """Cria projeto nomeado; nunca altera pastas fora do cérebro nem sobrescreve arquivos."""
     store = store if store is not None else BrainStore()
     slug = slugify(name)
     store.initialize()
     root = f"projetos/{slug}"
+    obj_text = instructions.strip() if instructions and isinstance(instructions, str) else "A definir."
     files = {
-        "contexto.md": f"# {name}\n\n## Objetivo\n\nA definir.\n\n## Estado\n\nIniciado.\n",
+        "contexto.md": f"# {name}\n\n## Objetivo e Instruções\n\n{obj_text}\n\n## Estado\n\nIniciado.\n",
         "decisoes.md": "# Decisões\n\n",
         "tarefas.md": "# Tarefas\n\n- [ ] Definir o primeiro passo.\n",
         "diario.md": "# Diário\n\n",

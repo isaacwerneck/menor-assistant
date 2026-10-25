@@ -32,6 +32,8 @@ from src.api.workspace import router as workspace_router
 from src.api.private_diagnostics import router as private_diagnostics_router
 from src.lab.api import router as lab_router
 from src.tools.file_analysis.api import router as file_analysis_router
+from src.api.brain_workspace import router as brain_workspace_router
+from src.projects.api import router as projects_router
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +183,8 @@ app.include_router(workspace_router)
 app.include_router(private_diagnostics_router)
 app.include_router(lab_router)
 app.include_router(file_analysis_router)
+app.include_router(brain_workspace_router)
+app.include_router(projects_router)
 
 MessageText = Annotated[str, StringConstraints(min_length=1, max_length=16000, pattern=r"\S")]
 

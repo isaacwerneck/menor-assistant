@@ -1106,13 +1106,14 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         <nav class="app-nav" aria-label="Navegação principal" onclick="closeMobileSidebar()">
             <span class="sidebar-nav-label">ÁREA DE TRABALHO</span>
             <span class="app-nav-current" aria-current="page">Conversas</span>
-            <button type="button" onclick="openObjectives()">Objetivos</button>
             <button type="button" onclick="openProjects()">Projetos</button>
-            <a href="/files/view">Arquivos</a>
+            <a href="/files/view" title="Gerenciador de Documentos e Uploads">Arquivos</a>
+            <button type="button" onclick="openObjectives()">Objetivos</button>
+            <span class="sidebar-nav-label">INTELIGÊNCIA & ESTUDO</span>
             <a href="/lab/view" aria-label="Abrir Laboratório de testes">Laboratório · Testes</a>
-            <a href="/workspace/system">Sistema</a>
-            <span class="sidebar-nav-label">PERSONALIZAÇÃO</span>
-            <button type="button" onclick="openBrain()">Conhecimentos</button>
+            <a href="/brain/view" aria-label="Abrir Cérebro do Menor">Cérebro do Menor</a>
+            <span class="sidebar-nav-label">SISTEMA & CONTROLE</span>
+            <a href="/workspace/system">Sistema & Recursos</a>
             <button type="button" onclick="openFeedback()">Ensinar uma resposta</button>
         </nav>
         <div class="sidebar-conversations" id="convList" onclick="closeMobileSidebar()">
@@ -1303,6 +1304,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         <div class="modal-box">
             <h2>Meus projetos</h2>
             <p>Selecione o projeto desta conversa para recuperar seu contexto.</p>
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                <input id="newProjectName" type="text" placeholder="Nome do novo projeto..." style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary); font-size: 0.85rem;">
+                <button type="button" onclick="createNewProjectFromChat()" style="padding: 8px 14px;">＋ Criar</button>
+            </div>
             <select id="projectPicker" aria-label="Escolher projeto" onchange="previewProject()"></select>
             <button onclick="selectProject()">Usar neste chat</button>
             <p id="projectDescription" class="project-note-text"></p>
@@ -2001,6 +2006,23 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         }
 
         function closeProjects() { document.getElementById('projectsPanel').hidden = true; }
+
+        async function createNewProjectFromChat() {
+            const input = document.getElementById('newProjectName');
+            const name = input.value.trim();
+            if (!name) return;
+            try {
+                const res = await projectRequest('/projects', { name });
+                input.value = '';
+                await openProjects();
+                if (res.project && res.project.slug) {
+                    document.getElementById('projectPicker').value = res.project.slug;
+                    selectProject();
+                }
+            } catch (err) {
+                document.getElementById('projectError').textContent = err.message;
+            }
+        }
 
         let chatCycleTimer = null;
         let lastChatLogCount = 0;

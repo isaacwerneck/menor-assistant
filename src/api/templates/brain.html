@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cérebro do Menor · Inspetor de Dados & Memórias</title>
+    <style>
+        :root {
+            --bg-primary: #12101a;
+            --bg-secondary: #1a1726;
+            --bg-tertiary: #232033;
+            --bg-card: #28243c;
+            --border: rgba(184, 173, 226, 0.15);
+            --border-hover: rgba(184, 173, 226, 0.35);
+            --accent: #b2a2f5;
+            --text-primary: #f3f1fa;
+            --text-secondary: #b8b1ce;
+            --text-muted: #7d7596;
+            --success: #34d399;
+            --danger: #f87171;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: rgba(26, 23, 38, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .brand-badge {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            color: #12101a;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .brand-title { font-size: 1.1rem; font-weight: 650; }
+        .brand-title span { color: var(--accent); font-weight: 400; font-size: 0.85rem; margin-left: 6px; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 9px;
+            font-size: 0.85rem;
+            font-weight: 550;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+        .btn-primary { background: var(--accent); color: #12101a; }
+        .btn-primary:hover { background: #c5b8f8; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border); }
+        .btn-secondary:hover { background: var(--border-hover); }
+
+        /* Changelog Banner */
+        .changelog-bar {
+            background: #171524;
+            border-bottom: 1px solid var(--border);
+            padding: 8px 24px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .changelog-label {
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .changelog-pill {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 3px 10px;
+            border-radius: 99px;
+            color: var(--text-secondary);
+        }
+
+        .layout {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            min-height: calc(100vh - 105px);
+        }
+        .tree-sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+        .search-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            outline: none;
+            width: 100%;
+        }
+        .tree-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.85rem;
+        }
+        .tree-folder {
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tree-folder:hover { background: var(--bg-tertiary); }
+        .tree-children {
+            margin-left: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            border-left: 1px solid rgba(184, 173, 226, 0.1);
+            padding-left: 6px;
+        }
+        .tree-file {
+            padding: 5px 8px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.1s ease;
+        }
+        .tree-file:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .tree-file.active { background: rgba(178, 162, 245, 0.15); color: var(--accent); font-weight: 600; }
+
+        .editor-area {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 14px;
+            overflow-y: auto;
+        }
+        .editor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .editor-path {
+            font-family: "Cascadia Code", Consolas, monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            flex: 1;
+            min-height: 480px;
+        }
+        .code-input {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            color: var(--text-primary);
+            font-family: "Cascadia Code", Consolas, monospace;
+            font-size: 0.88rem;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+        .code-input:focus { border-color: var(--accent); }
+        .preview-pane {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .preview-pane h1, .preview-pane h2, .preview-pane h3 {
+            color: var(--accent); margin-bottom: 10px;
+        }
+        .preview-pane p, .preview-pane ul { margin-bottom: 12px; }
+        .preview-pane code {
+            background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;
+        }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .editor-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="header-brand" title="Voltar ao Chat">
+            <div class="brand-badge">🧠</div>
+            <div class="brand-title">Cérebro do Menor <span>Inspetor de Memória</span></div>
+        </a>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" onclick="saveActiveNote()">💾 Salvar Alterações</button>
+            <a href="/" class="btn btn-secondary">💬 Voltar ao Chat</a>
+        </div>
+    </header>
+
+    <!-- FEED CHANGELOG ESTILO GITHUB -->
+    <div class="changelog-bar" id="changelogBar">
+        <span class="changelog-label">⚡ Modificações Recentes:</span>
+        <span class="changelog-pill" id="latestChangelog">Carregando feed de alterações...</span>
+    </div>
+
+    <div class="layout">
+        <!-- ÁRVORE DE DIRETÓRIOS -->
+        <aside class="tree-sidebar">
+            <input type="search" class="search-box" id="treeSearch" placeholder="🔍 Filtrar notas e conhecimentos..." oninput="filterTree()">
+            <div class="tree-container" id="treeContainer">Carregando estrutura do cérebro...</div>
+        </aside>
+
+        <!-- ÁREA DO EDITOR -->
+        <main class="editor-area">
+            <div class="editor-header">
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Documento Ativo</span>
+                    <div class="editor-path" id="activeNotePath">Nenhum documento selecionado</div>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);" id="activeNoteUpdated"></div>
+            </div>
+
+            <div class="editor-container">
+                <textarea class="code-input" id="noteEditor" placeholder="Selecione um arquivo na árvore à esquerda para visualizar e editar seu conteúdo..." oninput="updatePreview()"></textarea>
+                <div class="preview-pane" id="notePreview">
+                    <p style="color: var(--text-muted);">A pré-visualização formatada do Markdown aparecerá aqui.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentPath = null;
+        let currentHash = null;
+        let rawTree = [];
+
+        async function loadChangelog() {
+            try {
+                const res = await fetch('/api/brain/changelog?limit=5');
+                if (res.ok) {
+                    const data = await res.json();
+                    const bar = document.getElementById('changelogBar');
+                    if (data.items && data.items.length) {
+                        const itemsHtml = data.items.map(it => {
+                            const timeStr = new Date(it.timestamp).toLocaleTimeString();
+                            return `<span class="changelog-pill" title="${it.summary}">🕒 ${timeStr} · <strong>${it.author}</strong>: ${it.path}</span>`;
+                        }).join('');
+                        bar.innerHTML = `<span class="changelog-label">⚡ Modificações Recentes:</span>` + itemsHtml;
+                    } else {
+                        document.getElementById('latestChangelog').textContent = 'Nenhuma modificação registrada recentemente.';
+                    }
+                }
+            } catch (err) {
+                console.error("Erro no changelog:", err);
+            }
+        }
+
+        async function loadTree() {
+            try {
+                const res = await fetch('/api/brain/tree');
+                if (res.ok) {
+                    const data = await res.json();
+                    rawTree = data.tree || [];
+                    renderTree(rawTree);
+                    // Abre por padrão o arquivo de preferências se existir
+                    openDefaultNote();
+                }
+            } catch (err) {
+                document.getElementById('treeContainer').textContent = 'Erro ao carregar árvore do cérebro.';
+            }
+        }
+
+        function renderTree(nodes, container = document.getElementById('treeContainer')) {
+            container.innerHTML = '';
+            nodes.forEach(node => {
+                if (node.type === 'directory') {
+                    const folderDiv = document.createElement('div');
+                    folderDiv.className = 'tree-folder';
+                    folderDiv.innerHTML = `📁 ${node.name}`;
+                    const childContainer = document.createElement('div');
+                    childContainer.className = 'tree-children';
+
+                    folderDiv.onclick = () => {
+                        childContainer.style.display = childContainer.style.display === 'none' ? 'flex' : 'none';
+                    };
+
+                    container.appendChild(folderDiv);
+                    container.appendChild(childContainer);
+                    if (node.children) renderTree(node.children, childContainer);
+                } else {
+                    const fileDiv = document.createElement('div');
+                    fileDiv.className = `tree-file ${currentPath === node.path ? 'active' : ''}`;
+                    fileDiv.innerHTML = `📄 ${node.name}`;
+                    fileDiv.onclick = () => selectNote(node.path);
+                    container.appendChild(fileDiv);
+                }
+            });
+        }
+
+        async function selectNote(path) {
+            try {
+                const res = await fetch(`/api/brain/note?path=${encodeURIComponent(path)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    currentPath = data.path;
+                    currentHash = data.hash;
+                    document.getElementById('activeNotePath').textContent = currentPath;
+                    document.getElementById('activeNoteUpdated').textContent = `Última atualização: ${new Date(data.updated_at).toLocaleString()}`;
+                    document.getElementById('noteEditor').value = data.content;
+                    updatePreview();
+
+                    document.querySelectorAll('.tree-file').forEach(f => f.classList.remove('active'));
+                    renderTree(rawTree);
+                }
+            } catch (err) {
+                alert("Erro ao abrir nota selecionada.");
+            }
+        }
+
+        async function saveActiveNote() {
+            if (!currentPath) {
+                alert("Nenhum documento selecionado para salvar.");
+                return;
+            }
+            const content = document.getElementById('noteEditor').value;
+            try {
+                const res = await fetch('/api/brain/note', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path: currentPath,
+                        content: content,
+                        expected_hash: currentHash
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    currentHash = data.hash;
+                    alert("Documento salvo com sucesso no Cérebro do Menor!");
+                    loadChangelog();
+                } else if (res.status === 409) {
+                    alert("Aviso: Conflito detectado! O documento foi modificado no servidor enquanto você editava.");
+                } else {
+                    alert("Erro ao salvar nota.");
+                }
+            } catch (err) {
+                alert("Erro de conexão ao salvar documento.");
+            }
+        }
+
+        function updatePreview() {
+            const raw = document.getElementById('noteEditor').value;
+            // Renderizador simples e limpo de Markdown (sem dependências externas)
+            let html = escapeHtml(raw)
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^\- (.*$)/gim, '<li>$1</li>')
+                .replace(/`([^`]+)`/gim, '<code>$1</code>')
+                .replace(/\n\n/gim, '<p></p>');
+            document.getElementById('notePreview').innerHTML = html;
+        }
+
+        function escapeHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        function openDefaultNote() {
+            // Tenta abrir preferencias.md ou primeiro arquivo
+            selectNote('preferencias.md').catch(() => {});
+        }
+
+        loadTree();
+        loadChangelog();
+    </script>
+</body>
+</html>
