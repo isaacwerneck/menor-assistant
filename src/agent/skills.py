@@ -3,7 +3,7 @@
 Estado derivado do cérebro e do runtime local; não confundir 'planejado'
 com 'instalado'. O modelo de linguagem não pode marcar uma skill como pronta.
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from src.tools import local_images
 from src.memory.store import _write_lock
 
@@ -71,29 +71,45 @@ def catalog(missions=None) -> List[Dict[str, Any]]:
     for capability in sorted(CAPABILITIES):
         mission = verified.get(capability) if image_runtime.get("ready") else None
         mission = mission or latest.get(capability)
-        
+
         if capability in v2_native_ready:
             ready = True
             state = "ready"
         elif capability == "images.generate":
-            ready = bool(
-                image_runtime.get("ready")
-                and (mission is None or (mission.get("status") == "ready" and isinstance(mission.get("result"), dict) and mission["result"].get("verified") is True))
+            has_verified_proof = bool(
+                mission is None or (
+                    mission.get("status") == "ready"
+                    and isinstance(mission.get("result"), dict)
+                    and mission["result"].get("verified") is True
+                )
             )
-            state = "ready" if ready else ("awaiting_setup" if not image_runtime.get("ready") else _mission_state(mission))
+            ready = bool(image_runtime.get("ready") and has_verified_proof)
+            if ready:
+                state = "ready"
+            elif not image_runtime.get("ready"):
+                state = "awaiting_setup"
+            else:
+                state = _mission_state(mission)
         else:
             ready = bool(mission and mission.get("status") == "ready")
             state = "ready" if ready else _mission_state(mission)
 
+        worker_desc = None
+        if capability == "images.generate":
+            worker_desc = "openvino-sd15-int8"
+        elif capability in v2_native_ready:
+            worker_desc = "python-native-v2"
+
+        quality = "verified_native" if capability in v2_native_ready else "not_evaluated_for_specific_styles"
         result.append({
             "capability": capability,
             "name": LABELS.get(capability, capability),
             "description": DESCRIPTIONS.get(capability, ""),
             "status": state,
             "ready": bool(ready),
-            "quality_status": "verified_native" if capability in v2_native_ready else "not_evaluated_for_specific_styles",
+            "quality_status": quality,
             "mission_id": mission["id"] if mission and "id" in mission else None,
-            "worker": "openvino-sd15-int8" if capability == "images.generate" else ("python-native-v2" if capability in v2_native_ready else None),
+            "worker": worker_desc,
             "offline": capability in ("images.generate", "programming"),
         })
     return result

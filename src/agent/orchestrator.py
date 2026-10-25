@@ -266,7 +266,11 @@ class Orchestrator:
 
                 if rep.get("has_report") and rep.get("report_markdown"):
                     executed_tools_log.append("get_study_report")
-                    if norm_user.strip() in ("ver ultimo relatorio", "ver último relatório", "cat ultimo_estudo.md", "relatorio cru"):
+                    raw_report_triggers = (
+                        "ver ultimo relatorio", "ver último relatório",
+                        "cat ultimo_estudo.md", "relatorio cru"
+                    )
+                    if norm_user.strip() in raw_report_triggers:
                         return {
                             "success": True,
                             "reply": (
@@ -280,12 +284,13 @@ class Orchestrator:
                     full_system += (
                         f"\n\n[CONTEXTO ATUALIZADO DE ATIVIDADES, ESTUDOS E MODIFICAÇÕES DO MENOR]:\n"
                         f"1. Relatório Consolidado de Auto-Evolução e Estudos:\n{rep['report_markdown']}\n\n"
-                        f"2. Commits e Modificações Recentes no Código do Menor (Git):\n{recent_commits or 'Nenhum commit recente detectado.'}\n\n"
+                        f"2. Commits e Modificações Recentes no Código do Menor (Git):\n"
+                        f"{recent_commits or 'Nenhum commit recente detectado.'}\n\n"
                         "DIRETRIZ DE RESPOSTA:\n"
                         "- O usuário está perguntando o que você aprendeu, fez ou modificou recentemente.\n"
-                        "- Responda de forma natural, executiva, calorosa e conversacional em português (como parceiro de programação).\n"
-                        "- NUNCA repita o relatório cru em markdown verbatim se o usuário já tiver recebido ou se estiver conversando em tom pessoal.\n"
-                        "- Destaque com clareza tanto os tópicos estudados/assimilados quanto as melhorias de código, ferramentas e commits recentes feitos no projeto."
+                        "- Responda de forma natural, executiva, calorosa e conversacional em português.\n"
+                        "- NUNCA repita o relatório cru em markdown verbatim se o usuário já tiver recebido.\n"
+                        "- Destaque os tópicos estudados e as melhorias e commits recentes no código do Menor."
                     )
             except Exception as exc:
                 LOGGER.debug("Grounding de relatório de estudos ignorado: %s", exc)

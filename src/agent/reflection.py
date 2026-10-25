@@ -98,7 +98,8 @@ class ReflectionWorker:
         if len(events) < max_events:
             try:
                 from src.agent.study import TopicManager
-                completed = [t for t in TopicManager(self.store).list_topics(uncompleted_only=False) if t.get("completed")]
+                all_topics = TopicManager(self.store).list_topics(uncompleted_only=False)
+                completed = [t for t in all_topics if t.get("completed")]
                 for t in reversed(completed[-3:]):
                     events.append(f"Tópico técnico estudado e assimilado no cérebro: {t.get('text', '')}")
             except Exception:

@@ -39,6 +39,10 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
     # 1. Remove tags <think>...</think> ou <thought>...</thought> fechadas
     cleaned = re.sub(r"<(?:think|thought)>.*?</(?:think|thought)>", "", raw_content, flags=re.DOTALL)
 
+    # Remove qualquer bloco de raciocínio com tag de fechamento órfã (ex: início sem <think>)
+    if "</think>" in cleaned or "</thought>" in cleaned:
+        cleaned = re.sub(r"^.*?</(?:think|thought)>\s*", "", cleaned, flags=re.DOTALL)
+
     # Se a tag <think> ficou aberta (truncamento do modelo antes de fechar </think>),
     # tenta resgatar qualquer código ou resposta legítima posterior ao bloco
     if "<think>" in cleaned or "<thought>" in cleaned:

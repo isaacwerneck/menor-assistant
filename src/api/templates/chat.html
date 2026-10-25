@@ -2626,31 +2626,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
 
             const content = document.createElement('div');
             content.className = 'message-content' + (animate ? ' cursor' : '');
-            if (role === 'bot' && animate) {
-                const textSlot = document.createElement('div');
-                textSlot.className = 'bot-text-body';
-                textSlot.textContent = text;
-                content.appendChild(textSlot);
-
-                Object.defineProperty(content, 'textContent', {
-                    get() {
-                        const slot = this.querySelector('.bot-text-body');
-                        return slot ? slot.textContent : (this.innerText || '');
-                    },
-                    set(val) {
-                        let slot = this.querySelector('.bot-text-body');
-                        if (!slot) {
-                            slot = document.createElement('div');
-                            slot.className = 'bot-text-body';
-                            this.appendChild(slot);
-                        }
-                        slot.textContent = val;
-                    },
-                    configurable: true
-                });
-            } else {
-                content.textContent = text;
-            }
+            content.textContent = text;
             if (role === 'bot' && approval) {
                 content.textContent = '';
                 if (!approvalCard(content, approval, activeApproval)) content.textContent = text;
@@ -3267,6 +3243,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
         function cleanAssistantText(txt) {
             if (!txt || typeof txt !== 'string') return '';
             let cleaned = txt.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, '');
+            cleaned = cleaned.replace(/^[\s\S]*?<\/(?:think|thought)>/gi, '');
             cleaned = cleaned.replace(/<(?:think|thought)>[\s\S]*/gi, '');
             if (/^\s*(?:Thinking Process|Thought Process|Thinking):/i.test(cleaned) || /^\s*Okay,?\s+let's/i.test(cleaned) || /^\s*Wait,\s+the user/i.test(cleaned)) {
                 const parts = cleaned.split(/\n\s*(?:Resposta|Response|Final Answer|Assistant|Menor):\s*/i);
