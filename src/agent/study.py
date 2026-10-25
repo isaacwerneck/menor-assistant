@@ -693,17 +693,17 @@ class DiagnosticEngine:
             except Exception:
                 pass
 
-            if not golden_example:
-                golden_example = (
-                    "Utilize loop.run_in_executor ou starlette run_in_threadpool para I/O bloqueante."
-                )
-
-            self.store.improve_knowledge(
-                domain="programacao",
-                topic="exemplos_ouro",
-                content=f"### Pergunta: {question}\n**Resposta Perfeita (Juiz):**\n{golden_example}\n",
-                mode="append",
-            )
+            # NUNCA utilizar fallback estático repetitivo: só grava se o modelo gerou resposta válida e única
+            if golden_example and len(golden_example) > 20 and not golden_example.startswith("Utilize loop"):
+                existing = self.store.read_knowledge("programacao", "exemplos_ouro") or ""
+                # Evitar gravar perguntas idênticas ou duplicadas
+                if question[:40].lower() not in existing.lower():
+                    self.store.improve_knowledge(
+                        domain="programacao",
+                        topic="exemplos_ouro",
+                        content=f"### Pergunta: {question}\n**Resposta Perfeita (Juiz):**\n{golden_example}\n",
+                        mode="append",
+                    )
 
             if score < 7.0:
                 self.store.improve_knowledge(
@@ -723,11 +723,11 @@ class DiagnosticEngine:
                     )
                     gap_scheduled = True
 
-        # 4. Salva boletim em diagnosticos/
+        # 4. Salva boletim em diagnosticos/ (arquivo único consolidado para não poluir o cérebro)
         diag_dir = self.store.brain_dir / "diagnosticos"
         diag_dir.mkdir(parents=True, exist_ok=True)
-        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M")
-        report_file = diag_dir / f"auto_avaliacao_{now_str}.md"
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        report_file = diag_dir / "ultimo_diagnostico.md"
         report_content = (
             f"# Relatório de Auto-Diagnóstico - {now_str}\n\n"
             f"**Pergunta-Desafio:** {question}\n\n"

@@ -24,7 +24,6 @@ FOLDERS = (
     "conhecimentos/engenharia_software",
     "conhecimentos/musica",
     "conhecimentos/game_design",
-    "conhecimentos/game-design",
     "conhecimentos/comunicacao",
     "ferramentas/programacao",
     "ferramentas/imagens",
