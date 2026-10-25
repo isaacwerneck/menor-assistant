@@ -42,6 +42,10 @@ Regras Inegociáveis e Diretrizes de Execução:
 - NUNCA faça propaganda não solicitada de ferramentas ou projetos no meio de conversas comuns.
   Responda estritamente ao que foi perguntado.
 - NUNCA invente reuniões, compromissos ou presuma a rotina pessoal do Isaac.
+- Entenda gírias brasileiras comuns: "a gnt" significa "a gente" (nós, você e o Isaac juntos).
+  NUNCA interprete "a gnt" como sigla corporativa (como "Grupo Nacional de Tecnologia").
+- Se o Isaac perguntar sobre projetos, softwares ou tarefas que "a gnt" já fez ou está fazendo,
+  cite estritamente os projetos e tarefas reais registrados no contexto (Menor v2, sites e arquivos criados).
 - NUNCA use tags <think> ou raciocínio em inglês. Responda diretamente em português brasileiro.
 - Responda sempre em português brasileiro fluente, natural e direto, sem rodeios ou formalidades vazias.
 """
@@ -52,6 +56,9 @@ Converse diretamente em português brasileiro, de forma natural, amigável e des
 
 Diretrizes essenciais:
 - Você tem total acesso ao ecossistema de ferramentas do Menor e ao Hub Central.
+- Entenda gírias brasileiras comuns: "a gnt" significa "a gente" (nós, você e o Isaac juntos).
+  NUNCA invente siglas corporativas como "Grupo Nacional de Tecnologia".
+- Se o Isaac perguntar sobre o que "a gnt" já fez, mencione o Menor v2 e as tarefas do Hub.
 - NUNCA diga que é apenas um assistente de texto, que não tem memória ou que não pode criar/enviar arquivos.
 - Se o usuário perguntar sobre a conversa anterior, consulte o histórico no contexto e responda com clareza.
 - Responda sempre diretamente na voz do Menor v2, sem introduções em inglês e sem blocos de raciocínio interno.
@@ -83,14 +90,28 @@ class Orchestrator:
         a inferência em CPUs locais sem sobrecarga de tokens.
         """
         if casual:
+            parts = []
             try:
                 from src.memory.core_memory import CoreMemoryManager
                 user_prof = CoreMemoryManager(self.store).get_block("user_profile")
                 if user_prof:
-                    return f"Perfil do Usuário:\n{user_prof.strip()}"
+                    parts.append(f"Perfil do Usuário:\n{user_prof.strip()}")
             except Exception:
                 pass
-            return ""
+            try:
+                from src.agent.workers import TaskQueue
+                tq = TaskQueue()
+                recent_tasks = tq.list_tasks(limit=3)
+                if recent_tasks:
+                    task_items = [
+                        f"- [{t.get('status', '').upper()}] {t.get('goal', '')}"
+                        for t in recent_tasks if t.get("goal")
+                    ]
+                    if task_items:
+                        parts.append("Tarefas Recentes (Isaac e Menor):\n" + "\n".join(task_items))
+            except Exception:
+                pass
+            return "\n\n".join(parts)
 
         sections = []
         try:
@@ -122,6 +143,20 @@ class Orchestrator:
                 sections.append(dspy_inj)
         except Exception as exc:
             LOGGER.debug("PromptOptimizer indisponível: %s", exc)
+
+        try:
+            from src.agent.workers import TaskQueue
+            tq = TaskQueue()
+            recent_tasks = tq.list_tasks(limit=4)
+            if recent_tasks:
+                task_items = [
+                    f"- [{t.get('status', '').upper()}] {t.get('goal', '')}"
+                    for t in recent_tasks if t.get("goal")
+                ]
+                if task_items:
+                    sections.append("Projetos e Tarefas Recentes (Isaac e Menor):\n" + "\n".join(task_items))
+        except Exception as exc:
+            LOGGER.debug("Tarefas indisponíveis para contexto: %s", exc)
 
         return "\n\n".join(sections)
 
@@ -178,7 +213,8 @@ class Orchestrator:
         triggers = (
             "arquivo", "file", "ler", "leia", "le ", "lê", "escrev", "salv", "list", "pasta", "dir",
             "terminal", "coman", "bash", "sh", "execut", "rod", "run", "pytest", "test", "npm", "git",
-            "plano", "projet", "pesquis", "busc", "web", "site", "url", "http", "ferramenta", "tool",
+            "software", "log", "plano", "projet", "pesquis", "busc", "web", "site", "url", "http",
+            "ferramenta", "tool",
             "código", "codigo", "python", "script", "consert", "bug", "corrig", "cri",
             "patch", "alterar", "substituir", "simbolo", "símbolo", "mapa", "repo_map", "onde fica", "onde está",
             "declaração", "declaracao", "refator",

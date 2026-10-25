@@ -511,6 +511,7 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
             {"role": "user", "content": req.message},
         ],
         "stream": True,
+        "think": False,
         "keep_alive": "60m",
         "options": {
             "temperature": 0.6,
