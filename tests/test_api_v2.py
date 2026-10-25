@@ -201,6 +201,36 @@ class TestApiV2(unittest.TestCase):
             if test_file.exists():
                 test_file.unlink(missing_ok=True)
 
+    def test_system_dashboard_endpoints(self):
+        # 1. Sem autenticação deve negar acesso (401)
+        from src.api.main import app
+        unauth_client = TestClient(app)
+        for ep in ("/images/status", "/agent/skills", "/tools", "/ops/diagnostics"):
+            unauth_resp = unauth_client.get(ep)
+            self.assertIn(unauth_resp.status_code, (401, 403))
+
+        # 2. Com autenticação deve responder 200 com contratos válidos
+        self.client.post("/auth/setup", json={"password": "minhasenhadesistema123"})
+        resp_login = self.client.post("/auth/login", json={"password": "minhasenhadesistema123"})
+        cookies = {"menor_session": resp_login.cookies.get("menor_session")}
+
+        r_img = self.client.get("/images/status", cookies=cookies)
+        self.assertEqual(r_img.status_code, 200)
+        self.assertIn("provider", r_img.json())
+        self.assertIn("configured", r_img.json())
+
+        r_skills = self.client.get("/agent/skills", cookies=cookies)
+        self.assertEqual(r_skills.status_code, 200)
+        self.assertIsInstance(r_skills.json().get("items"), list)
+
+        r_tools = self.client.get("/tools", cookies=cookies)
+        self.assertEqual(r_tools.status_code, 200)
+        self.assertIsInstance(r_tools.json().get("items"), list)
+
+        r_diag = self.client.get("/ops/diagnostics", cookies=cookies)
+        self.assertEqual(r_diag.status_code, 200)
+        self.assertEqual(r_diag.json().get("contract"), "menor.ops.observability")
+
 
 if __name__ == "__main__":
     unittest.main()

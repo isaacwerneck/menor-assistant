@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import logging
 from pathlib import Path
 import subprocess
+import sys
 import time
 from typing import Any, Dict, Optional
 
@@ -175,7 +176,7 @@ class SandboxRefactorEngine:
             test_file.write_text(test_code, encoding="utf-8")
 
             test_proc = subprocess.run(
-                ["python", "-m", "unittest", f"tests/{test_file.name}", "-v"],
+                [sys.executable, "-m", "unittest", f"tests/{test_file.name}", "-v"],
                 cwd=str(self.root_dir),
                 capture_output=True,
                 text=True,

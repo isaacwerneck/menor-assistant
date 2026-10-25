@@ -29,6 +29,7 @@ from src.security import auth
 # Routers de suporte
 from src.api.system_workspace import router as system_workspace_router
 from src.api.workspace import router as workspace_router
+from src.api.private_diagnostics import router as private_diagnostics_router
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +176,7 @@ app = FastAPI(
 
 app.include_router(system_workspace_router)
 app.include_router(workspace_router)
+app.include_router(private_diagnostics_router)
 
 MessageText = Annotated[str, StringConstraints(min_length=1, max_length=16000, pattern=r"\S")]
 
@@ -333,6 +335,42 @@ def list_models(_access=Depends(require_chat_access)):
             return resp.json()
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Falha ao consultar modelos no Ollama: {exc}")
+
+
+@app.get("/images/status")
+def get_images_status(request: Request):
+    auth.require_owner(request)
+    from src.tools.images import provider, configured
+    from src.tools.local_images import status as local_status
+    from src.agent.skills import capability_status
+    try:
+        local_model = local_status()
+    except Exception:
+        local_model = {"ready": False}
+    try:
+        skill_item = capability_status("images.generate")
+    except Exception:
+        skill_item = None
+    return {
+        "provider": provider(),
+        "configured": configured(),
+        "local_model": local_model,
+        "skill": skill_item,
+    }
+
+
+@app.get("/agent/skills")
+def get_agent_skills(request: Request):
+    auth.require_owner(request)
+    from src.agent.skills import catalog
+    return {"items": catalog()}
+
+
+@app.get("/tools")
+def get_tools_catalog(request: Request):
+    auth.require_owner(request)
+    from src.tools.registry import list_tools
+    return {"items": list_tools()}
 
 
 # --- AUTENTICAÇÃO ---

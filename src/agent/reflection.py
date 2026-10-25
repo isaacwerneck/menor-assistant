@@ -57,14 +57,14 @@ class ReflectionWorker:
         self.index = KnowledgeIndex(store=self.store, ollama_url=self.ollama_url)
 
     def _collect_recent_events(self, max_events: int = 15) -> List[str]:
-        """Agrupa metas de tarefas e resultados recentes."""
+        """Agrupa metas de tarefas, commits recentes do Git e tópicos assimilados."""
         events = []
         try:
             tasks = self.queue.list_tasks(limit=max_events)
             for t in tasks:
-                goal = t.get("goal", "")
-                result = t.get("result", "")
-                status = t.get("status", "")
+                goal = str(t.get("goal") or "")
+                result = str(t.get("result") or "")
+                status = str(t.get("status") or "")
                 slug = t.get("project_slug") or "geral"
                 is_fail = status == "failed" or "erro" in result.lower() or "exception" in result.lower()
                 if status == "completed" and result and not is_fail:
@@ -76,7 +76,35 @@ class ReflectionWorker:
         except Exception as exc:
             LOGGER.warning("Falha ao ler fila de tarefas para reflexão: %s", exc)
 
-        return events
+        # Se houver espaço, agrega commits recentes do repositório
+        if len(events) < max_events:
+            try:
+                import subprocess
+                git_proc = subprocess.run(
+                    ["git", "log", "-n", "4", "--pretty=format:%h - %s"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False,
+                )
+                if git_proc.returncode == 0 and git_proc.stdout.strip():
+                    for line in git_proc.stdout.strip().splitlines():
+                        if line.strip():
+                            events.append(f"Modificação recente no repositório (Git): {line.strip()}")
+            except Exception:
+                pass
+
+        # Agrega os últimos tópicos de estudo assimilados no cérebro
+        if len(events) < max_events:
+            try:
+                from src.agent.study import TopicManager
+                completed = [t for t in TopicManager(self.store).list_topics(uncompleted_only=False) if t.get("completed")]
+                for t in reversed(completed[-3:]):
+                    events.append(f"Tópico técnico estudado e assimilado no cérebro: {t.get('text', '')}")
+            except Exception:
+                pass
+
+        return events[:max_events]
 
     def reflect(self, events: Optional[List[str]] = None, max_events: int = 15) -> Dict[str, Any]:
         """Executa ciclo de reflexão cognitiva sobre eventos fornecidos ou coletados da fila."""

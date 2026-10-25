@@ -233,7 +233,7 @@ class Orchestrator:
         except Exception as exc:
             LOGGER.warning("Grounding em tempo real indisponível: %s", exc)
 
-        # Grounding de Relatório de Estudos (evita cascata de 2 turnos pesados de 14B na CPU)
+        # Grounding de Relatório de Estudos e Atividades Recentes
         norm_user = last_user.lower()
         study_report_triggers = (
             "estudou", "o que você estudou", "o que vc estudou", "oq vc estudou",
@@ -242,14 +242,31 @@ class Orchestrator:
             "oq aprendeu", "fez enquanto", "estudou essa noite", "estudou hoje",
             "aprendeu", "o que você aprendeu", "o que vc aprendeu", "oq vc aprendeu",
             "ultimos tempos", "últimos tempos", "novidades de estudo",
+            "relatorio geral", "relatório geral", "tudo que vc fez", "tudo o que fez",
+            "o que você fez", "oq vc fez", "se modificou", "modificações", "modificacoes",
         )
         if any(t in norm_user for t in study_report_triggers):
             try:
                 from src.tools.core import get_study_report
                 rep = get_study_report(self.store)
+                recent_commits = ""
+                try:
+                    import subprocess
+                    g_res = subprocess.run(
+                        ["git", "log", "-n", "5", "--pretty=format:%h - %s (%cr)"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                        check=False,
+                    )
+                    if g_res.returncode == 0 and g_res.stdout.strip():
+                        recent_commits = g_res.stdout.strip()
+                except Exception:
+                    pass
+
                 if rep.get("has_report") and rep.get("report_markdown"):
                     executed_tools_log.append("get_study_report")
-                    if any(w in norm_user for w in ("relat", "resumo", "o que", "oq", "aprendeu", "estudou")):
+                    if norm_user.strip() in ("ver ultimo relatorio", "ver último relatório", "cat ultimo_estudo.md", "relatorio cru"):
                         return {
                             "success": True,
                             "reply": (
@@ -260,7 +277,16 @@ class Orchestrator:
                             "model_used": target_model,
                             "node_url": target_url,
                         }
-                    full_system += f"\n\n[RELATÓRIO ATUALIZADO DE ESTUDOS DO MENOR]:\n{rep['report_markdown']}"
+                    full_system += (
+                        f"\n\n[CONTEXTO ATUALIZADO DE ATIVIDADES, ESTUDOS E MODIFICAÇÕES DO MENOR]:\n"
+                        f"1. Relatório Consolidado de Auto-Evolução e Estudos:\n{rep['report_markdown']}\n\n"
+                        f"2. Commits e Modificações Recentes no Código do Menor (Git):\n{recent_commits or 'Nenhum commit recente detectado.'}\n\n"
+                        "DIRETRIZ DE RESPOSTA:\n"
+                        "- O usuário está perguntando o que você aprendeu, fez ou modificou recentemente.\n"
+                        "- Responda de forma natural, executiva, calorosa e conversacional em português (como parceiro de programação).\n"
+                        "- NUNCA repita o relatório cru em markdown verbatim se o usuário já tiver recebido ou se estiver conversando em tom pessoal.\n"
+                        "- Destaque com clareza tanto os tópicos estudados/assimilados quanto as melhorias de código, ferramentas e commits recentes feitos no projeto."
+                    )
             except Exception as exc:
                 LOGGER.debug("Grounding de relatório de estudos ignorado: %s", exc)
 

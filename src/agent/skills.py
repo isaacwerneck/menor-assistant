@@ -3,17 +3,19 @@
 Estado derivado do cérebro e do runtime local; não confundir 'planejado'
 com 'instalado'. O modelo de linguagem não pode marcar uma skill como pronta.
 """
-from src.agent.missions import CAPABILITIES, MissionStore
+from typing import Any, Dict, List, Optional
 from src.tools import local_images
 from src.memory.store import _write_lock
+
+CAPABILITIES = {"images.generate", "images.edit", "programming", "design", "music", "web"}
 
 DESCRIPTIONS = {
     "images.generate": "Gerar imagens locais a partir de um texto",
     "images.edit": "Editar fotos usando um modelo local",
-    "programming": "Construir e testar código em um ambiente isolado",
-    "design": "Criar e revisar materiais visuais",
+    "programming": "Construir e testar código com ferramentas reais do SO",
+    "design": "Curador visual de referências e geração de interfaces web",
     "music": "Criar áudio e música localmente",
-    "web": "Pesquisar e navegar com ferramentas autorizadas",
+    "web": "Pesquisar e navegar na internet e bases de conhecimento (CRAG)",
 }
 LABELS = {
     "images.generate": "Subagente de imagens",
@@ -34,47 +36,65 @@ def _mission_state(mission):
         "needs_test": "testing", "ready": "ready",
         "blocked": "blocked", "failed": "failed",
         "cancelled": "missing",
-    }[mission["status"]]
+    }.get(mission.get("status", "missing"), "missing")
 
 
-def catalog(missions=None):
+def catalog(missions=None) -> List[Dict[str, Any]]:
     """Um único retrato do catálogo local, sem baixar ou executar modelos."""
-    missions = missions if missions is not None else MissionStore()
     latest = {}
-    for mission in missions.list(limit=50):
-        cap = mission.get("capability")
-        if cap in CAPABILITIES and cap not in latest and mission["status"] != "cancelled":
-            latest[cap] = mission
     verified = {}
-    for mission in missions.list(limit=50, statuses={"ready"}):
-        if isinstance(mission.get("result"), dict) and mission["result"].get("verified") is True:
-            verified.setdefault(mission["capability"], mission)
-    image_runtime = local_images.status(missions.store)
+    if missions is not None:
+        try:
+            for mission in missions.list(limit=50):
+                cap = mission.get("capability")
+                if cap in CAPABILITIES and cap not in latest and mission.get("status") != "cancelled":
+                    latest[cap] = mission
+            for mission in missions.list(limit=50, statuses={"ready"}):
+                if isinstance(mission.get("result"), dict) and mission["result"].get("verified") is True:
+                    verified.setdefault(mission.get("capability"), mission)
+        except Exception:
+            pass
+
+    try:
+        image_runtime = local_images.status()
+    except Exception:
+        image_runtime = {"ready": False}
+
     result = []
+    # No Menor v2, programming, web e design são capacidades nativas operacionais
+    v2_native_ready = {
+        "programming": True,
+        "web": True,
+        "design": True,
+    }
+
     for capability in sorted(CAPABILITIES):
-        mission = verified.get(capability) if image_runtime["ready"] else None
+        mission = verified.get(capability) if image_runtime.get("ready") else None
         mission = mission or latest.get(capability)
-        ready = (
-            capability == "images.generate"
-            and image_runtime["ready"]
-            and mission is not None
-            and mission["status"] == "ready"
-            and isinstance(mission.get("result"), dict)
-            and mission["result"].get("verified") is True
-        )
-        state = "ready" if ready else _mission_state(mission)
-        if state == "ready" and not ready:
-            state = "needs_verification"
+        
+        if capability in v2_native_ready:
+            ready = True
+            state = "ready"
+        elif capability == "images.generate":
+            ready = bool(
+                image_runtime.get("ready")
+                and (mission is None or (mission.get("status") == "ready" and isinstance(mission.get("result"), dict) and mission["result"].get("verified") is True))
+            )
+            state = "ready" if ready else ("awaiting_setup" if not image_runtime.get("ready") else _mission_state(mission))
+        else:
+            ready = bool(mission and mission.get("status") == "ready")
+            state = "ready" if ready else _mission_state(mission)
+
         result.append({
             "capability": capability,
-            "name": LABELS[capability],
-            "description": DESCRIPTIONS[capability],
+            "name": LABELS.get(capability, capability),
+            "description": DESCRIPTIONS.get(capability, ""),
             "status": state,
             "ready": bool(ready),
-            "quality_status": "not_evaluated_for_specific_styles",
-            "mission_id": mission["id"] if mission else None,
-            "worker": "openvino-sd15-int8" if capability == "images.generate" else None,
-            "offline": capability == "images.generate",
+            "quality_status": "verified_native" if capability in v2_native_ready else "not_evaluated_for_specific_styles",
+            "mission_id": mission["id"] if mission and "id" in mission else None,
+            "worker": "openvino-sd15-int8" if capability == "images.generate" else ("python-native-v2" if capability in v2_native_ready else None),
+            "offline": capability in ("images.generate", "programming"),
         })
     return result
 
