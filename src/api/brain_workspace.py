@@ -34,7 +34,7 @@ def _get_changelog_path(data_dir: Path) -> Path:
     return data_dir / "brain_changelog.jsonl"
 
 
-def _record_changelog(data_dir: Path, rel_path: str, author: str, action: str, diff_summary: str):
+def _record_changelog(data_dir: Path, rel_path: str, author: str, action: str, summary: str = ""):
     """Registra uma entrada append-only no changelog permanente."""
     try:
         log_file = _get_changelog_path(data_dir)
@@ -43,7 +43,7 @@ def _record_changelog(data_dir: Path, rel_path: str, author: str, action: str, d
             "path": rel_path,
             "author": author,
             "action": action,
-            "summary": diff_summary[:300],
+            "summary": summary[:300],
         }
         with _write_lock:
             with open(log_file, "a", encoding="utf-8") as f:
@@ -181,22 +181,25 @@ def save_brain_note(payload: NoteSavePayload, request: Request):
             except Exception:
                 pass
 
-        # Registra no changelog
-        _record_changelog(
-            data_dir=store.data_dir,
-            rel_path=payload.path,
-            author="Usuário (Web)",
-            action="update",
-            summary=f"Atualização manual de {payload.path} ({len(payload.content.encode('utf-8'))} bytes)",
-        )
+        # Registra no changelog defensivamente
+        try:
+            _record_changelog(
+                data_dir=store.data_dir,
+                rel_path=payload.path,
+                author="Usuário (Web)",
+                action="update",
+                summary=f"Atualização manual de {payload.path} ({len(payload.content.encode('utf-8'))} bytes)",
+            )
+        except Exception as log_err:
+            logger.warning("Não foi possível gravar no changelog: %s", log_err)
 
         new_hash = hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
         return {"success": True, "path": payload.path, "hash": new_hash}
     except SecurityPathError as err:
         raise HTTPException(status_code=400, detail=str(err))
     except Exception as exc:
-        logger.error("Erro ao salvar nota do cérebro: %s", exc)
-        raise HTTPException(status_code=500, detail="Erro interno ao gravar arquivo.")
+        logger.error("Erro ao salvar nota do cérebro: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno ao gravar arquivo: {exc}")
 
 
 @router.get("/api/brain/changelog")
