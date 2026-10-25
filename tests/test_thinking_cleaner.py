@@ -79,6 +79,18 @@ Fala meu parceiro, tudo na paz?"""
         result = sanitize_assistant_reply("", "salve")
         self.assertIn("Isaac", result)
 
+    def test_strip_simulated_bash_tool_commands(self):
+        raw = (
+            "Olá Isaac! Vou checar o que a gente fez com o site do Rebello.\n\n"
+            "```bash\n"
+            "terminal_run ls -la ~/estudos/ 2>/dev/null || terminal_run ls -la ~/ancora_de_estudos/ 2>/dev/null\n"
+            "```"
+        )
+        result = sanitize_assistant_reply(raw, "mostra o site do rebello")
+        self.assertNotIn("terminal_run", result)
+        self.assertNotIn("ancora_de_estudos", result)
+        self.assertIn("site do Rebello", result)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3122,7 +3122,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             let createdHtmlFile = null;
             if (result.tools_executed && Array.isArray(result.tools_executed)) {
                 result.tools_executed.forEach(tool => {
-                    const filepath = typeof tool === 'string' && tool.startsWith('fs_write:')
+                    const filepath = typeof tool === 'string' && (tool.startsWith('fs_write:') || tool.startsWith('fs_read:'))
                         ? tool.split(':')[1]
                         : (tool.args?.filepath || tool.result?.filepath || '');
                     if (filepath && (filepath.toLowerCase().endsWith('.html') || filepath.toLowerCase().endsWith('.htm'))) {

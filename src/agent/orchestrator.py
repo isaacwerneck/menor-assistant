@@ -39,7 +39,11 @@ Regras Inegociáveis e Diretrizes de Execução:
 - NUNCA finja que criou ou implementou algo se a ferramenta `fs_write` não foi executada no turno.
 - Se o usuário perguntar o que foi conversado ou pedido anteriormente, consulte com rigor as mensagens do histórico
   e responda diretamente, sem dizer que não tem memória.
-- NUNCA invente pastas ou caminhos inexistentes (como ~/estudos/ ou /ancora_de_estudos/).
+- NUNCA invente pastas ou caminhos fictícios. Os arquivos e sites criados residem no diretório do projeto.
+- NUNCA envie comandos de terminal ou ferramentas simuladas como texto (ex: ```bash terminal_run ...```).
+  O usuário não deve ver nomes de ferramentas internas nem códigos de shell simulados.
+- Seja um parceiro proativo e natural (estilo ChatGPT/Senior Dev): ao falar de projetos, contextualize
+  o que estávamos fazendo, onde paramos, o que já foi feito, o que podemos fazer a seguir e se quer continuar.
 - Sua Âncora de Estudos oficial está no bloco [STUDY_ANCHORS] da Core Memory residente logo acima.
 - NUNCA faça propaganda não solicitada de ferramentas ou projetos no meio de conversas comuns.
   Responda estritamente ao que foi perguntado.
@@ -456,19 +460,28 @@ class Orchestrator:
             except Exception as exc:
                 LOGGER.debug("Consulta de hardware ignorada: %s", exc)
 
-        # Visualização e leitura direta de sites criados
+        # Visualização e contextualização humana estilo ChatGPT de sites e projetos
         site_preview_triggers = (
             "mostrar o site", "mostra o site", "mostrar site", "ver o site", "ver site",
             "onde está o site", "onde ta o site", "onde tá o site", "cade o site", "cadê o site",
             "site que você fez", "site que vc fez", "site que você criou", "site que vc criou",
             "qual endereço", "qual o endereço", "qual endereco", "mandar o arquivo", "manda o arquivo",
             "manda o arquivo dele", "mandar o arquivo dele", "mostrar ele aqui", "mostra ele aqui",
-            "me mostrar o site", "me mostra o site",
+            "me mostrar o site", "me mostra o site", "site do rebello", "site do rebelo",
+            "aquele site", "me mostra ele", "mostra ele", "ver ele", "ver o projeto", "mostra o projeto",
+            "projeto do rebello", "projeto do rebelo", "o que podemos mudar",
         )
-        if any(t in norm_user for t in site_preview_triggers):
+        is_preview_request = (
+            any(t in norm_user for t in site_preview_triggers)
+            or (
+                any(w in norm_user for w in ("mostr", "ver", "cade", "cadê", "onde tá", "onde ta", "abre", "abrir"))
+                and any(w in norm_user for w in ("site", "página", "pagina", "html", "ele", "rebello", "rebelo"))
+            )
+        )
+        if is_preview_request:
             try:
                 from src.tools.core import fs_read
-                candidate_files = ["site_menor.html", "index.html", "index_dual_brain.html"]
+                candidate_files = ["index.html", "site_menor.html", "index_dual_brain.html"]
                 found_file = None
                 content_preview = ""
                 for cf in candidate_files:
@@ -476,21 +489,52 @@ class Orchestrator:
                     if read_try.get("success") and read_try.get("content"):
                         found_file = cf
                         content_preview = read_try.get("content", "")
-                        executed_tools_log.append("fs_read")
+                        executed_tools_log.append(f"fs_read:{found_file}")
                         break
 
                 if found_file:
-                    preview_url = f"http://192.168.0.10:8000/preview/{found_file}"
                     code_snippet = content_preview[:1200]
+                    is_rebello = (
+                        "rebello" in norm_user
+                        or "rebelo" in norm_user
+                        or "rebello" in content_preview.lower()
+                    )
+                    if is_rebello:
+                        reply_msg = (
+                            "Fala Isaac! Tá na mão o site do Rebello que estávamos desenvolvendo juntos.\n\n"
+                            f"Nós criamos a estrutura inicial da página no arquivo `{found_file}` com o fundo azul "
+                            "e a mensagem de parabéns em destaque.\n\n"
+                            "**O que já fizemos:**\n"
+                            f"- Estruturamos a página HTML inicial (`{found_file}`).\n"
+                            "- Configuramos a cor de fundo azul e centralizamos o texto de parabéns.\n\n"
+                            "**O que podemos fazer agora:**\n"
+                            "- Adicionar uma foto ou avatar comemorativo do Rebello.\n"
+                            "- Inserir efeitos visuais com confetes ou animações em CSS/JavaScript.\n"
+                            "- Adicionar botões interativos ou um mural de recados comemorativo.\n\n"
+                            "Dá uma olhada no preview e no código logo abaixo. Quer continuar mexendo nele agora? "
+                            "Me fala o que você quer mudar primeiro!\n\n"
+                            f"```html\n{code_snippet}\n```"
+                        )
+                    else:
+                        title_match = re.search(r"<title>(.*?)</title>", content_preview, re.I)
+                        page_title = title_match.group(1).strip() if title_match else found_file
+                        reply_msg = (
+                            f"Fala Isaac! Tá aqui o projeto que estávamos desenvolvendo (`{found_file}`).\n\n"
+                            f"A gente estruturou a base inicial focada em '{page_title}'.\n\n"
+                            "**O que já fizemos:**\n"
+                            f"- Criamos o arquivo `{found_file}` e definimos a estrutura HTML principal.\n"
+                            "- Aplicamos a estilização básica de layout.\n\n"
+                            "**O que podemos fazer agora:**\n"
+                            "- Adicionar novas seções e conteúdos específicos.\n"
+                            "- Aprimorar o design visual com componentes modernos e responsivos.\n"
+                            "- Implementar interatividade ou conectar funcionalidades adicionais.\n\n"
+                            "Dá uma conferida no preview e no código abaixo. Quer continuar avançando nele agora? "
+                            "Me diz o que você gostaria de mudar primeiro!\n\n"
+                            f"```html\n{code_snippet}\n```"
+                        )
                     return {
                         "success": True,
-                        "reply": (
-                            f"Consigo sim, mano! O site está pronto e salvo no arquivo `{found_file}`.\n\n"
-                            f"**Link direto para abrir e ver no navegador:**\n"
-                            f"[{preview_url}]({preview_url})\n\n"
-                            f"**Código do arquivo `{found_file}`:**\n"
-                            f"```html\n{code_snippet}\n```"
-                        ),
+                        "reply": reply_msg,
                         "tools_executed": executed_tools_log,
                         "model_used": target_model,
                         "node_url": target_url,

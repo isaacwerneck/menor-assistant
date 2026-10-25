@@ -43,6 +43,20 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
     if "</think>" in cleaned or "</thought>" in cleaned:
         cleaned = re.sub(r"^.*?</(?:think|thought)>\s*", "", cleaned, flags=re.DOTALL)
 
+    # Remove blocos de código simulando comandos de terminal ou ferramentas (terminal_run, fs_list, etc.)
+    cleaned = re.sub(
+        r"```(?:bash|sh|terminal|shell)?\s*\n\s*(?:terminal_run|fs_list|fs_read|fs_write|python\s+-c)[\s\S]*?\n```",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"^\s*(?:terminal_run|fs_list|fs_read|fs_write)\s+.*$",
+        "",
+        cleaned,
+        flags=re.MULTILINE,
+    )
+
     # Se a tag <think> ficou aberta (truncamento do modelo antes de fechar </think>),
     # tenta resgatar qualquer código ou resposta legítima posterior ao bloco
     if "<think>" in cleaned or "<thought>" in cleaned:
