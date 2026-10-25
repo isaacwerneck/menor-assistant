@@ -207,8 +207,10 @@ class DualTierVerifier:
         }
 
     @staticmethod
-    def verify_tier2_qualitative(probe: Dict[str, Any], reply: str, objective_md: str) -> Dict[str, Any]:
-        """Avaliação qualitativa (rubrica / conformidade de estilo)."""
+    def verify_tier2_qualitative(
+        probe: Dict[str, Any], reply: str, objective_md: str, tier1_checks: Optional[List[Dict[str, Any]]] = None
+    ) -> Dict[str, Any]:
+        """Avaliação qualitativa (rubrica / conformidade de estilo e geração de aprendizado dinâmico)."""
         score = 40  # Base média qualitativa
         critique = []
 
@@ -219,23 +221,36 @@ class DualTierVerifier:
             critique.append("Resposta excessivamente evasiva ou monossilábica.")
         elif words > 40:
             score += 5
-            critique.append("Resposta detalhada com especificações concretas.")
+            critique.append("Resposta detalhada com especificações técnicas concretas.")
 
         # Bonificação se estruturou código com markdown
         if "```" in reply:
             score += 5
             critique.append("Apresentou código formatado em blocos técnicos.")
 
-        score = max(0, min(50, score))
-        total_qualitative = score
+        # Detecção de falhas no Tier 1 para enriquecer o aprendizado
+        t1_fails = [c["detail"] for c in (tier1_checks or []) if c.get("status") == "FAIL"]
+        if t1_fails:
+            learning = (
+                f"Falha detectada no domínio '{probe.get('category', 'geral')}': {'; '.join(t1_fails)}. "
+                f"Regra preventiva: O modelo deve priorizar execução real e formatação válida."
+            )
+        elif words >= 30 and ("```" in reply or "/preview/" in reply):
+            learning = (
+                f"Padrão de excelência consolidado para '{probe.get('name')}': Resposta estruturada, "
+                f"código limpo e referências verificadas com sucesso."
+            )
+        else:
+            learning = (
+                f"Para o domínio '{probe.get('category', 'geral')}', manter respostas diretas, "
+                f"com ferramentas reais e links de preview funcionais."
+            )
 
+        score = max(0, min(50, score))
         return {
-            "tier2_score": total_qualitative,
+            "tier2_score": score,
             "critique": " ".join(critique) if critique else "Conformidade padrão com objetivo.",
-            "learning_extracted": (
-                f"Para o domínio '{probe.get('category')}', reforçar sempre código completo "
-                f"e visualização sem frases de desculpas."
-            ),
+            "learning_extracted": learning,
         }
 
 

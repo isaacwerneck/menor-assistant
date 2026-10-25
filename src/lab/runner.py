@@ -59,23 +59,78 @@ class LabRunner:
 
             # 1. Execução da sonda através do orquestrador
             start_t = time.time()
+            messages = [{"role": "user", "content": probe["prompt"]}]
             try:
                 turn_res = self.orchestrator.run_turn(
-                    message=probe["prompt"],
+                    messages=messages,
                     model=session.model,
-                    session_id=f"lab-session-{session.session_id}",
+                    enable_tools=True,
                 )
                 reply = turn_res.get("reply", "")
                 elapsed = time.time() - start_t
             except Exception as exc:
                 logger.error("Erro na execução da sonda %s: %s", probe['id'], exc)
-                reply = f"[ERRO INTERNO]: {exc}"
+                reply = f"[ERRO]: {exc}"
                 elapsed = time.time() - start_t
 
             # 2. Verificações Dual-Tier
             t1 = DualTierVerifier.verify_tier1(probe, reply)
-            t2 = DualTierVerifier.verify_tier2_qualitative(probe, reply, session.objective_md)
+            t2 = DualTierVerifier.verify_tier2_qualitative(
+                probe, reply, session.objective_md, tier1_checks=t1["tier1_checks"]
+            )
             combined_score = round((t1["tier1_score"] + t2["tier2_score"]) / 10.0, 1)
+
+            # 3. Reflexion / Auto-Aprimoramento se a nota inicial for insuficiente
+            initial_score = combined_score
+            if combined_score < 7.0 and not session._abort_requested:
+                fail_points = [c["detail"] for c in t1.get("tier1_checks", []) if c.get("status") == "FAIL"]
+                critique_note = (
+                    "; ".join(fail_points) if fail_points else t2.get("critique", "Critérios não atingidos.")
+                )
+                session.logs.append(
+                    f"[REFLEXION] Nota preliminar {combined_score}/10 insuficiente. Auto-crítica: {critique_note}"
+                )
+
+                reflexion_prompt = (
+                    f"Sua resposta anterior não atingiu a pontuação mínima (nota {combined_score}/10).\n"
+                    f"Falhas detectadas na verificação técnica:\n- {critique_note}\n\n"
+                    f"Por favor, atenda ao pedido com rigor máximo gerando a solução completa, "
+                    f"código limpo e executável sem frases robóticas:\n{probe['prompt']}"
+                )
+                try:
+                    ref_messages = [
+                        {"role": "user", "content": probe["prompt"]},
+                        {"role": "assistant", "content": reply},
+                        {"role": "user", "content": reflexion_prompt},
+                    ]
+                    ref_res = self.orchestrator.run_turn(
+                        messages=ref_messages,
+                        model=session.model,
+                        enable_tools=True,
+                    )
+                    ref_reply = ref_res.get("reply", "")
+                    if ref_reply and not ref_reply.startswith("[ERRO"):
+                        ref_t1 = DualTierVerifier.verify_tier1(probe, ref_reply)
+                        ref_t2 = DualTierVerifier.verify_tier2_qualitative(
+                            probe, ref_reply, session.objective_md, tier1_checks=ref_t1["tier1_checks"]
+                        )
+                        new_score = round((ref_t1["tier1_score"] + ref_t2["tier2_score"]) / 10.0, 1)
+                        if new_score > combined_score:
+                            session.logs.append(
+                                f"[EVOLUÇÃO] Reflexion aumentou a nota de {combined_score}/10 "
+                                f"para {new_score}/10 (+{round(new_score - combined_score, 1)} pts)!"
+                            )
+                            combined_score = new_score
+                            reply = ref_reply
+                            t1 = ref_t1
+                            t2 = ref_t2
+                except Exception as ref_exc:
+                    logger.debug("Reflexion pass falhou: %s", ref_exc)
+
+            evol_note = (
+                f" (Auto-aprimorado de {initial_score} para {combined_score}/10 via Reflexion)"
+                if combined_score > initial_score else ""
+            )
 
             result_card = {
                 "step": idx,
@@ -90,12 +145,13 @@ class LabRunner:
                 "tier2_critique": t2["critique"],
                 "tier2_score": t2["tier2_score"],
                 "final_score": combined_score,
-                "learning": t2["learning_extracted"],
+                "initial_score": initial_score,
+                "learning": t2["learning_extracted"] + evol_note,
                 "target_file": f"conhecimentos/{probe.get('category', 'geral')}/{probe['id']}.md",
                 "proposed_diff": (
                     f"+ # Aprendizado: {probe['name']}\n"
-                    f"+ {t2['learning_extracted']}\n"
-                    f"+ Verificado com nota {combined_score}/10."
+                    f"+ {t2['learning_extracted']}{evol_note}\n"
+                    f"+ Verificado com nota final {combined_score}/10."
                 ),
             }
 
