@@ -75,6 +75,16 @@ class TestBrainWorkspaceV2(unittest.TestCase):
         self.assertGreater(len(items), 0)
         self.assertEqual(items[0]["path"], "cerebro/preferencias.md")
 
+    @patch("src.security.auth.require_owner")
+    def test_sync_playbooks_endpoint(self, mock_auth):
+        mock_auth.return_value = True
+        res = self.client.post("/api/brain/sync-playbooks")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data["success"])
+        self.assertGreater(data["updated_count"], 0)
+        self.assertTrue(any("android/arquitetura_mobile.md" in f for f in data["files"]))
+
 
 if __name__ == "__main__":
     unittest.main()

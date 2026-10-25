@@ -19,6 +19,7 @@ _write_lock = threading.RLock()
 
 FOLDERS = (
     "identidade",
+    "conhecimentos/android",
     "conhecimentos/design",
     "conhecimentos/programacao",
     "conhecimentos/engenharia_software",
@@ -36,53 +37,124 @@ FOLDERS = (
 SEED_FILES = {
     "identidade/perfil_usuario.md": "# Perfil do usuário\n\nInformações fornecidas ou confirmadas pelo usuário.\n",
     "identidade/preferencias.md": "# Preferências\n\nPreferências explícitas do usuário:\n",
-    "conhecimentos/aprendizados_gerais.md": "# Aprendizados gerais\n\n",
+    "identidade/diretrizes_executivas.md": (
+        "# Diretrizes Executivas e de Identidade do Menor v2\n\n"
+        "## 1. Filosofia de Atuação e Zero Recusas\n"
+        "- O Menor v2 é um assistente executivo e proativo, parceiro técnico do Isaac.\n"
+        "- **Zero Recusas:** É estritamente proibido usar 'sou apenas voz' ou 'não posso criar'.\n"
+        "- **Execução Real:** Se solicitado uma tela ou script, materializa o arquivo via `fs_write`.\n"
+        "- **Comunicação Executiva:** Respostas objetivas, elegantes e diretas, sem preâmbulos.\n\n"
+        "## 2. Padrões de Entrega de Demandas\n"
+        "1. Para web: gera o HTML/CSS/JS e devolve o link clicável `/preview/<arquivo>.html`.\n"
+        "2. Para mobile (Android Studio): entrega o modelo Kotlin/Clean Arch pronto para compilar.\n"
+        "3. Em ambiguidades de negócio: faz 1 ou 2 perguntas de alinhamento antes de construir.\n"
+    ),
+    "conhecimentos/android/arquitetura_mobile.md": (
+        "# Playbook Canônico: Engenharia Android Studio & Mobile\n\n"
+        "## 1. Stack Tecnológico & Versões Canônicas\n"
+        "- **Linguagem & SDK:** Kotlin 2.0+ (K2 compiler), Android Min SDK 26, Target SDK 35.\n"
+        "- **UI & Toolkit:** Jetpack Compose (BOM moderno), Material 3 (`androidx.compose.material3`).\n"
+        "- **Persistência Local:** Room Database (`androidx.room:room-ktx:2.6+`) com SQLite bundled.\n"
+        "- **Fluxo Reativo & Assincronismo:** Kotlin Coroutines + `StateFlow` / `SharedFlow`.\n"
+        "- **Injeção de Dependências:** Koin ou Hilt estruturado por módulos (feature-based).\n"
+        "- **Rede & Serialização:** Ktor Client ou Retrofit 2.11 com `kotlinx.serialization.json`.\n\n"
+        "## 2. Padrão Obrigatório de Arquitetura (Clean Architecture + MVI)\n"
+        "```text\n"
+        "com.empresa.app/\n"
+        "├── data/         # Entities, Room DAOs, API Services, Repositories Impl\n"
+        "├── domain/       # Modelos puros imutáveis, Interfaces de Repository, UseCases\n"
+        "└── presentation/ # Compose Screens, ViewModels, UiState imutável, Tema\n"
+        "```\n\n"
+        "## 3. Snippets de Referência Canônica\n"
+        "```kotlin\n"
+        "sealed interface EstoqueUiState {\n"
+        "    data object Loading : EstoqueUiState\n"
+        "    data class Success(val itens: List<ItemEstoque>) : EstoqueUiState\n"
+        "    data class Error(val mensagem: String) : EstoqueUiState\n"
+        "}\n\n"
+        "@HiltViewModel\n"
+        "class EstoqueViewModel @Inject constructor(\n"
+        "    private val getItensUseCase: GetItensEstoqueUseCase\n"
+        ") : ViewModel() {\n"
+        "    private val _uiState = MutableStateFlow<EstoqueUiState>(EstoqueUiState.Loading)\n"
+        "    val uiState: StateFlow<EstoqueUiState> = _uiState.asStateFlow()\n"
+        "}\n"
+        "```\n\n"
+        "## 4. Anti-Padrões Proibidos\n"
+        "- NUNCA usar `LiveData` em código novo; use `StateFlow` com `collectAsStateWithLifecycle()`.\n"
+        "- NUNCA rodar operações de banco ou rede na Main Dispatcher.\n"
+        "- NUNCA criar Activities gigantes monolíticas.\n"
+    ),
     "conhecimentos/design/estilo_visual.md": (
-        "# Estilo Visual e Design do Isaac\n\n"
-        "## Diretrizes de Interface\n"
-        "- Tema dark minimalista com alto contraste e elegância.\n"
-        "- Tipografia moderna, legível e hierarquia clara.\n"
-        "- Micro-interações táteis e responsivas sem animações pesadas.\n"
-        "- Componentes modulares, cantos suavemente arredondados e bordas sutis.\n"
+        "# Estilo Visual e Design System do Isaac\n\n"
+        "## 1. Diretrizes de Interface & Paleta Dark Minimalist\n"
+        "- **Background Root:** `#0c0b10` (Preto azulado profundo, sem cansar a vista).\n"
+        "- **Surface / Card Background:** `#14131c` (Elevação primária elegante).\n"
+        "- **Border / Divider:** `rgba(255, 255, 255, 0.08)` (Borda nítida e sutil).\n"
+        "- **Accent Primário (Violeta):** `#8b5cf6` (Foco, botões de ação e status ativo).\n"
+        "- **Accent Secundário (Cyan):** `#06b6d4` (Indicadores de estado, links e previews).\n"
+        "- **Texto Principal:** `#f3f4f6` (Alto contraste e legibilidade perfeita).\n\n"
+        "## 2. Tipografia & Componentes\n"
+        "- **UI Geral:** Inter, Plus Jakarta Sans ou system sans-serif moderna.\n"
+        "- **Código & Schemas:** Cascadia Code, JetBrains Mono ou Consolas.\n"
+        "- **Border Radius:** 8px para botões/inputs; 12px a 14px para cards e modais.\n"
+        "- **Micro-interações:** Transições táteis rápidas de 150ms a 200ms `ease-out`.\n\n"
+        "## 3. Anti-Padrões Visuais Proibidos\n"
+        "- NUNCA usar fundo branco puro (`#ffffff`) para interfaces do Isaac.\n"
+        "- NUNCA usar sombras escuras opacas ou borradas que sujem o contraste.\n"
+        "- NUNCA usar animações lentas (>300ms) que prejudiquem a agilidade.\n"
     ),
     "conhecimentos/programacao/estilo_isaac.md": (
-        "# Estilo de Programação do Isaac\n\n"
-        "## Convenções e Filosofia de Código\n"
-        "- Código limpo, modular e direto ao ponto (princípio YAGNI).\n"
-        "- Preferência por recursos nativos da linguagem/stdlib antes de instalar dependências.\n"
-        "- Tipagem estrita com dataclasses / Pydantic e funções coesas de responsabilidade única.\n"
+        "# Estilo de Programação e Engenharia do Isaac\n\n"
+        "## 1. Convenções & Filosofia de Código\n"
+        "- **Princípio YAGNI & Código Limpo:** O menor código que resolve o problema completamente.\n"
+        "- **Prioridade Nativa:** Usar biblioteca padrão antes de instalar pacotes de terceiros.\n"
+        "- **Tipagem Estrita:** Pydantic v2 / Dataclasses com validação em tempo de compilação/execução.\n"
+        "- **Funções Coesas:** Responsabilidade única, funções curtas e testabilidade direta.\n\n"
+        "## 2. Qualidade e Ciclo de Vida\n"
         "- Testes unitários para validar todo comportamento crítico antes do commit.\n"
+        "- Tratamento explícito de exceções sem `except: pass` silencioso em lógica de negócio.\n"
     ),
     "conhecimentos/engenharia_software/arquitetura.md": (
         "# Engenharia de Software e Arquitetura do Menor\n\n"
-        "## Padrões de Produção\n"
-        "- FastAPI assíncrono com ciclo de vida (lifespan) estruturado.\n"
-        "- Concorrência segura com locks (RLock) e isolamento temporal.\n"
-        "- Armazenamento durável em SQLite FTS5 híbrido fora da árvore Git.\n"
-        "- Preempção atômica em processos demorados para liberar a CPU do operador imediatamente.\n"
+        "## 1. Padrões de Produção FastAPI\n"
+        "- Ciclo de vida estruturado com `@asynccontextmanager async def lifespan(app: FastAPI)`.\n"
+        "- Async / Await: operações I/O bloqueantes (disco, subprocessos) com `run_in_threadpool`.\n"
+        "- Armazenamento híbrido durável em SQLite FTS5 fora da árvore Git (`~/menor-data/`).\n"
+        "- Locks `threading.RLock()` para atomicidade e proteção de concorrência.\n\n"
+        "## 2. Anti-Padrões de Backend Proibidos\n"
+        "- NUNCA chamar `time.sleep()` em rotas assíncronas do FastAPI.\n"
+        "- NUNCA concatenar strings em queries SQL cruas; use prepared statements.\n"
     ),
     "conhecimentos/musica/producao_e_sintese.md": (
-        "# Conhecimentos Musicais e Produção de Áudio\n\n"
-        "## Sound Design e Composição\n"
-        "- Teoria musical moderna, escalas, harmonia funcional e progressões de acordes.\n"
-        "- Síntese sonora subtrativa, aditiva, FM e modelagem física.\n"
-        "- Processamento de áudio digital (DSP), envelopes ADSR, filtros e efeitos temporais.\n"
-        "- Preferências sonoras do Isaac para beats, trilhas e texturas imersivas.\n"
+        "# Conhecimentos Musicais e Produção de Áudio DSP\n\n"
+        "## 1. Sound Design & Teoria Harmônica\n"
+        "- Escalas Menor Natural, Harmônica e Dórica para progressões e texturas imersivas.\n"
+        "- Síntese subtrativa: Osciladores -> Filtro VCF 24dB com Cutoff dinâmico -> ADSR -> LFO.\n"
+        "- Síntese procedural de bateria: Kick (pitch drop 140Hz -> 38Hz), Snare (ruído branco + seno 180Hz).\n\n"
+        "## 2. Processamento Digital de Sinais (DSP)\n"
+        "- Taxa de amostragem padrão: 44.1 kHz / 48 kHz com float32 `[-1.0, 1.0]`.\n"
+        "- Envelope anti-click: fade-in e fade-out de 3-5ms em bordas de buffer para evitar descontinuidade de fase.\n"
+        "- Master bus sempre com limiter para impedir clipping digital (`> 0 dBFS`).\n"
     ),
     "conhecimentos/game_design/filosofia_jogos.md": (
         "# Game Design e Desenvolvimento de Jogos\n\n"
-        "## Filosofia de Gameplay e Gráficos\n"
-        "- Mecânicas de jogo responsivas, loop de gameplay viciante e curva de aprendizado justa.\n"
-        "- Shaders GLSL / HLSL modernos (iluminação dinâmica, pós-processamento, partículas).\n"
-        "- Desenvolvimento em C++ e Unreal Engine 5 com arquitetura ECS / UObject limpa.\n"
-        "- Otimização de framerate, draw calls e profiling de GPU/CPU.\n"
+        "## 1. Arquitetura de Engine & Gráficos\n"
+        "- Desenvolvimento em C++20 / Unreal Engine 5 com arquitetura ECS / UObject limpa.\n"
+        "- Shaders GLSL / HLSL modernos: iluminação PBR (Cook-Torrance, albedo, metallic, roughness).\n"
+        "- Game loop determinístico com física em passo fixo e interpolação de renderização.\n\n"
+        "## 2. Anti-Padrões de Jogos\n"
+        "- NUNCA alocar memória dinâmica (`new`/`malloc`) dentro do loop de renderização (tick).\n"
+        "- NUNCA criar dependências circulares entre atores ou subsistemas.\n"
     ),
+    "conhecimentos/aprendizados_gerais.md": "# Aprendizados gerais\n\n",
     "menor_refletir.md": (
         "# Temas de Estudo e Pesquisa do Menor\n\n"
+        "- [ ] Android: Compose multiplatform, Room migrations e Ktor Client\n"
         "- [ ] Inteligência Artificial: Arquiteturas de agentes, RAG híbrido, MoE\n"
         "- [ ] Engenharia de Software: Padrões de concorrência em Python, FastAPI production\n"
-        "- [ ] JavaScript: EventLoop, Web Workers, Web Audio API\n"
         "- [ ] Design e UI/UX: Design Systems modernos, micro-interações, teoria das cores\n"
+        "- [ ] Áudio DSP: Web Audio API, síntese procedural e processamento de som\n"
     ),
     "ferramentas/catalogo.md": (
         "# Catálogo de ferramentas\n\nAs ferramentas executáveis serão registradas no código.\n"
@@ -171,6 +243,23 @@ class BrainStore:
                 if target.is_symlink() or not target.is_file():
                     raise ValueError("Nota inicial existente não é arquivo regular.") from None
         return self.brain_dir
+
+    def sync_playbooks(self, force: bool = False):
+        """Sincroniza os playbooks normativos de engenharia com o cérebro permanente."""
+        updated = []
+        for rel_path, content in SEED_FILES.items():
+            # Preserva integralmente dados pessoais de perfil e preferências
+            if rel_path in ("identidade/perfil_usuario.md", "identidade/preferencias.md"):
+                continue
+            target = self._note_path(rel_path, create_parent=True)
+            if force or not target.exists():
+                self.write_note(rel_path, content)
+                try:
+                    self._update_fts_index(rel_path, content)
+                except Exception:
+                    pass
+                updated.append(rel_path)
+        return updated
 
     def read_note(self, relative):
         target = self._note_path(relative)
@@ -289,7 +378,7 @@ class BrainStore:
 
     def list_domains(self):
         """Lista os domínios de conhecimento padrão."""
-        return ["design", "programacao", "engenharia_software", "musica", "game_design"]
+        return ["design", "programacao", "engenharia_software", "musica", "game_design", "android"]
 
     def list_domain_knowledge(self, domain):
         """Retorna todas as notas de um domínio específico."""

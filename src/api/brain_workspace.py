@@ -227,3 +227,19 @@ def get_brain_changelog(request: Request, limit: int = Query(25, ge=1, le=100)):
         logger.warning("Falha ao ler changelog: %s", exc)
 
     return {"items": entries}
+
+
+@router.post("/api/brain/sync-playbooks")
+def sync_playbooks_endpoint(request: Request):
+    """Sincroniza os playbooks normativos de engenharia com o cérebro permanente."""
+    auth.require_owner(request)
+    store = BrainStore()
+    updated = store.sync_playbooks(force=True)
+    _record_changelog(
+        data_dir=store.data_dir,
+        rel_path="cerebro/playbooks",
+        author="Sistema (Playbooks)",
+        action="sync",
+        summary=f"Sincronização de {len(updated)} playbooks normativos de engenharia.",
+    )
+    return {"success": True, "updated_count": len(updated), "files": updated}

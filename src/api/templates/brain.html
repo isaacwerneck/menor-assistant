@@ -236,6 +236,7 @@
             <div class="brand-title">Cérebro do Menor <span>Inspetor de Memória</span></div>
         </a>
         <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" onclick="syncPlaybooks()" title="Atualiza Playbooks normativos sem afetar preferências">⚡ Atualizar Playbooks</button>
             <button class="btn btn-primary" onclick="saveActiveNote()">💾 Salvar Alterações</button>
             <a href="/" class="btn btn-secondary">💬 Voltar ao Chat</a>
         </div>
@@ -390,6 +391,23 @@
                 }
             } catch (err) {
                 alert("Erro de conexão ao salvar documento.");
+            }
+        }
+
+        async function syncPlaybooks() {
+            if (!confirm("Deseja sincronizar os Playbooks Normativos de Engenharia (Android Studio, Design System, FastAPI, Áudio DSP)? Suas preferências pessoais serão preservadas.")) return;
+            try {
+                const res = await fetch('/api/brain/sync-playbooks', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`Sucesso! ${data.updated_count} playbooks normativos atualizados e indexados no Cérebro.`);
+                    loadTree();
+                    loadChangelog();
+                } else {
+                    alert("Erro ao sincronizar playbooks.");
+                }
+            } catch (err) {
+                alert("Erro de conexão ao sincronizar playbooks.");
             }
         }
 
