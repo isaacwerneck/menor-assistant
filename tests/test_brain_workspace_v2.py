@@ -85,6 +85,33 @@ class TestBrainWorkspaceV2(unittest.TestCase):
         self.assertGreater(data["updated_count"], 0)
         self.assertTrue(any("android/arquitetura_mobile.md" in f for f in data["files"]))
 
+    @patch("src.security.auth.require_owner")
+    def test_save_and_read_code_extensions(self, mock_auth):
+        mock_auth.return_value = True
+
+        # Test saving and reading an HTML file in project directory
+        html_path = "projetos/meu_jogo/index.html"
+        html_content = "<!DOCTYPE html><html><body><h1>Meu Jogo</h1></body></html>"
+        save_res = self.client.post("/api/brain/note", json={
+            "path": html_path,
+            "content": html_content,
+        })
+        self.assertEqual(save_res.status_code, 200)
+        self.assertTrue(save_res.json()["success"])
+
+        read_res = self.client.get(f"/api/brain/note?path={html_path}")
+        self.assertEqual(read_res.status_code, 200)
+        self.assertIn("<h1>Meu Jogo</h1>", read_res.json()["content"])
+
+        # Test rejected extension (.exe)
+        bad_res = self.client.post("/api/brain/note", json={
+            "path": "projetos/meu_jogo/malware.exe",
+            "content": "binary",
+        })
+        self.assertEqual(bad_res.status_code, 400)
+        self.assertIn("Extens", bad_res.json()["detail"])
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,6 +23,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Cérebro do Menor"])
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
+SAFE_WORKSPACE_EXTENSIONS = {
+    ".md", ".json", ".txt", ".html", ".htm", ".css", ".js", ".ts",
+    ".py", ".sql", ".sh", ".yml", ".yaml", ".kt", ".xml", ".csv"
+}
+
 
 class NoteSavePayload(BaseModel):
     path: str = Field(min_length=1, max_length=200)
@@ -101,7 +106,7 @@ def get_brain_tree(request: Request):
                         "path": rel_item,
                         "children": children,
                     })
-                elif entry.is_file() and entry.suffix.lower() in (".md", ".json", ".txt"):
+                elif entry.is_file() and entry.suffix.lower() in SAFE_WORKSPACE_EXTENSIONS:
                     try:
                         size = entry.stat().st_size
                         mtime = datetime.fromtimestamp(entry.stat().st_mtime, timezone.utc).isoformat()
@@ -127,7 +132,7 @@ def read_brain_note(path: str = Query(..., min_length=1, max_length=200), reques
     """Lê o conteúdo de uma nota com hash SHA-256 para controle de concorrência."""
     auth.require_owner(request)
     store = BrainStore()
-    sentinel = PathSentinel(allowed_base=store.data_dir, allowed_extensions={".md", ".json", ".txt"})
+    sentinel = PathSentinel(allowed_base=store.data_dir, allowed_extensions=SAFE_WORKSPACE_EXTENSIONS)
 
     try:
         content = sentinel.safe_read_text(path)
@@ -151,7 +156,7 @@ def save_brain_note(payload: NoteSavePayload, request: Request):
     """Salva uma nota com prevenção de race condition (ETag check) e registro de changelog."""
     auth.require_owner(request)
     store = BrainStore()
-    sentinel = PathSentinel(allowed_base=store.data_dir, allowed_extensions={".md", ".json", ".txt"})
+    sentinel = PathSentinel(allowed_base=store.data_dir, allowed_extensions=SAFE_WORKSPACE_EXTENSIONS)
 
     try:
         # Se o cliente enviou expected_hash, valida controle otimista de concorrência
