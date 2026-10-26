@@ -504,12 +504,22 @@ class Orchestrator:
 
         # Setup de Hardware
         hardware_triggers = (
-            "configuração de máquinas", "setup atual", "quais máquinas", "nossas gpus", "setup de hardware"
+            "configuração de máquinas", "setup atual", "quais máquinas", "nossas gpus",
+            "setup de hardware", "nossas maquinas", "configuracao de maquinas", "nosso hardware",
+            "configuração de hardware", "setup de máquinas", "setup de maquinas", "nossa máquina",
+            "nossas máquinas", "nossas maquinas", "configuração de máquinas e hardware"
         )
         if any(t in norm_user for t in hardware_triggers):
             try:
                 from src.memory.core_memory import CoreMemoryManager
-                env_block = CoreMemoryManager(self.store).get_block("environment")
+                cm = CoreMemoryManager(self.store)
+                env_block = cm.get_block("environment")
+                if not env_block:
+                    prof = cm.get_block("user_profile") or ""
+                    for line in prof.split("\n"):
+                        if "Hardware:" in line:
+                            env_block = line.strip()
+                            break
                 if env_block:
                     return {
                         "success": True,
@@ -847,11 +857,15 @@ class Orchestrator:
                     ):
                         requested_files = ["index.html"]
 
-                    code_blocks = re.findall(r"```(?:html|css|js|py|md|json|txt)?\n([\s\S]*?)```", reply_text)
+                    code_blocks = re.findall(r"```(?:[a-zA-Z0-9_\-]+)?\s*?(?:\r?\n)([\s\S]*?)(?:\r?\n)```", reply_text)
                     if not code_blocks:
                         dt_match = re.search(r"(<!DOCTYPE html[\s\S]*?</html>)", reply_text, re.IGNORECASE)
                         if dt_match:
                             code_blocks = [dt_match.group(1)]
+                    if not code_blocks:
+                        content_match = re.search(r"conte[uú]do\s*['\"]([^'\"]+)['\"]", last_user, re.IGNORECASE)
+                        if content_match:
+                            code_blocks = [content_match.group(1)]
 
                     if requested_files and code_blocks:
                         for idx, rfile in enumerate(requested_files):
@@ -864,6 +878,8 @@ class Orchestrator:
                                         from src.tools.core import fs_write
                                         fs_write(filepath=rfile, content=code_blocks[idx].strip())
                                         executed_tools_log.append(f"fs_write:{rfile}")
+                                        if not any(rfile in reply_text for _ in [1]):
+                                            reply_text += f"\n\nArquivo `{rfile}` criado com sucesso."
                                     except Exception as write_err:
                                         LOGGER.debug("Auto fs_write falhou para %s: %s", rfile, write_err)
 
@@ -881,7 +897,7 @@ class Orchestrator:
                     if t_match:
                         cmd_to_run = t_match.group("cmd")
                     else:
-                        bash_blocks = re.findall(r"```(?:bash|sh|terminal|shell)?\s*\n([\s\S]*?)\n```", reply_text)
+                        bash_blocks = re.findall(r"```(?:bash|sh|terminal|shell)?\s*?(?:\r?\n)([\s\S]*?)(?:\r?\n)```", reply_text)
                         if bash_blocks:
                             cand = bash_blocks[0].strip()
                             if not cand.startswith(("import ", "def ", "class ", "from ")):
@@ -904,7 +920,9 @@ class Orchestrator:
                 # 4. Interceptação e auto-leitura de arquivos (fs_read)
                 read_triggers = (
                     "leia o arquivo", "ler o arquivo", "le o arquivo", "lê o arquivo",
-                    "conteúdo do arquivo", "conteudo do arquivo", "cat ", "mostre o arquivo", "mostra o arquivo"
+                    "leia ", "ler ", "le ", "lê ", "conteúdo de", "conteudo de",
+                    "conteúdo do arquivo", "conteudo do arquivo", "cat ", "mostre o arquivo", "mostra o arquivo",
+                    "ver o arquivo", "abre o arquivo", "abrir o arquivo"
                 )
                 if any(w in norm_user for w in read_triggers):
                     r_files = re.findall(r"\b([a-zA-Z0-9_\-/\\]+\.(?:html|css|js|py|md|json|txt|sh|yml|yaml))\b", last_user)

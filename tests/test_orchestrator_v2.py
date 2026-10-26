@@ -189,6 +189,58 @@ class TestOrchestratorV2(unittest.TestCase):
         self.assertTrue(any("terminal_run:git status" in str(t) for t in result["tools_executed"]))
         self.assertIn("On branch main", result["reply"])
 
+    @patch("src.tools.core.fs_write")
+    @patch("src.agent.orchestrator.requests.post")
+    def test_run_turn_auto_fs_write_from_user_quotes(self, mock_post, mock_fs_write):
+        mock_fs_write.return_value = {"success": True, "filepath": "test_e2e_verify.txt"}
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "message": {
+                "role": "assistant",
+                "content": "Com certeza! Vou criar o arquivo para você agora mesmo.",
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        orchestrator = Orchestrator()
+        result = orchestrator.run_turn(
+            messages=[{
+                "role": "user",
+                "content": "crie um arquivo no workspace chamado test_e2e_verify.txt com o conteudo 'Menor v2 funcionando 100%'",
+            }],
+            enable_tools=True,
+        )
+
+        self.assertTrue(result["success"])
+        mock_fs_write.assert_called_once_with(filepath="test_e2e_verify.txt", content="Menor v2 funcionando 100%")
+        self.assertIn("fs_write:test_e2e_verify.txt", result["tools_executed"])
+
+    @patch("src.tools.core.fs_read")
+    @patch("src.agent.orchestrator.requests.post")
+    def test_run_turn_auto_fs_read(self, mock_post, mock_fs_read):
+        mock_fs_read.return_value = {"success": True, "filepath": "test_e2e_verify.txt", "content": "Menor v2 funcionando 100%"}
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "message": {
+                "role": "assistant",
+                "content": "O usuário está pedindo para ler um arquivo.",
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        orchestrator = Orchestrator()
+        result = orchestrator.run_turn(
+            messages=[{"role": "user", "content": "leia o arquivo test_e2e_verify.txt"}],
+            enable_tools=True,
+        )
+
+        self.assertTrue(result["success"])
+        mock_fs_read.assert_called_once_with(filepath="test_e2e_verify.txt")
+        self.assertIn("fs_read:test_e2e_verify.txt", result["tools_executed"])
+        self.assertIn("Menor v2 funcionando 100%", result["reply"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -43,6 +43,11 @@ DEFAULT_BLOCKS = {
         "6. Áudio, Música e DSP (Síntese Sonora, MIDI, Web Audio API, Filtros e Processamento Digital de Sinais)\n"
         "7. Design e UI/UX (Design Systems Dark/Minimalista, Micro-interações, Acessibilidade)"
     ),
+    "environment": (
+        "1. PC Interativo (Windows): AMD Ryzen 5 3500X, 16GB RAM, NVIDIA GTX 1650 (4GB VRAM). Roda voz e interface.\n"
+        "2. Servidor Hub Central (Ubuntu): Intel Core i7-1185G7, 32GB RAM, Iris Xe. Roda API FastAPI (porta 8000), SQLite FTS5 e Ollama (127.0.0.1:11434).\n"
+        "3. Conexão de Rede: Rede local 192.168.0.x e túnel Cloudflare para acesso remoto seguro."
+    ),
 }
 
 
