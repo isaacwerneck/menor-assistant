@@ -1,0 +1,12 @@
+[Unit]
+Description=Ciclo noturno de consolidação e sono do Menor v2 (menor-dream)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/menor-assistant
+EnvironmentFile=-%h/.config/menor/environment
+ExecStart=%h/menor-assistant/.venv/bin/python -c "from src.agent.dream import DreamConsolidator; DreamConsolidator().run_dream_cycle()"
+TimeoutStartSec=30min
+NoNewPrivileges=true
+UMask=0077

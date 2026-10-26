@@ -7,87 +7,53 @@ import json
 import logging
 import os
 import re
+import time
 from typing import Any, Dict, List, Optional
 import requests
 
 from src.tools.core import CORE_TOOLS_SCHEMA, TOOL_DISPATCHER
 from src.memory.store import BrainStore
+from src.memory.identity import IdentityManager
+from src.memory.agora import AgoraLayer
+from src.memory.fact_extractor import FactExtractor
+from src.observability.prompt_traces import PromptTraceLogger
+from src.agent.context_engine import ContextBudgetManager
 from src.agent.cleaner import sanitize_assistant_reply
 
 LOGGER = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Você é o Menor v2, parceiro de tecnologia e arquiteto de software de alto nível do Isaac.
-Você é direto, técnico, proativo, inteligente e parceiro de engenharia.
-Você tem acesso a ferramentas reais no computador: leitura e escrita de arquivos (fs_read, fs_write, fs_patch),
-listagem de pastas (fs_list), execução de comandos no terminal (terminal_run), pesquisa web (web_search, web_read),
-criação de ferramentas (create_new_tool), agendamento de estudos (schedule_study_topic),
-consulta de relatórios (get_study_report) e atualização de memória de trabalho (update_core_memory).
+SYSTEM_PROMPT = """Você é o Menor v2, assistente executivo e arquiteto de software de alto nível do Isaac Werneck.
+Você é direto, técnico, proativo, inteligente e parceiro sênior de engenharia.
+Você opera com ferramentas reais no sistema operacional:
+- Leitura, escrita e patch de arquivos (fs_read, fs_write, fs_patch)
+- Listagem de diretórios e inspeção (fs_list)
+- Execução de comandos no terminal (terminal_run)
+- Pesquisa factual em fontes locais e web (web_search, web_read)
+- Criação dinâmica de ferramentas (create_new_tool)
+- Agendamento e relatórios de estudo (schedule_study_topic, get_study_report)
+- Atualização atômica de memória de trabalho (update_core_memory)
 
-Regras Inegociáveis e Diretrizes de Execução:
-- Se o usuário pedir para criar, fazer, programar, desenvolver ou salvar um site, página ou arquivo:
-  Chame OBRIGATORIAMENTE a ferramenta `fs_write` com 'filepath' (ex: 'index.html') e 'content'.
-  NUNCA use web_read nem web_search para pedidos de criar ou programar sites/arquivos locais.
-  Execute `fs_write` imediatamente no primeiro turno.
-  Ao criar ou salvar um site/página, NUNCA despeje centenas de linhas de código cru na mensagem do chat. Confirme onde o arquivo foi salvo no workspace, forneça o link de prévia `[Abrir Prévia do Site](/preview/<arquivo>)` e pergunte consultivamente o que o Isaac deseja ajustar ou acrescentar.
-- NUNCA simule saídas de terminal, prompts de shell (ex: ```terminal $ ls ...```, ```bash```) ou finja leituras de
-  arquivos em blocos de texto ou markdown. Se precisar executar comandos ou ler/escrever arquivos, use
-  OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
-  diretamente sem inventar arquivos ou saídas fictícias.
-- Se o usuário pedir para rodar, executar, testar ou checar algo no terminal (ex: comandos git, pytest, bash, npm, ls, status),
-  chame OBRIGATORIAMENTE a ferramenta `terminal_run` com o campo 'command'. NUNCA devolva o comando dentro de bloco de código sem executá-lo.
-- NUNCA escreva código python simulando chamadas de ferramenta no texto (ex: ```python fs_write(...)```).
-  Ferramentas devem ser executadas exclusivamente via native tool calling da API.
-- NUNCA diga que é apenas um modelo ou assistente de texto, que não pode criar arquivos ou que não tem ferramentas.
-  Você é o Menor v2 com ferramentas reais ativas no Hub e capacidade de criar arquivos e sites diretamente.
-- NUNCA finja que criou ou implementou algo se a ferramenta `fs_write` não foi executada no turno.
-- Se o usuário perguntar o que foi conversado ou pedido anteriormente, consulte com rigor as mensagens do histórico
-  e responda diretamente, sem dizer que não tem memória.
-- NUNCA invente pastas ou caminhos fictícios. Os arquivos e sites criados residem no diretório do projeto.
-- NUNCA envie comandos de terminal ou ferramentas simuladas como texto (ex: ```bash terminal_run ...```).
-  O usuário não deve ver nomes de ferramentas internas nem códigos de shell simulados.
-- Seja um parceiro proativo e natural (estilo ChatGPT/Senior Dev): ao falar de projetos, contextualize
-  o que estávamos fazendo, onde paramos, o que já foi feito, o que podemos fazer a seguir e se quer continuar.
-- Sua Âncora de Estudos oficial está no bloco [STUDY_ANCHORS] da Core Memory residente logo acima.
-- NUNCA faça propaganda não solicitada de ferramentas ou projetos no meio de conversas comuns.
-  Responda estritamente ao que foi perguntado.
-- NUNCA invente reuniões, compromissos ou presuma a rotina pessoal do Isaac.
-- Entenda gírias brasileiras comuns de chat:
-  * "pf" / "pff" / "pls" / "plz" = "por favor" (NUNCA interprete "pf" como sigla corporativa, "tópicos prioritários", "prato feito" ou "polícia federal").
-  * "a gnt" = "a gente" (nós, você e o Isaac juntos; NUNCA interprete como "Grupo Nacional de Tecnologia").
-  * "oq" / "o que" = "o que".
-  * "vc" / "vcs" = "você" / "vocês".
-  * "tb" / "tbm" = "também".
-  * "pq" = "por que" ou "porque".
-  * "blz" = "beleza".
-- NUNCA pense em voz alta em inglês (NUNCA emita "Looking at...", "Given their...", "I need to...", "Okay, the user...", "The user is asking...", "Wait, the user...").
-  Inicie a sua resposta IMEDIATAMENTE no texto em português brasileiro voltado ao Isaac.
-- O Isaac é desenvolvedor de software e atua construindo: sites modernos, jogos 2D, música/DSP de áudio, aplicativos mobile Android (Kotlin/Compose) e sistemas/backends. Ao sugerir estudos ou debater arquitetura, alinhe-se a essas áreas reais.
-- Suas Âncoras de Estudo oficiais estão no bloco [STUDY_ANCHORS] da Core Memory. Se o usuário perguntar quais são, cite as âncoras reais de Core Memory e NUNCA invente tópicos não relacionados (como Kubernetes ou APIs de pagamento).
-- Se o Isaac perguntar sobre projetos, softwares ou tarefas que "a gnt" já fez ou está fazendo,
-  cite estritamente os projetos e tarefas reais registrados no contexto (Menor v2, sites e arquivos criados).
-- NUNCA use tags <think> ou raciocínio em inglês. Responda diretamente em português brasileiro.
-- Responda sempre em português brasileiro fluente, natural e direto, sem rodeios ou formalidades vazias.
+Diretrizes Positivas de Atuação e Execução:
+1. Execução Real de Demandas:
+   - Ao criar, programar ou refatorar sites, páginas ou scripts, utilize a ferramenta fs_write imediatamente.
+   - Ao salvar um arquivo de site ou projeto, confirme a localização no workspace e forneça o link de prévia [Abrir Prévia do Site](/preview/<arquivo>), consultando o Isaac sobre refinamentos e sem despejar blocos de código cru na conversa.
+2. Terminal e Automação:
+   - Execute comandos de terminal reais diretamente através da ferramenta terminal_run.
+3. Comunicação Direta e Parceira:
+   - Responda sempre em português brasileiro de forma natural, técnica e fluente.
+   - Seja colaborativo como um desenvolvedor sênior de confiança.
+4. Vocabulário e Abreviações do Isaac:
+   - "pf" / "pff" / "pls" = "por favor"
+   - "a gnt" = "a gente" (parceria Isaac e Menor)
+   - "oq" / "vc" / "tb" / "pq" / "blz" = "o que", "você", "também", "porque", "beleza"
+5. Perfil de Engenharia do Isaac:
+   - O Isaac desenvolve sites modernos, jogos 2D, música/DSP de áudio, aplicativos mobile Android (Kotlin/Compose) e sistemas de software/backends.
 """
 
-CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, assistente pessoal e parceiro de tecnologia do Isaac.
-Converse diretamente em português brasileiro, de forma natural, amigável e descontraída
-(usando gírias leves como mano, suave, blz).
-
-Diretrizes essenciais:
-- Você tem total acesso ao ecossistema de ferramentas do Menor e ao Hub Central.
-- Compreenda gírias e abreviações brasileiras comuns:
-  * "pf" / "pff" / "pls" = "por favor" (NUNCA interprete como sigla corporativa ou tópicos prioritários).
-  * "a gnt" = "a gente" (nós, você e o Isaac juntos).
-  * "oq" = "o que"; "vc" = "você"; "tb" = "também"; "pq" = "porque".
-- NUNCA pense em voz alta em inglês ("Looking at...", "Given their...", "I need to...", "Okay, the user..."). Responda diretamente em português do Brasil.
-- Suas Âncoras de Estudo oficiais estão no bloco [STUDY_ANCHORS] da Core Memory.
-- O Isaac desenvolve: sites modernos, jogos 2D, música/DSP, aplicativos mobile Android e sistemas de software.
-- Se o Isaac perguntar sobre o que "a gnt" já fez, mencione o Menor v2 e as tarefas do Hub.
-- NUNCA diga que é apenas um assistente de texto, que não tem memória ou que não pode criar/enviar arquivos.
-- Se o usuário perguntar sobre a conversa anterior, consulte o histórico no contexto e responda com clareza.
-- Se o usuário fizer uma pergunta direta, técnica ou sobre conceitos e regras, responda à pergunta
-  com clareza e precisão em vez de emitir saudações vazias.
-- Responda sempre diretamente na voz do Menor v2, sem introduções em inglês e sem blocos de raciocínio interno.
+CASUAL_SYSTEM_PROMPT = """Você é o Menor v2, parceiro de tecnologia e assistente pessoal do Isaac Werneck.
+Converse diretamente em português brasileiro, de forma natural, amigável e descontraída (usando gírias leves como mano, suave, blz).
+Responda diretamente e com rapidez, sem preâmbulos técnicos ou introduções em inglês.
+Compreenda gírias comuns: "pf" = por favor, "a gnt" = a gente (nós), "oq" = o que, "vc" = você, "tb" = também, "blz" = beleza.
 """
 
 
@@ -108,6 +74,11 @@ class Orchestrator:
         from src.agent.study import get_optimal_model
         self.default_model = default_model or os.environ.get("OLLAMA_MODEL") or get_optimal_model(self.ollama_url)
         self.store = store or BrainStore()
+        self.identity_manager = IdentityManager(self.store)
+        self.agora_layer = AgoraLayer(self.store)
+        self.context_budget = ContextBudgetManager()
+        self.fact_extractor = FactExtractor(self.store, ollama_url=self.ollama_url)
+        self.trace_logger = PromptTraceLogger(self.store)
 
     def _get_context_summary(self, casual: bool = False) -> str:
         """Coleta Core Memory residente e memórias permanentes do cérebro.
@@ -273,16 +244,9 @@ class Orchestrator:
         target_url = (ollama_url or self.ollama_url).rstrip("/")
         target_model = model or self.default_model
 
+        turn_start_time = time.time()
         should_use_tools = enable_tools and self._needs_tools(messages)
         tools_schema = CORE_TOOLS_SCHEMA if should_use_tools else None
-
-        if not should_use_tools:
-            # Modo ultrarrápido para conversas casuais na CPU (< 80 tokens de prompt)
-            context_mem = self._get_context_summary(casual=True)
-            full_system = CASUAL_SYSTEM_PROMPT + (f"\n{context_mem}" if context_mem else "")
-        else:
-            context_mem = self._get_context_summary(casual=False)
-            full_system = SYSTEM_PROMPT + (f"\n{context_mem}" if context_mem else "")
 
         executed_tools_log = []
         last_user = ""
@@ -290,6 +254,23 @@ class Orchestrator:
             if m.get("role") == "user":
                 last_user = str(m.get("content", ""))
                 break
+
+        # Context Budget v2 & Camada Temporal do Agora
+        base_budget_system, layers_meta = self.context_budget.assemble_system_prompt(
+            user_message=last_user,
+            identity_manager=self.identity_manager,
+            agora_layer=self.agora_layer,
+            store=self.store,
+            channel="web",
+        )
+
+        if not should_use_tools:
+            # Modo ultrarrápido para conversas casuais na CPU (< 280 tokens)
+            context_mem = self._get_context_summary(casual=True)
+            full_system = f"{CASUAL_SYSTEM_PROMPT}\n\n{base_budget_system}" + (f"\n\n{context_mem}" if context_mem else "")
+        else:
+            context_mem = self._get_context_summary(casual=False)
+            full_system = f"{SYSTEM_PROMPT}\n\n{base_budget_system}" + (f"\n\n{context_mem}" if context_mem else "")
 
         # Grounding factual em tempo real (CRAG + Perplexity Pattern)
         try:
@@ -604,6 +585,12 @@ class Orchestrator:
         else:
             for m in non_system:
                 chat_history.append({"role": m["role"], "content": m["content"]})
+
+        # Regra dos 80% (3276 tokens) de compactação nativa de histórico
+        chat_history, was_compacted = self.context_budget.compact_history_if_needed(
+            history=chat_history,
+            system_tokens=layers_meta.get("total_system_tokens", 0),
+        )
 
         steps_taken = 0
 
@@ -920,6 +907,31 @@ class Orchestrator:
                             except Exception as read_err:
                                 LOGGER.debug("Auto fs_read falhou para %s: %s", rf, read_err)
 
+                # Observabilidade (Pilar 4) e Extração Factual Assíncrona (Pilar 3)
+                try:
+                    duration_ms = int((time.time() - turn_start_time) * 1000)
+                    self.trace_logger.record_trace(
+                        session_id="default",
+                        turn_index=1,
+                        model=target_model,
+                        provider="ollama",
+                        input_tokens=layers_meta.get("total_system_tokens", 0) + int(len(last_user) / 3.6),
+                        output_tokens=int(len(reply_text) / 3.6),
+                        duration_ms=duration_ms,
+                        context_layers=layers_meta,
+                        raw_prompt=last_user,
+                        raw_response=reply_text,
+                        tool_calls=executed_tools_log,
+                    )
+                except Exception:
+                    pass
+
+                if last_user and reply_text:
+                    try:
+                        self.fact_extractor.extract_and_store_async(last_user, reply_text)
+                    except Exception:
+                        pass
+
                 return {
                     "success": True,
                     "reply": reply_text,
@@ -966,6 +978,31 @@ class Orchestrator:
             chat_history[-1].get("content", "Operação concluída com ferramentas."),
             last_user,
         )
+        # Observabilidade (Pilar 4) e Extração Factual Assíncrona (Pilar 3)
+        try:
+            duration_ms = int((time.time() - turn_start_time) * 1000)
+            self.trace_logger.record_trace(
+                session_id="default",
+                turn_index=1,
+                model=target_model,
+                provider="ollama",
+                input_tokens=layers_meta.get("total_system_tokens", 0) + int(len(last_user) / 3.6),
+                output_tokens=int(len(last_content) / 3.6),
+                duration_ms=duration_ms,
+                context_layers=layers_meta,
+                raw_prompt=last_user,
+                raw_response=last_content,
+                tool_calls=executed_tools_log,
+            )
+        except Exception:
+            pass
+
+        if last_user and last_content:
+            try:
+                self.fact_extractor.extract_and_store_async(last_user, last_content)
+            except Exception:
+                pass
+
         return {
             "success": True,
             "reply": last_content,

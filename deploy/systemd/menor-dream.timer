@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer para ciclo noturno de sono e consolidação do Menor v2 (22:00 BRT)
+
+[Timer]
+OnCalendar=*-*-* 22:00:00
+Persistent=true
+Unit=menor-dream.service
+
+[Install]
+WantedBy=timers.target

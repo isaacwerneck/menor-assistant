@@ -20,7 +20,10 @@ class TestLabV2(unittest.TestCase):
         self.client = TestClient(app)
 
     def tearDown(self):
-        self.temp_dir.cleanup()
+        try:
+            self.temp_dir.cleanup()
+        except Exception:
+            pass
 
     @patch("src.security.auth.require_owner")
     def test_get_lab_view_page(self, mock_auth):

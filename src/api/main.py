@@ -856,6 +856,74 @@ def study_report(request: Request):
     return get_study_report()
 
 
+# --- Pilar 4: Prompt Trace v2 (Observabilidade Total) ---
+
+@app.get("/api/system/prompt-traces")
+def get_prompt_traces(request: Request, limit: int = 50, session_id: Optional[str] = None):
+    auth.require_owner(request)
+    from src.observability.prompt_traces import PromptTraceLogger
+    tracer = PromptTraceLogger()
+    traces = tracer.list_traces(limit=limit, session_id=session_id)
+    return {"success": True, "count": len(traces), "traces": traces}
+
+
+@app.get("/api/system/prompt-traces/{trace_id}")
+def get_prompt_trace_detail(trace_id: str, request: Request):
+    auth.require_owner(request)
+    from src.observability.prompt_traces import PromptTraceLogger
+    tracer = PromptTraceLogger()
+    trace = tracer.get_trace(trace_id)
+    if not trace:
+        raise HTTPException(status_code=404, detail="Trace não encontrado.")
+    return {"success": True, "trace": trace}
+
+
+# --- Pilar 3: Rotina Noturna de Sono (menor-dream) ---
+
+@app.get("/api/dream/status")
+def get_dream_status(request: Request):
+    auth.require_owner(request)
+    from src.agent.dream import DreamConsolidator
+    dream = DreamConsolidator()
+    return {"success": True, "is_running": dream.is_running(), "state": dream.get_state()}
+
+
+@app.post("/api/dream/trigger")
+def trigger_dream(request: Request):
+    auth.require_owner(request)
+    from src.agent.dream import DreamConsolidator
+    dream = DreamConsolidator()
+    if dream.is_running():
+        return {"success": False, "message": "Ciclo de Dream já está em execução."}
+    t = threading.Thread(
+        target=dream.run_dream_cycle,
+        daemon=True,
+        name="dream-manual-worker",
+    )
+    t.start()
+    return {"success": True, "message": "Ciclo de Dream iniciado em segundo plano com sucesso."}
+
+
+# --- Pilar 8: Preset Nativo Morning Digest Falado ---
+
+@app.get("/api/morning-digest")
+def get_morning_digest(request: Request, synthesize_audio: bool = False):
+    auth.require_owner(request)
+    from src.agent.morning_digest import MorningDigestEngine
+    engine = MorningDigestEngine()
+    digest = engine.generate_digest(synthesize_audio=synthesize_audio)
+    return {"success": True, "digest": digest}
+
+
+@app.post("/api/morning-digest/refresh")
+def refresh_morning_digest(request: Request):
+    auth.require_owner(request)
+    from src.agent.morning_digest import MorningDigestEngine
+    engine = MorningDigestEngine()
+    digest = engine.generate_digest(synthesize_audio=True)
+    return {"success": True, "digest": digest}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000, reload=True)

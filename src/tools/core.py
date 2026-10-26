@@ -930,6 +930,25 @@ CORE_TOOLS_SCHEMA = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_agent_work_status",
+            "description": (
+                "Consulta o status de sessões, compilações e execuções de agentes de código externos "
+                "(Antigravity, Codex, etc.) no banco isolado de trabalhos sem poluir a memória pessoal."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "ID opcional de uma sessão específica a auditar.",
+                    },
+                },
+            },
+        },
+    },
 ]
 
 
@@ -951,6 +970,11 @@ def dispatch_trial_code_refactoring(**kw):
 def dispatch_subagent_tool(**kw):
     from src.agent.subagents import dispatch_specialized_subagent as _d
     return _d(**kw)
+
+
+def dispatch_agent_work_status(**kw):
+    from src.agent.external_work_store import get_agent_work_status as _g
+    return _g(**kw)
 
 
 TOOL_DISPATCHER = {
@@ -975,4 +999,5 @@ TOOL_DISPATCHER = {
     "inspect_codebase": dispatch_inspect_codebase,
     "trial_code_refactoring": dispatch_trial_code_refactoring,
     "dispatch_specialized_subagent": dispatch_subagent_tool,
+    "get_agent_work_status": dispatch_agent_work_status,
 }
