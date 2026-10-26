@@ -28,6 +28,7 @@ Regras Inegociáveis e Diretrizes de Execução:
   Chame OBRIGATORIAMENTE a ferramenta `fs_write` com 'filepath' (ex: 'index.html') e 'content'.
   NUNCA use web_read nem web_search para pedidos de criar ou programar sites/arquivos locais.
   Execute `fs_write` imediatamente no primeiro turno.
+  Ao criar ou salvar um site/página, NUNCA despeje centenas de linhas de código cru na mensagem do chat. Confirme onde o arquivo foi salvo no workspace, forneça o link de prévia `[Abrir Prévia do Site](/preview/<arquivo>)` e pergunte consultivamente o que o Isaac deseja ajustar ou acrescentar.
 - NUNCA simule saídas de terminal, prompts de shell (ex: ```terminal $ ls ...```, ```bash```) ou finja leituras de
   arquivos em blocos de texto ou markdown. Se precisar executar comandos ou ler/escrever arquivos, use
   OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
@@ -616,7 +617,7 @@ class Orchestrator:
                     "temperature": 0.6 if not should_use_tools else 0.2,
                     "top_p": 0.9,
                     "repeat_penalty": 1.1,
-                    "num_predict": 1024,
+                    "num_predict": 2048,
                     "num_thread": get_optimal_threads(),
                     "num_ctx": 4096,
                     "stop": ["\nThinking Process:", "Thinking Process:", "Okay, let's", "Let's tackle"],
@@ -795,6 +796,20 @@ class Orchestrator:
                         if dt_match:
                             code_blocks = [dt_match.group(1)]
                     if not code_blocks:
+                        unclosed_match = re.search(r"```(?:[a-zA-Z0-9_\-]+)?\s*?(?:\r?\n)([\s\S]*)$", reply_text)
+                        if unclosed_match and len(unclosed_match.group(1).strip()) > 30:
+                            raw_code = unclosed_match.group(1).strip()
+                            if "<!DOCTYPE html" in raw_code.upper() and "</html>" not in raw_code.lower():
+                                raw_code += "\n</body>\n</html>"
+                            code_blocks = [raw_code]
+                        elif "<!DOCTYPE html" in reply_text.upper():
+                            dt_partial = re.search(r"(<!DOCTYPE html[\s\S]*)$", reply_text, re.IGNORECASE)
+                            if dt_partial:
+                                raw_code = dt_partial.group(1).strip()
+                                if "</html>" not in raw_code.lower():
+                                    raw_code += "\n</body>\n</html>"
+                                code_blocks = [raw_code]
+                    if not code_blocks:
                         content_match = re.search(r"conte[uú]do\s*['\"]([^'\"]+)['\"]", last_user, re.IGNORECASE)
                         if content_match:
                             code_blocks = [content_match.group(1)]
@@ -812,15 +827,27 @@ class Orchestrator:
                                         executed_tools_log.append(f"fs_write:{rfile}")
                                         if rfile.endswith((".html", ".htm")):
                                             preview_url = f"/preview/{rfile}"
-                                            if preview_url not in reply_text:
+                                            show_code_triggers = ("mostre o codigo", "mostrar o codigo", "ver o codigo", "exiba o codigo", "qual o codigo")
+                                            if not any(w in norm_user for w in show_code_triggers):
+                                                clean_summary = re.sub(r"```(?:[a-zA-Z0-9_\-]+)?\s*?(?:\r?\n)[\s\S]*?(?:\r?\n)```", "", reply_text).strip()
+                                                clean_summary = re.sub(r"<!DOCTYPE html[\s\S]*?</html>", "", clean_summary, flags=re.IGNORECASE).strip()
+                                                clean_summary = re.sub(r"```(?:[a-zA-Z0-9_\-]+)?\s*?(?:\r?\n)[\s\S]*$", "", clean_summary).strip()
+                                                if len(clean_summary) < 15:
+                                                    clean_summary = f"Estruturei e criei o arquivo `{rfile}` no workspace com layout moderno e profissional."
+                                                reply_text = (
+                                                    f"{clean_summary}\n\n"
+                                                    f"📁 **Arquivo:** `{rfile}` (salvo no workspace)\n"
+                                                    f"🌐 **Prévia do Site:** [Abrir Prévia do Site]({preview_url})\n\n"
+                                                    "Quer que eu ajuste as cores, adicione novas seções ou conecte alguma interatividade?"
+                                                )
+                                            elif preview_url not in reply_text:
                                                 reply_text += (
-                                                    f"\n\nArquivo `{rfile}` criado com sucesso no workspace! "
-                                                    f"Você pode abrir e conferir a prévia no navegador aqui: "
-                                                    f"[Abrir Prévia do Site]({preview_url})\n\n"
+                                                    f"\n\n📁 **Arquivo:** `{rfile}` (salvo no workspace)\n"
+                                                    f"🌐 **Prévia do Site:** [Abrir Prévia do Site]({preview_url})\n\n"
                                                     "Quer que eu ajuste as cores, adicione novas seções ou conecte alguma interatividade?"
                                                 )
                                         elif not any(rfile in reply_text for _ in [1]):
-                                            reply_text += f"\n\nArquivo `{rfile}` criado com sucesso."
+                                            reply_text += f"\n\nArquivo `{rfile}` criado com sucesso no workspace."
                                     except Exception as write_err:
                                         LOGGER.debug("Auto fs_write falhou para %s: %s", rfile, write_err)
 

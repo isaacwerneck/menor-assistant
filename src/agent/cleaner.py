@@ -231,9 +231,9 @@ def _fallback_casual_reply(user_msg: str) -> str:
             "Com certeza, mano! Consigo sim. Me conta o que você tem em mente para o site "
             "(tema, páginas e funcionalidades) que a gente já começa a estruturar agora."
         )
-    if any(w in norm_user for w in ("tudo bem", "td bem", "como vai", "suave", "tranquilo")):
+    if re.search(r"\b(?:tudo\s+bem|td\s+bem|como\s+vai|suave|tranquilo)\b", norm_user):
         return "Tudo suave por aqui, mano! E com você, como estão as coisas?"
-    if any(w in norm_user for w in ("eai", "e ai", "opa", "salve", "fala", "oi", "olá", "ola")):
+    if re.search(r"\b(?:eai|e\s+ai|opa|salve|fala|oi|ol[aá])\b", norm_user):
         return "E aí Isaac! Tô na escuta, mano. O que manda hoje?"
     if any(w in norm_user for w in ("aplicativo", "app", "sistema", "software", "programa")):
         return "Consigo sim, parceiro! Me passa os detalhes do que você precisa desenvolver que a gente já desenrola."

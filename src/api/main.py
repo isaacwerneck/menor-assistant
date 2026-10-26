@@ -530,7 +530,7 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
             "temperature": 0.6,
             "top_p": 0.9,
             "repeat_penalty": 1.1,
-            "num_predict": 1024,
+            "num_predict": 2048,
             "num_thread": get_optimal_threads(),
             "num_ctx": 4096,
             "stop": [

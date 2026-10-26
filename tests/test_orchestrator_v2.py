@@ -241,6 +241,42 @@ class TestOrchestratorV2(unittest.TestCase):
         self.assertIn("fs_read:test_e2e_verify.txt", result["tools_executed"])
         self.assertIn("Menor v2 funcionando 100%", result["reply"])
 
+    @patch("src.tools.core.fs_write")
+    @patch("src.agent.orchestrator.requests.post")
+    def test_run_turn_auto_fs_write_html_preview_clean_reply(self, mock_post, mock_fs_write):
+        mock_fs_write.return_value = {"success": True, "filepath": "index.html"}
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "message": {
+                "role": "assistant",
+                "content": (
+                    "Aqui está o código do site:\n\n"
+                    "```html\n"
+                    "<!DOCTYPE html>\n<html><head><title>SonicWave</title></head><body><h1>Estúdio</h1></body></html>\n"
+                    "```\n\n"
+                    "Espero que goste!"
+                ),
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        orchestrator = Orchestrator()
+        result = orchestrator.run_turn(
+            messages=[{"role": "user", "content": "Crie o site do estúdio SonicWave com index.html"}],
+            enable_tools=True,
+        )
+
+        self.assertTrue(result["success"])
+        mock_fs_write.assert_called_once()
+        self.assertIn("fs_write:index.html", result["tools_executed"])
+        # Código cru deve ter sido removido da mensagem direta
+        self.assertNotIn("<!DOCTYPE html>", result["reply"])
+        # Deve conter link de preview e pasta
+        self.assertIn("[Abrir Prévia do Site](/preview/index.html)", result["reply"])
+        self.assertIn("index.html", result["reply"])
+        self.assertIn("Quer que eu ajuste as cores", result["reply"])
+
 
 if __name__ == "__main__":
     unittest.main()
