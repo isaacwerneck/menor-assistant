@@ -24,7 +24,8 @@ class TaskQueue:
 
     def _init_db(self):
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(str(self.db_path)) as conn:
+        conn = sqlite3.connect(str(self.db_path))
+        try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS tasks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,10 +38,13 @@ class TaskQueue:
                 )
             """)
             conn.commit()
+        finally:
+            conn.close()
 
     def enqueue(self, goal: str, project_slug: Optional[str] = None, auto_start: bool = True) -> int:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(str(self.db_path)) as conn:
+        conn = sqlite3.connect(str(self.db_path))
+        try:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO tasks (goal, project_slug, status, created_at, updated_at)
@@ -48,6 +52,8 @@ class TaskQueue:
             """, (goal, project_slug, now, now))
             conn.commit()
             task_id = cursor.lastrowid
+        finally:
+            conn.close()
 
         if auto_start:
             t = threading.Thread(
@@ -59,25 +65,34 @@ class TaskQueue:
         return task_id
 
     def get_task(self, task_id: int) -> Optional[Dict[str, Any]]:
-        with sqlite3.connect(str(self.db_path)) as conn:
+        conn = sqlite3.connect(str(self.db_path))
+        try:
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
             return dict(row) if row else None
+        finally:
+            conn.close()
 
     def list_tasks(self, limit: int = 20) -> List[Dict[str, Any]]:
-        with sqlite3.connect(str(self.db_path)) as conn:
+        conn = sqlite3.connect(str(self.db_path))
+        try:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("SELECT * FROM tasks ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
             return [dict(r) for r in rows]
+        finally:
+            conn.close()
 
     def update_status(self, task_id: int, status: str, result: Optional[str] = None):
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(str(self.db_path)) as conn:
+        conn = sqlite3.connect(str(self.db_path))
+        try:
             conn.execute("""
                 UPDATE tasks SET status = ?, result = ?, updated_at = ?
                 WHERE id = ?
             """, (status, result, now, task_id))
             conn.commit()
+        finally:
+            conn.close()
 
 
 _DEFAULT_QUEUE = None
