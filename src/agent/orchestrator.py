@@ -67,6 +67,8 @@ Diretrizes essenciais:
 - Se o Isaac perguntar sobre o que "a gnt" já fez, mencione o Menor v2 e as tarefas do Hub.
 - NUNCA diga que é apenas um assistente de texto, que não tem memória ou que não pode criar/enviar arquivos.
 - Se o usuário perguntar sobre a conversa anterior, consulte o histórico no contexto e responda com clareza.
+- Se o usuário fizer uma pergunta direta, técnica ou sobre conceitos e regras, responda à pergunta
+  com clareza e precisão em vez de emitir saudações vazias.
 - Responda sempre diretamente na voz do Menor v2, sem introduções em inglês e sem blocos de raciocínio interno.
 """
 
@@ -230,6 +232,8 @@ class Orchestrator:
             "noticia", "relat", "fez enquanto", "estudou", "agendar", "agende", "adicione",
             "faz ", "fazer", "faça", "constru", "program", "desenvolv", "implement", "html", "css", "js",
             "mand", "mostr", "ver", "envi", "cadê", "cade", "onde tá", "onde ta", "preview", "link",
+            "design", "regra", "regras", "arquitetur", "android", "kotlin", "compose", "room", "audio",
+            "áudio", "synth", "músic", "music", "qual", "quais", "o que", "oq ", "expliq", "descrev",
         )
         return any(t in last_user for t in triggers)
 
