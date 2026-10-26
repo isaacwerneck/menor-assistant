@@ -832,6 +832,12 @@ class Orchestrator:
                                                 clean_summary = re.sub(r"```(?:[a-zA-Z0-9_\-]+)?\s*?(?:\r?\n)[\s\S]*?(?:\r?\n)```", "", reply_text).strip()
                                                 clean_summary = re.sub(r"<!DOCTYPE html[\s\S]*?</html>", "", clean_summary, flags=re.IGNORECASE).strip()
                                                 clean_summary = re.sub(r"```(?:[a-zA-Z0-9_\-]+)?\s*?(?:\r?\n)[\s\S]*$", "", clean_summary).strip()
+                                                clean_summary = re.sub(
+                                                    r"(?:Aqui está|Segue|Abaixo está|Veja)\s+(?:o\s+)?código[^\n:]*[:.]?",
+                                                    "",
+                                                    clean_summary,
+                                                    flags=re.IGNORECASE,
+                                                ).strip()
                                                 if len(clean_summary) < 15:
                                                     clean_summary = f"Estruturei e criei o arquivo `{rfile}` no workspace com layout moderno e profissional."
                                                 reply_text = (
