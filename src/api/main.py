@@ -536,6 +536,7 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
             "stop": [
                 "\nThinking Process:", "Thinking Process:", "Okay, let's", "Let's tackle",
                 "Looking at the current", "Given their work profile", "Okay, the user wants",
+                "O usuário está perguntando", "O usuário está pedindo",
             ],
         },
     }
@@ -568,7 +569,10 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
                             or buf_lower.startswith((
                                 "okay, let's", "let's tackle", "looking at", "given their",
                                 "okay, the user", "the user is", "the user wants",
-                                "i need to", "wait, the user", "first, i need", "let me check"
+                                "i need to", "wait, the user", "first, i need", "let me check",
+                                "o usuário está", "o usuário quer", "o usuário pediu",
+                                "o usuário perguntou", "isso é uma pergunta", "com base nas informações",
+                                "com base no perfil", "com base na core", "vou responder diretamente"
                             ))
                         ):
                             in_thought = True
