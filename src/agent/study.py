@@ -24,24 +24,28 @@ _FILE_LOCK = threading.RLock()
 
 DEFAULT_STUDY_SEED = """# Temas de Estudo e Pesquisa do Menor
 
-- [ ] Inteligência Artificial: Arquiteturas de agentes, RAG híbrido, MoE
-- [ ] Engenharia de Software: Padrões de concorrência em Python, FastAPI production
-- [ ] JavaScript: EventLoop, Web Workers, Web Audio API
-- [ ] Design e UI/UX: Design Systems modernos, micro-interações, teoria das cores
+- [ ] Game Development: JavaScript com Raylib para jogos 2D e game loops
+- [ ] Música e Áudio: Teoria musical, escalas menores e workflows no FL Studio
+- [ ] Automação de Documentos: Manipulação de planilhas Excel (.xlsx) com openpyxl
+- [ ] Mobile Android: Estruturação de Activities e layouts no Android Studio
+- [ ] Banco de Dados & Linguagens: SQLite WAL/FTS5 e novas linguagens de programação
 """
 
 DOMAIN_ANCHORS = [
-    "Inteligência Artificial e LLMs (RAG, Agentes, MoE, Fine-tuning, Embeddings)",
-    "Engenharia de Software (Python assíncrono, FastAPI, Concorrência, SQLite, Arquitetura)",
-    "Frontend e JavaScript (EventLoop, WebSockets, Server-Sent Events, Web Workers, DOM Performance)",
-    "Design e UI/UX (Design Systems, Micro-interações, Teoria das Cores, Acessibilidade)",
+    "Jogos 2D e Game Development (JavaScript Raylib, Godot 4 GDScript, GameMaker 2, Pixel Art, Shaders 2D, Level Design)",
+    "Música, Produção de Áudio e Teoria Musical (FL Studio, Teoria Musical, Campo Harmônico, Acordes, Piano Roll)",
+    "Automação de Documentos e Office (Python openpyxl Excel, python-docx Word, Extração de texto de PDF)",
+    "Desenvolvimento Mobile Android (Android Studio prático, Activities, Layouts XML, Ciclo de Vida)",
+    "Engenharia de Software e Banco de Dados (Python FastAPI assíncrono, SQLite WAL FTS5, Descoberta de Linguagens)",
+    "Frontend Web Moderno (Tailwind CSS, WebSockets, Server-Sent Events, Web Workers)",
+    "Inteligência Artificial e LLMs (RAG Híbrido, Agentes Autônomos, Embeddings, Modelos Locais Ollama)",
 ]
 
 FALLBACK_DISCOVERY_TOPICS = [
-    "Server-Sent Events vs WebSockets no FastAPI para streaming de IA",
-    "Padrões de micro-interações acessíveis com Tailwind CSS",
-    "Otimização de consultas vetoriais com Cosine Similarity no SQLite",
-    "Uso de Web Workers para processamento de áudio sem travamento do DOM",
+    "JavaScript com Raylib: game loops e detecção de colisões 2D",
+    "Teoria musical aplicada no FL Studio: progressões de acordes e campo harmônico",
+    "Automação de planilhas Excel com openpyxl e Python",
+    "Godot 4: movimentação suave com CharacterBody2D e GDScript",
 ]
 
 

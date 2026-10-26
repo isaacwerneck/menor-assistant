@@ -18,11 +18,11 @@ _CORE_MEM_LOCK = threading.RLock()
 DEFAULT_BLOCKS = {
     "user_profile": (
         "Nome: Isaac Werneck\n"
-        "Papel: Fundador e Desenvolvedor Líder (Desenvolve sites modernos, jogos 2D, música/DSP/áudio, "
-        "aplicativos mobile Android e sistemas de software)\n"
+        "Papel: Fundador e Desenvolvedor Líder (Desenvolve sites modernos, jogos 2D, música no FL Studio, "
+        "aplicativos mobile no Android Studio, automação de Excel/Word/PDF e sistemas de software)\n"
         "Hardware: PC Desktop (Ryzen 5 3500X, 16GB RAM, GTX 1650 4GB VRAM) e "
         "Notebook Servidor Ubuntu (Intel Core i7-1185G7, 32GB RAM, Iris Xe)\n"
-        "Stack: Python, FastAPI, Node.js, SQLite, Kotlin, Android, Web Audio, Tailwind, Linux, Windows."
+        "Stack: Python, FastAPI, JavaScript (Raylib), GDScript (Godot 4), GML (GameMaker), FL Studio, Android Studio, openpyxl, SQLite, Tailwind, Linux, Windows."
     ),
     "system_directives": (
         "1. Seja direto, técnico e aja como parceiro sênior de engenharia.\n"
@@ -32,16 +32,16 @@ DEFAULT_BLOCKS = {
     ),
     "active_projects": (
         "Menor v2: Assistente de engenharia local distribuído (PC cliente + Servidor Notebook).\n"
-        "Foco atual: Cérebro SOTA (Core Memory Letta, Busca Híbrida Mem0, Worker de Reflexão Stanford)."
+        "Foco atual: Cérebro SOTA (Core Memory Letta, Busca Híbrida Mem0, Laboratório de Avaliação Real)."
     ),
     "study_anchors": (
-        "1. Inteligência Artificial e Agentes (RAG, Agentes Autônomos, Embeddings, MoE, Fine-tuning)\n"
-        "2. Engenharia de Software e Backend (Python assíncrono, FastAPI, Concorrência, SQLite, Arquitetura)\n"
-        "3. Frontend e Web Moderna (Tailwind, WebSockets, Web Workers, Web Audio API, DOM Performance)\n"
-        "4. Desenvolvimento Mobile e Android (Kotlin, Jetpack Compose, Clean Architecture, Coroutines)\n"
-        "5. Jogos 2D e Simulação (Game Loops, Física 2D, Sprites, Shaders, WebGL/Canvas)\n"
-        "6. Áudio, Música e DSP (Síntese Sonora, MIDI, Web Audio API, Filtros e Processamento Digital de Sinais)\n"
-        "7. Design e UI/UX (Design Systems Dark/Minimalista, Micro-interações, Acessibilidade)"
+        "1. Jogos 2D e Game Development (JavaScript Raylib, Godot 4 GDScript, GameMaker 2 GML, Pixel Art, Shaders 2D, Level Design)\n"
+        "2. Música, Produção de Áudio e Teoria Musical (FL Studio, Teoria Musical, Campo Harmônico, Acordes e Arranjos)\n"
+        "3. Automação de Documentos e Office (Python openpyxl Excel, python-docx Word, Extração de texto de PDF)\n"
+        "4. Desenvolvimento Mobile Android (Android Studio prático, Activities, Layouts XML, Ciclo de Vida)\n"
+        "5. Engenharia de Software e Banco de Dados (Python FastAPI assíncrono, SQLite WAL FTS5, Descoberta de Linguagens como Rust e Go)\n"
+        "6. Frontend Web Moderno (Tailwind CSS, WebSockets, Server-Sent Events, Web Workers, DOM Performance)\n"
+        "7. Inteligência Artificial e LLMs (RAG Híbrido, Agentes Autônomos, Embeddings, Modelos Locais Ollama)"
     ),
     "environment": (
         "1. PC Interativo (Windows): AMD Ryzen 5 3500X, 16GB RAM, NVIDIA GTX 1650 (4GB VRAM). Roda voz e interface.\n"
@@ -80,9 +80,10 @@ class CoreMemoryManager:
                     data[k] = v
                     updated = True
             current_anchors = data.get("study_anchors", "").lower()
-            if "jogos" not in current_anchors or "android" not in current_anchors or "áudio" not in current_anchors:
+            if "jogos" not in current_anchors or "android" not in current_anchors or "áudio" not in current_anchors or "raylib" not in current_anchors:
                 data["study_anchors"] = DEFAULT_BLOCKS["study_anchors"]
-                data["user_profile"] = DEFAULT_BLOCKS["user_profile"]
+                if "canvas" in data.get("user_profile", "").lower() or "dsp" in data.get("user_profile", "").lower():
+                    data["user_profile"] = DEFAULT_BLOCKS["user_profile"]
                 updated = True
             if updated:
                 with _CORE_MEM_LOCK:

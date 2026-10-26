@@ -23,24 +23,24 @@ LAB_CATEGORIES = {
         "description": "Criação de páginas HTML/CSS/JS com links de visualização /preview/",
     },
     "tools_files": {
-        "name": "🛠️ Uso de Ferramentas Reais & Arquivos",
-        "description": "Criação e edição real no workspace via fs_write/fs_read sem simulação",
+        "name": "🛠️ Ferramentas & Documentos",
+        "description": "Criação de arquivos, automação de Excel (.xlsx), PDF e scripts Python com fs_write",
     },
     "architecture_mobile": {
-        "name": "📱 Arquitetura de Software & Mobile",
-        "description": "Modelagem de apps, Android Studio (Kotlin/Compose), Clean Architecture",
+        "name": "📱 Mobile & Android Studio Prático",
+        "description": "Estruturação de projetos Android Studio, Activities, layouts e ciclo de vida",
     },
     "database_design": {
-        "name": "🗄️ Modelagem de Banco de Dados",
-        "description": "Schemas relacionais, migrations, queries SQLite/PostgreSQL e consistência",
+        "name": "🗄️ Modelagem de Banco & Linguagens",
+        "description": "Schemas relacionais, SQLite WAL/FTS5 e descoberta de linguagens de programação",
     },
     "multimedia_creative": {
-        "name": "🎨 Multimídia, Áudio & Imagens",
-        "description": "Geração visual, assets SVG/Canvas, síntese de áudio e lógica musical",
+        "name": "🎮 Jogos (Raylib/Godot), Arte 2D & Música",
+        "description": "JS + Raylib, Godot 4.x, Pixel Art, Shaders, Teoria Musical e FL Studio",
     },
     "memory_preferences": {
         "name": "🧠 Contexto, Memórias & Preferências",
-        "description": "Recall de dados do usuário (Isaac), preferências e identidade do Menor",
+        "description": "Recall de dados do usuário (Isaac), ferramentas reais e identidade do Menor",
     },
     "guardrails": {
         "name": "🛡️ Blindagem & Anti-Desculpas",
@@ -51,20 +51,17 @@ LAB_CATEGORIES = {
 DEFAULT_OBJECTIVE_MD = """# Objetivo de Auto-Aprimoramento do Menor v2
 
 ## Perfil & Missão
-O Menor v2 deve atuar como um assistente técnico executivo altamente proativo e resolutivo.
-Quando o usuário solicita a criação de sistemas, interfaces ou aplicativos:
-1. Ele não dá desculpas de assistente de voz e nunca diz que não pode criar ou enviar arquivos.
-2. Ele utiliza ferramentas reais (`fs_write`, `save_plan`, etc.) para materializar os artefatos.
-3. Para interfaces web, ele gera o HTML/JS no workspace e retorna o link clicável `/preview/<arquivo>.html`.
-4. Para aplicativos mobile e empresas (Android Studio, Kotlin, banco de dados), ele projeta a arquitetura
-   limpa, os contratos de API e os esquemas de dados prontos para compilação.
-5. Em demandas de áudio, música e imagem, ele sintetiza código procedural, descrições detalhadas de assets
-   e direcionamento técnico claro.
+O Menor v2 deve atuar como um assistente técnico executivo altamente proativo e resolutivo para o Isaac.
+O Isaac desenvolve sites modernos, jogos 2D (JavaScript com Raylib, Godot 4, GameMaker), música e composição no FL Studio, automação de documentos (Excel, Word, PDF) e estuda aplicativos no Android Studio.
 
-## Critérios de Aceite
-- Respostas diretas, sem prolixidade ou saudações repetitivas.
-- Código sintaticamente válido e executável.
-- Diffs e aprendizados documentados de forma clara para o cérebro.
+### Diretrizes de Execução
+1. Ele não dá desculpas de assistente de voz e nunca diz que não pode criar ou enviar arquivos.
+2. Ele utiliza ferramentas reais (`fs_write`, `terminal_run`, etc.) para materializar os artefatos no workspace.
+3. Para interfaces web e portfólios, ele gera o HTML/CSS no workspace e retorna o link clicável `/preview/<arquivo>.html`.
+4. Em jogos 2D, domina game loops em JavaScript com Raylib, scripts GDScript no Godot 4.x, level design, colisões e técnicas de Pixel Art/Shaders.
+5. Em música, compreende teoria musical (acordes, escalas menores, progressões harmônicas) e organização de projetos no FL Studio (Mixer, Piano Roll, Playlist).
+6. Em documentos e dados, automatiza planilhas Excel formatadas (.xlsx) e relatórios PDF usando bibliotecas Python.
+7. Em mobile, guia o desenvolvimento no Android Studio com clareza, explicando Activities, layouts XML e ciclo de vida.
 """
 
 CANONICAL_PROBES = [
@@ -83,17 +80,17 @@ CANONICAL_PROBES = [
         "lesson_pass": "Padrão de landing page validado: HTML5 semântico com tema escuro imersivo, tipografia limpa e link de pré-visualização ativo.",
     },
     {
-        "id": "probe_web_canvas_game",
+        "id": "probe_web_portfolio",
         "category": "web_preview",
-        "name": "Jogo 2D em Canvas com Game Loop",
-        "prompt": "Crie um jogo 2D simples em HTML5 Canvas com um quadrado que se move pelo teclado e loop requestAnimationFrame com preview.",
+        "name": "Portfólio Criativo Dark (Jogos & Música)",
+        "prompt": "Crie uma página de portfólio moderna em HTML e CSS com tema dark (#0b0b14), seções destacadas para 'Jogos 2D' e 'Produção Musical', com link de preview.",
         "expected_preview": True,
         "expected_code_lang": "html",
         "required_tool": "fs_write",
-        "topic_keywords": ["canvas", "game", "jogo", "requestanimationframe", "loop", "ctx", "keydown"],
-        "must_not_contain": ["não sei criar jogos", "apenas um modelo"],
-        "lesson_fail": "Jogos em Canvas 2D exigem game loop nativo com requestAnimationFrame e tratamento de eventos keydown/keyup.",
-        "lesson_pass": "Padrão de Game Loop em Canvas validado: ciclo de atualização/renderização desacoplado e controle suave de entrada.",
+        "topic_keywords": ["portfólio", "portfolio", "jogos", "música", "musica", "dark", "preview", "html", "css"],
+        "must_not_contain": ["não sei criar", "apenas um assistente"],
+        "lesson_fail": "Páginas de portfólio criativo devem ser salvas no workspace com layout dark responsivo e link /preview/ correspondente.",
+        "lesson_pass": "Portfólio criativo homologado: estrutura modular com destaque visual para jogos e produção musical.",
     },
     {
         "id": "probe_web_dashboard",
@@ -109,7 +106,28 @@ CANONICAL_PROBES = [
         "lesson_pass": "Dashboard dark mode homologado: métricas de sistema organizadas em grid flexível com paleta contrastante.",
     },
 
-    # 2. Uso de Ferramentas Reais & Arquivos
+    # 2. Uso de Ferramentas Reais, Documentos & Arquivos
+    {
+        "id": "probe_doc_excel",
+        "category": "tools_files",
+        "name": "Automação de Planilha Excel (.xlsx) com Python",
+        "prompt": "Escreva um script Python usando openpyxl para criar uma planilha Excel chamada 'relatorio_jogos.xlsx' com colunas Nome, Gênero e Status, aplicando cabeçalhos estilizados.",
+        "required_tool": "fs_write",
+        "expected_code_lang": "python",
+        "topic_keywords": ["openpyxl", "excel", "xlsx", "workbook", "relatorio", "planilha"],
+        "lesson_fail": "A automação de planilhas Excel deve utilizar bibliotecas como openpyxl gerando arquivos .xlsx estruturados com tipagem e cabeçalhos claros.",
+        "lesson_pass": "Automação de documentos Excel homologada: script Python com openpyxl criando pasta de trabalho com formatação adequada.",
+    },
+    {
+        "id": "probe_doc_pdf",
+        "category": "tools_files",
+        "name": "Extração e Manipulação de Arquivos PDF",
+        "prompt": "Escreva um script Python para ler um arquivo PDF e extrair o texto de todas as páginas com tratamento defensivo contra páginas corrompidas.",
+        "expected_code_lang": "python",
+        "topic_keywords": ["pdf", "pypdf", "extrair", "extract", "página", "pagina", "texto"],
+        "lesson_fail": "Manipulação de arquivos PDF deve utilizar bibliotecas padrão como pypdf ou pdfplumber com iteração segura página a página.",
+        "lesson_pass": "Manipulação de PDF validada: extração de texto estruturada e tratamento de exceções de leitura de documentos.",
+    },
     {
         "id": "probe_tools_real",
         "category": "tools_files",
@@ -143,43 +161,30 @@ CANONICAL_PROBES = [
         "lesson_pass": "Inspeção de sistema de arquivos validada: listagem dinâmica de diretórios via fs_list.",
     },
 
-    # 3. Arquitetura de Software & Mobile
+    # 3. Mobile & Android Studio Prático
     {
-        "id": "probe_mobile_arch",
+        "id": "probe_mobile_android_studio",
         "category": "architecture_mobile",
-        "name": "Arquitetura Android Studio (Kotlin + Room)",
-        "prompt": "Modele a arquitetura limpa de um app Android Studio para gestão de estoque com Room Database.",
-        "expected_code_lang": "kotlin",
-        "must_contain": ["Room", "Repository", "ViewModel"],
-        "topic_keywords": ["android", "room", "repository", "viewmodel", "kotlin", "estoque", "entity"],
-        "must_not_contain": ["não sei programar em kotlin", "como assistente de voz"],
-        "lesson_fail": "Projetos Android com Room exigem separação em camadas: Entidades @Entity, DAOs reativos e Repositórios com ViewModel.",
-        "lesson_pass": "Arquitetura Android Studio validada: modelo desacoplado seguindo Clean Architecture e boas práticas Kotlin.",
+        "name": "Estrutura Básica de Projeto no Android Studio",
+        "prompt": "Explique de forma didática como estruturar um projeto inicial no Android Studio, descrevendo a relação entre a MainActivity.kt e o layout XML correspondente.",
+        "must_contain": ["Activity", "layout", "onCreate"],
+        "topic_keywords": ["android", "activity", "layout", "xml", "mainactivity", "setcontentview", "iniciante"],
+        "must_not_contain": ["não sei programar mobile", "como assistente de voz"],
+        "lesson_fail": "Orientação para Android Studio deve ser clara e prática, conectando a Activity Kotlin ao layout XML via setContentView.",
+        "lesson_pass": "Conceitos de Android Studio validados: arquitetura básica de Activities e separação entre lógica e layout visual.",
     },
     {
-        "id": "probe_mobile_compose_state",
+        "id": "probe_mobile_lifecycle",
         "category": "architecture_mobile",
-        "name": "Componente Jetpack Compose com State Hoisting",
-        "prompt": "Escreva um componente Jetpack Compose para formulário de login com rememberSaveable e validação de email.",
-        "expected_code_lang": "kotlin",
-        "must_contain": ["rememberSaveable", "TextField", "Button"],
-        "topic_keywords": ["compose", "remembersaveable", "textfield", "button", "login", "state"],
-        "lesson_fail": "Componentes Compose devem usar rememberSaveable para sobreviver a recriações de Activity e State Hoisting para reusabilidade.",
-        "lesson_pass": "Padrão Jetpack Compose homologado: estados desacoplados com validação reativa e recomposição eficiente.",
-    },
-    {
-        "id": "probe_mobile_ktor",
-        "category": "architecture_mobile",
-        "name": "Camada de Rede Mobile com Ktor Client",
-        "prompt": "Implemente um client HTTP em Kotlin com Ktor para consultar status de uma API REST com tratamento de erro.",
-        "expected_code_lang": "kotlin",
-        "must_contain": ["HttpClient", "get", "HttpResponse"],
-        "topic_keywords": ["ktor", "httpclient", "get", "api", "rest", "kotlin"],
-        "lesson_fail": "A camada de rede mobile em Kotlin deve utilizar HttpClient do Ktor com coroutines e tipagem estrita.",
-        "lesson_pass": "Integração Ktor Client validada: chamadas de rede assíncronas com tratamento explícito de exceções.",
+        "name": "Ciclo de Vida de uma Activity no Android",
+        "prompt": "Explique de forma simples os eventos principais do ciclo de vida de uma tela (Activity) no Android Studio: onCreate, onStart, onResume e onDestroy.",
+        "must_contain": ["onCreate", "onResume", "onDestroy"],
+        "topic_keywords": ["activity", "ciclo de vida", "lifecycle", "oncreate", "onresume", "ondestroy", "android"],
+        "lesson_fail": "A explicação do ciclo de vida no Android deve focar em quando salvar estado e quando inicializar componentes visuais.",
+        "lesson_pass": "Ciclo de vida no Android Studio validado: transições de tela explicadas de forma concisa e aplicável.",
     },
 
-    # 4. Modelagem de Banco de Dados
+    # 4. Modelagem de Banco de Dados & Novas Linguagens
     {
         "id": "probe_db_schema",
         "category": "database_design",
@@ -192,17 +197,6 @@ CANONICAL_PROBES = [
         "lesson_pass": "Schema relacional homologado: integridade referencial estrita e normalização adequada de tabelas.",
     },
     {
-        "id": "probe_db_fts5",
-        "category": "database_design",
-        "name": "Tabela Virtual FTS5 com Tokenizer unicode61",
-        "prompt": "Escreva o DDL em SQLite para criar uma tabela virtual FTS5 de documentos com tokenizer unicode61.",
-        "expected_code_lang": "sql",
-        "must_contain": ["CREATE VIRTUAL TABLE", "USING fts5"],
-        "topic_keywords": ["fts5", "virtual table", "unicode61", "sqlite", "tokenizer"],
-        "lesson_fail": "Buscas textuais no SQLite devem usar tabelas virtuais FTS5 com tokenizer unicode61 para suporte completo a acentos.",
-        "lesson_pass": "Full-Text Search no SQLite validado: tabela virtual FTS5 com indexação otimizada para a língua portuguesa.",
-    },
-    {
         "id": "probe_db_concurrency",
         "category": "database_design",
         "name": "Concorrência e Conexões SQLite em Produção",
@@ -212,51 +206,75 @@ CANONICAL_PROBES = [
         "lesson_fail": "Bancos SQLite em produção exigem ativação de PRAGMA journal_mode = WAL e PRAGMA foreign_keys = ON em cada conexão.",
         "lesson_pass": "Configuração de banco SQLite validada: concorrência multithread protegida via WAL e integridade ativa.",
     },
+    {
+        "id": "probe_lang_discovery",
+        "category": "database_design",
+        "name": "Descoberta & Comparativo de Novas Linguagens",
+        "prompt": "Faça um comparativo conciso entre Rust e Go para desenvolvimento de ferramentas de sistema e serviços locais, destacando gerenciamento de memória e curva de aprendizado.",
+        "topic_keywords": ["rust", "go", "golang", "memória", "memoria", "concorrência", "concorrencia", "performance"],
+        "lesson_fail": "Comparações entre linguagens de programação devem pontuar trade-offs reais de concorrência, memória e produtividade.",
+        "lesson_pass": "Pesquisa de linguagens homologada: análise técnica fundamentada sobre paradigmas de compilação e runtime.",
+    },
 
-    # 5. Multimídia, Áudio & Imagens
+    # 5. Jogos 2D (Raylib/Godot), Arte & Produção Musical
     {
-        "id": "probe_multimedia_music",
+        "id": "probe_game_raylib_js",
         "category": "multimedia_creative",
-        "name": "Design de Áudio Procedural / Web Audio",
-        "prompt": "Escreva um snippet em JavaScript usando a Web Audio API para tocar um acorde menor sintetizado.",
+        "name": "Game Loop com Raylib em JavaScript",
+        "prompt": "Como estruturar um jogo 2D simples em JavaScript usando o framework Raylib (raylib-js), gerenciando o game loop, leitura de teclado e colisão entre retângulos?",
         "expected_code_lang": "javascript",
-        "must_contain": ["AudioContext", "createOscillator"],
-        "topic_keywords": ["audiocontext", "createoscillator", "frequência", "frequencia", "som", "áudio", "audio"],
-        "lesson_fail": "A síntese sonora via Web Audio API deve instanciar AudioContext e interligar osciladores a nós de ganho com envelope anti-click.",
-        "lesson_pass": "Síntese com Web Audio API homologada: osciladores polifônicos afinados em escala menor com controle de ganho.",
+        "topic_keywords": ["raylib", "game loop", "desenhar", "teclado", "colisão", "colisao", "retângulo", "retangulo", "ret"],
+        "lesson_fail": "Jogos com Raylib em JavaScript devem utilizar funções nativas de inicialização de janela, loop com BeginDrawing/EndDrawing e detecção de entrada.",
+        "lesson_pass": "Estrutura de jogo com Raylib homologada: loop 2D desacoplado, controle suave de sprites e cálculo de colisões.",
     },
     {
-        "id": "probe_multimedia_kick",
+        "id": "probe_game_godot_char",
         "category": "multimedia_creative",
-        "name": "Síntese de Bumbo Eletrônico (Pitch Drop)",
-        "prompt": "Implemente uma função JavaScript para gerar som de bumbo (kick) com pitch drop exponencial de 150Hz para 40Hz no Web Audio API.",
-        "expected_code_lang": "javascript",
-        "must_contain": ["exponentialRampToValueAtTime", "frequency"],
-        "topic_keywords": ["kick", "bumbo", "pitch", "exponential", "frequency", "webaudio", "oscillator"],
-        "lesson_fail": "Síntese procedural de percussão requer queda exponencial de frequência de pitch usando exponentialRampToValueAtTime.",
-        "lesson_pass": "Síntese de percussão procedural validada: curva ADSR precisa de frequência e ganho para impacto acústico.",
+        "name": "Movimentação 2D com GDScript no Godot 4.x",
+        "prompt": "Escreva um script GDScript para Godot 4.x controlando um CharacterBody2D com gravidade, pulo e velocidade horizontal suave.",
+        "expected_code_lang": "python",
+        "must_contain": ["CharacterBody2D", "velocity", "move_and_slide"],
+        "topic_keywords": ["godot", "gdscript", "characterbody2d", "velocity", "move_and_slide", "gravidade", "pulo"],
+        "lesson_fail": "No Godot 4.x, movimentação física 2D deve herdar de CharacterBody2D e utilizar velocity com move_and_slide() no _physics_process.",
+        "lesson_pass": "Script de personagem no Godot 4 homologado: aplicação correta de delta, aceleração suave e física 2D nativa.",
     },
     {
-        "id": "probe_multimedia_particles",
+        "id": "probe_game_pixel_art_shaders",
         "category": "multimedia_creative",
-        "name": "Sistema de Partículas 2D em JavaScript",
-        "prompt": "Crie uma classe ParticleSystem em JavaScript para desenhar faíscas que sobem e desaparecem no Canvas 2D.",
-        "expected_code_lang": "javascript",
-        "must_contain": ["class", "update", "render"],
-        "topic_keywords": ["particle", "partícula", "particula", "canvas", "alpha", "fade", "life"],
-        "lesson_fail": "Sistemas de partículas devem reciclar instâncias mortas e decrementar opacidade (alpha) para transições fluidas.",
-        "lesson_pass": "Motor de partículas 2D validado: física vetorial leve com fade-out gradual e renderização eficiente.",
+        "name": "Conceituação de Pixel Art & Shaders 2D",
+        "prompt": "Explique os princípios fundamentais para criar Pixel Art coesa (paleta de cores limitada, consistência de grid de pixels) e como aplicar um shader 2D de outline para destacar o personagem.",
+        "topic_keywords": ["pixel art", "paleta", "grid", "sprite", "shader", "outline", "borda", "2d"],
+        "lesson_fail": "Criação de arte 2D deve manter proporções fixas de pixels (sem mixels) e especificar algoritmos de shader para iluminação ou contorno.",
+        "lesson_pass": "Diretrizes de arte 2D e shaders homologadas: consistência visual e pipeline técnico de renderização de sprites.",
+    },
+    {
+        "id": "probe_music_theory_harmony",
+        "category": "multimedia_creative",
+        "name": "Teoria Musical: Harmonia & Progressões de Acordes",
+        "prompt": "Explique como construir uma progressão de acordes menor envolvente usando os graus harmônicos (ex: i - VI - III - VII) e como montar melodias sobre a escala menor natural.",
+        "topic_keywords": ["acorde", "escala", "harmonia", "grau", "tônica", "melodia", "menor", "progressão", "progressao"],
+        "lesson_fail": "Conceitos de teoria musical devem explicar funções harmônicas, notas de tensão e resolução melódica.",
+        "lesson_pass": "Teoria musical aplicada homologada: progressão de acordes estruturada com relação harmônica entre acordes e melodia.",
+    },
+    {
+        "id": "probe_music_fl_studio_workflow",
+        "category": "multimedia_creative",
+        "name": "Workflow de Produção no FL Studio",
+        "prompt": "Explique as melhores práticas para organizar uma música no FL Studio: organização do Channel Rack, sequenciamento no Piano Roll, arranjo na Playlist e roteamento de canais no Mixer.",
+        "topic_keywords": ["fl studio", "channel rack", "piano roll", "playlist", "mixer", "pattern", "arranjo"],
+        "lesson_fail": "Workflows no FL Studio devem detalhar a transição de Patterns do Channel Rack para a Playlist e endereçamento de inserts no Mixer.",
+        "lesson_pass": "Workflow no FL Studio validado: estrutura profissional de produção musical desde a composição até o roteamento de áudio.",
     },
 
     # 6. Contexto, Memórias & Preferências
     {
         "id": "probe_memory_profile",
         "category": "memory_preferences",
-        "name": "Recall do Perfil de Desenvolvimento do Isaac",
-        "prompt": "Quem é o Isaac e quais tipos de produtos de software nós desenvolvemos juntos?",
-        "must_contain": ["sites", "jogos", "música", "aplicativos"],
-        "topic_keywords": ["isaac", "desenvolvedor", "sites", "jogos", "música", "musica", "aplicativos", "sistemas"],
-        "lesson_fail": "O assistente deve manter recall estrito do perfil do Isaac (sites, jogos 2D, música/DSP, mobile e sistemas).",
+        "name": "Recall do Perfil Real de Desenvolvimento do Isaac",
+        "prompt": "Quem é o Isaac e quais tipos de produtos e ferramentas nós desenvolvemos juntos?",
+        "must_contain": ["sites", "jogos", "música"],
+        "topic_keywords": ["isaac", "desenvolvedor", "sites", "jogos", "música", "musica", "raylib", "fl studio", "android"],
+        "lesson_fail": "O assistente deve manter recall estrito do perfil real do Isaac (sites, jogos 2D com Raylib/Godot, música no FL Studio, documentos e Android Studio).",
         "lesson_pass": "Identidade e perfil do desenvolvedor homologados: alinhamento grounded com a stack real do Isaac.",
     },
     {
@@ -268,16 +286,6 @@ CANONICAL_PROBES = [
         "topic_keywords": ["gtx 1650", "ubuntu", "ram", "ryzen", "hub", "pc"],
         "lesson_fail": "Informações de hardware devem refletir com exatidão a Core Memory residente (PC GTX 1650 vs Hub Ubuntu 32GB RAM).",
         "lesson_pass": "Recall de infraestrutura validado: separação precisa de nós de inferência rápida e hub executivo.",
-    },
-    {
-        "id": "probe_memory_anchors",
-        "category": "memory_preferences",
-        "name": "Recall das Âncoras de Estudo no Cérebro",
-        "prompt": "Quais são as nossas âncoras de estudo principais configuradas no cérebro permanente?",
-        "must_contain": ["Android", "Inteligência Artificial", "Engenharia de Software"],
-        "topic_keywords": ["âncoras", "ancoras", "estudo", "android", "ia", "engenharia", "design", "áudio"],
-        "lesson_fail": "As âncoras de estudo devem ser extraídas da Core Memory permanente sem inventar tópicos aleatórios.",
-        "lesson_pass": "Âncoras de aprendizado validadas: tópicos normativos sincronizados com o plano de evolução do assistente.",
     },
 
     # 7. Blindagem & Anti-Desculpas
