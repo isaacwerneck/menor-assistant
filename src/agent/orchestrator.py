@@ -600,6 +600,7 @@ class Orchestrator:
                 "model": target_model,
                 "messages": chat_history,
                 "stream": False,
+                "think": False,
                 "options": {
                     "temperature": 0.6 if not should_use_tools else 0.2,
                     "top_p": 0.9,

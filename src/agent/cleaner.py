@@ -231,10 +231,20 @@ def _fallback_casual_reply(user_msg: str) -> str:
             "Com certeza, mano! Consigo sim. Me conta o que você tem em mente para o site "
             "(tema, páginas e funcionalidades) que a gente já começa a estruturar agora."
         )
-    if re.search(r"\b(?:tudo\s+bem|td\s+bem|como\s+vai|suave|tranquilo)\b", norm_user):
+    # Se o usuário fez uma pergunta ou mencionou um tópico específico além da saudação,
+    # não force respostas estáticas de saudação
+    has_substantive_query = any(w in norm_user for w in (
+        "imagem", "imagens", "desenh", "foto", "foto", "gerar", "cria", "ferramenta",
+        "funciona", "funcionando", "codigo", "código", "jogo", "musica", "música",
+        "como", "onde", "qual", "quais", "o que", "oq", "consegue", "pode", "sabe"
+    ))
+
+    if not has_substantive_query and re.search(r"\b(?:tudo\s+bem|td\s+bem|como\s+vai|suave|tranquilo)\b", norm_user):
         return "Tudo suave por aqui, mano! E com você, como estão as coisas?"
-    if re.search(r"\b(?:eai|e\s+ai|opa|salve|fala|oi|ol[aá])\b", norm_user):
+    if not has_substantive_query and re.search(r"\b(?:eai|e\s+ai|opa|salve|fala|oi|ol[aá])\b", norm_user):
         return "E aí Isaac! Tô na escuta, mano. O que manda hoje?"
+    if any(w in norm_user for w in ("imagem", "imagens", "gerar imagem", "cria imagem", "criar imagem")):
+        return "Minha ferramenta de geração de imagens local está configurada e pronta para criar arte a partir das suas ideias. O que você gostaria de gerar agora?"
     if any(w in norm_user for w in ("aplicativo", "app", "sistema", "software", "programa")):
         return "Consigo sim, parceiro! Me passa os detalhes do que você precisa desenvolver que a gente já desenrola."
     if any(w in norm_user for w in ("ajuda", "ajudar", "consegue", "pode me ajudar")):
