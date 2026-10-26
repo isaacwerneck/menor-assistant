@@ -220,6 +220,35 @@ class DualTierVerifier:
                 })
                 score -= 20
 
+        # 5. Checagem de Truncamento e Simulação de Criação de Arquivos
+        code_fences = reply.count("```")
+        is_truncated = (code_fences % 2 != 0)
+
+        blocks = re.findall(r"```(?:[a-zA-Z0-9_\-]*\n)?(.*?)```", reply, re.DOTALL)
+        code_keywords = (
+            "class ", "fun ", "val ", "var ", "interface ", "def ", "function ",
+            "import ", "package ", "select ", "create table", "<!doctype", "<html", "<div"
+        )
+        has_real_code = any(any(kw in b.lower() for kw in code_keywords) and len(b.strip()) >= 50 for b in blocks)
+
+        promised_files = any(p in reply.lower() for p in ("criar os arquivos", "arquivos criados", "vou criar os arquivos"))
+        expects_code = bool(probe.get("expected_code_lang"))
+        has_simulated_files = (promised_files or expects_code) and not has_real_code
+
+        if is_truncated or has_simulated_files:
+            checks.append({
+                "name": "Integridade de Execução (Anti-Truncamento)",
+                "status": "FAIL",
+                "detail": "Resposta truncada ou simulação de arquivos sem entrega de código real.",
+            })
+            score = 0
+        else:
+            checks.append({
+                "name": "Integridade de Execução (Anti-Truncamento)",
+                "status": "PASS",
+                "detail": "Sem truncamento detectado.",
+            })
+
         score = max(0, min(50, score))
         return {
             "tier1_score": score,
@@ -248,6 +277,16 @@ class DualTierVerifier:
                 "learning": "Nenhum aprendizado gerado: falha técnica na infraestrutura de execução.",
             }
 
+        # Se o Tier 1 falhou por truncamento ou simulação, nota ZERO imediata
+        t1_fails = [c["detail"] for c in (tier1_checks or []) if c.get("status") == "FAIL"]
+        has_truncation_or_sim = any("truncad" in f.lower() or "simula" in f.lower() for f in t1_fails)
+        if has_truncation_or_sim:
+            return {
+                "tier2_score": 0,
+                "critique": "Resposta truncada com simulação indevida de arquivos sem código funcional.",
+                "learning_extracted": "Nenhum aprendizado gerado: resposta descartada por truncamento ou simulação.",
+            }
+
         score = 40  # Base média qualitativa
         critique = []
 
@@ -261,7 +300,7 @@ class DualTierVerifier:
             critique.append("Resposta detalhada com especificações técnicas concretas.")
 
         # Bonificação se estruturou código com markdown
-        if "```" in reply:
+        if "```" in reply and reply.count("```") >= 2:
             score += 5
             critique.append("Apresentou código formatado em blocos técnicos.")
 

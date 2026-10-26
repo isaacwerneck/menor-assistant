@@ -129,6 +129,27 @@ class TestLabV2(unittest.TestCase):
         abort_res = self.client.post("/api/lab/control", json={"action": "abort"})
         self.assertEqual(abort_res.status_code, 200)
 
+    def test_dual_tier_verifier_zero_on_simulated_files_or_truncation(self):
+        probe = {
+            "id": "probe_mobile_arch",
+            "category": "architecture_mobile",
+            "must_contain": ["Room", "Repository", "ViewModel"],
+        }
+        # Resposta truncada simulando criação de arquivos sem código
+        simulated_reply = (
+            "Vou criar os arquivos essenciais agora mesmo para você visualizar:\n"
+            "Aqui estão os arquivos criados no projeto:\n"
+            "```text\n/app/src/main/java/com/estoque/app/domain\n```"
+        )
+        t1 = DualTierVerifier.verify_tier1(probe, simulated_reply)
+        self.assertFalse(t1["tier1_pass"])
+        self.assertEqual(t1["tier1_score"], 0)
+
+        t2 = DualTierVerifier.verify_tier2_qualitative(probe, simulated_reply, "", t1["tier1_checks"])
+        self.assertEqual(t2["tier2_score"], 0)
+        self.assertIn("truncad", t2["critique"].lower())
+        self.assertIn("descartad", t2["learning_extracted"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()
