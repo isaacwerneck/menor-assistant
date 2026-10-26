@@ -35,3 +35,4 @@ Thumbs.db
 # Stubs temporários de testes de sandbox e ferramentas dinâmicas
 tests/test_stub_*
 src/tools/dynamic/*.py
+scratch/

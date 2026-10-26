@@ -5,6 +5,7 @@
 - Fase 4: DSPy Prompt Optimizer
 """
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 
@@ -117,7 +118,7 @@ class TestAdvancedSkillsV2(unittest.TestCase):
 
         # Teste que falha inicialmente se o retorno for False
         test_script = (
-            f'python -c "import sys; sys.path.insert(0, r\'{self.base}\'); '
+            f'"{sys.executable}" -c "import sys; sys.path.insert(0, r\'{self.base}\'); '
             'import algo; assert algo.solve() is True"'
         )
 
@@ -138,7 +139,7 @@ class TestAdvancedSkillsV2(unittest.TestCase):
         target = self.base / "broken.py"
         target.write_text("val = 1\n", encoding="utf-8")
 
-        test_script = 'python -c "assert False"'
+        test_script = f'"{sys.executable}" -c "assert False"'
 
         # Fornece gerador para segunda tentativa que também falha no teste
         gen_call_count = [0]

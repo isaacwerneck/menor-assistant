@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 
@@ -64,7 +65,7 @@ class TestCoreTools(unittest.TestCase):
 def add_magic(a: int, b: int) -> int:
     return a + b + 42
 """
-        test_cmd = 'python -c "assert True"'
+        test_cmd = f'"{sys.executable}" -c "assert True"'
         res = create_new_tool(
             name="add_magic",
             code=tool_code,

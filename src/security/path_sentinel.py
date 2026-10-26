@@ -42,7 +42,14 @@ class PathSentinel:
                 raise SecurityPathError("Tentativa de path traversal ('..') detectada.")
             clean_rel = "/".join(clean_parts)
 
-        target = (self.allowed_base / clean_rel).resolve()
+        raw_target = self.allowed_base / clean_rel
+        cur = raw_target
+        while cur != self.allowed_base and cur != cur.parent:
+            if cur.is_symlink():
+                raise SecurityPathError("Acesso através de links simbólicos é estritamente proibido.")
+            cur = cur.parent
+
+        target = raw_target.resolve()
 
         # O caminho resolvido DEVE começar com o allowed_base
         try:
@@ -51,7 +58,7 @@ class PathSentinel:
             raise SecurityPathError(f"Caminho escapa da raiz permitida: {target}")
 
         # Bloqueio estrito de links simbólicos (symlink traversal attack)
-        if target.is_symlink():
+        if raw_target.is_symlink() or target.is_symlink():
             raise SecurityPathError("Acesso através de links simbólicos é estritamente proibido.")
 
         # Validação de extensões permitidas se configurada
