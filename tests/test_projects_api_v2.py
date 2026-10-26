@@ -61,6 +61,25 @@ class TestProjectsApiV2(unittest.TestCase):
         self.assertEqual(note_res.status_code, 200)
         self.assertTrue(note_res.json()["success"])
 
+    @patch("src.security.auth.require_owner")
+    def test_project_code_file_inclusion(self, mock_auth):
+        mock_auth.return_value = True
+
+        create_res = self.client.post("/projects", json={
+            "name": "Game 2D Engine",
+            "instructions": "Desenvolvimento do motor de jogo 2D Canvas.",
+        })
+        self.assertEqual(create_res.status_code, 200)
+        slug = create_res.json()["project"]["slug"]
+
+        # Adicionar nota de log
+        note_res = self.client.post(f"/projects/{slug}/note", json={
+            "kind": "log",
+            "text": "Setup inicial com canvas e loop de animação.",
+        })
+        self.assertEqual(note_res.status_code, 200)
+        self.assertTrue(note_res.json()["success"])
+
 
 if __name__ == "__main__":
     unittest.main()
