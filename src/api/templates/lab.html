@@ -410,8 +410,8 @@
                         </div>
 
                         <div id="approvalActionRow" style="display: flex; gap: 10px; margin-top: 4px;">
-                            <button class="btn btn-success" onclick="approveCurrent('approve')">✅ Aprovar & Gravar no Cérebro</button>
-                            <button class="btn btn-secondary" onclick="approveCurrent('discard')">❌ Descartar Modificação</button>
+                            <button id="btnApprove" class="btn btn-success" onclick="approveCurrent('approve')">✅ Aprovar & Gravar no Cérebro</button>
+                            <button id="btnDiscard" class="btn btn-secondary" onclick="approveCurrent('discard')">❌ Descartar Modificação</button>
                         </div>
                     </div>
                 </div>
@@ -555,7 +555,14 @@
                 else badge.style.color = 'inherit';
 
                 // Stats
-                document.getElementById('statScore').textContent = state.average_score > 0 ? `${state.average_score}/10` : '—';
+                const statEl = document.getElementById('statScore');
+                if (state.scores && state.scores.length > 0) {
+                    statEl.textContent = `${state.average_score}/10`;
+                    statEl.style.color = state.average_score >= 7.0 ? 'var(--success)' : (state.average_score >= 5.0 ? 'var(--warning)' : 'var(--danger)');
+                } else {
+                    statEl.textContent = '—';
+                    statEl.style.color = 'var(--accent)';
+                }
                 document.getElementById('statProgress').textContent = `${state.current_step}/${state.total_steps}`;
 
                 // Active Step Card
@@ -565,7 +572,9 @@
                     notice.style.display = 'none';
                     card.style.display = 'flex';
                     const resData = state.active_result;
-                    document.getElementById('activeStepTag').textContent = `Passo ${resData.step}/${state.total_steps} · ${resData.category} (Nota: ${resData.final_score}/10)`;
+                    const isPass = resData.final_score >= 7.0;
+                    document.getElementById('activeStepTag').textContent = `${isPass ? 'APROVADO' : 'REPROVADO'} · Passo ${resData.step}/${state.total_steps} (Nota: ${resData.final_score}/10)`;
+                    document.getElementById('activeStepTag').style.color = isPass ? 'var(--success)' : 'var(--danger)';
                     document.getElementById('stepQuestion').textContent = resData.question;
                     document.getElementById('stepReply').textContent = resData.reply;
                     document.getElementById('stepCritique').textContent = resData.tier2_critique;
@@ -582,8 +591,24 @@
                         checksEl.appendChild(pill);
                     });
 
-                    // Human in the loop row
-                    document.getElementById('approvalActionRow').style.display = (state.status === 'waiting_approval') ? 'flex' : 'none';
+                    // Human in the loop row: se reprovado (nota < 6), desativa gravação
+                    const row = document.getElementById('approvalActionRow');
+                    const btnApprove = document.getElementById('btnApprove');
+                    const btnDiscard = document.getElementById('btnDiscard');
+                    if (state.status === 'waiting_approval') {
+                        row.style.display = 'flex';
+                        if (resData.final_score < 6.0) {
+                            btnApprove.style.display = 'none';
+                            btnDiscard.className = 'btn btn-danger';
+                            btnDiscard.textContent = `❌ Reprovado (${resData.final_score}/10) · Descartar & Avançar`;
+                        } else {
+                            btnApprove.style.display = 'inline-flex';
+                            btnDiscard.className = 'btn btn-secondary';
+                            btnDiscard.textContent = '❌ Descartar Modificação';
+                        }
+                    } else {
+                        row.style.display = 'none';
+                    }
                 }
 
                 // Terminal Logs
