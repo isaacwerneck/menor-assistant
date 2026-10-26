@@ -25,6 +25,15 @@ THINKING_STARTERS = (
     r"^\s*Based on (?:the|their)\b",
     r"^\s*To answer this\b",
     r"^\s*In this case\b",
+    r"^\s*O usu[áa]rio (?:est[áa]|quer|pediu|perguntou|deseja|solicitou)\b",
+    r"^\s*Isso [ée] uma pergunta direta\b",
+    r"^\s*Para responder a isso\b",
+    r"^\s*Com base nas informa[çc][õo]es\b",
+    r"^\s*Com base no perfil\b",
+    r"^\s*Com base na Core Memory\b",
+    r"^\s*Vou responder diretamente\b",
+    r"^\s*N[ãa]o preciso de ferramentas\b",
+    r"^\s*Primeiro,\s+vou\b",
 )
 
 INTERNAL_SCRATCHPAD_PHRASES = (
@@ -46,6 +55,14 @@ INTERNAL_SCRATCHPAD_PHRASES = (
     "the user wants me to",
     "the user is asking",
     "as per the rules",
+    "o usuário está perguntando",
+    "o usuário está pedindo",
+    "o usuário quer",
+    "isso é uma pergunta direta",
+    "com base nas informações do perfil",
+    "com base na core memory",
+    "vou responder diretamente",
+    "não preciso de ferramentas",
 )
 
 
@@ -117,7 +134,7 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
             cleaned = "\n\n".join(valid_paras).strip()
 
     cleaned_lower = cleaned.lower()
-    is_still_english_scratchpad = any(phrase in cleaned_lower for phrase in (
+    is_still_scratchpad = any(phrase in cleaned_lower for phrase in (
         "thinking process",
         "okay, let's",
         "okay, the user",
@@ -130,6 +147,13 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
         "let me check the previous",
         "the user wants me to write",
         "as per the rules",
+        "o usuário está perguntando",
+        "o usuário está pedindo",
+        "o usuário quer",
+        "isso é uma pergunta direta",
+        "com base nas informações do perfil",
+        "com base na core memory",
+        "vou responder diretamente",
     ))
 
     has_false_refusal = any(phrase in cleaned_lower for phrase in (
@@ -140,7 +164,7 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
         "não tenho a capacidade de criar ou exibir", "apenas um assistente de voz",
     ))
 
-    if not cleaned.strip() or is_still_english_scratchpad or has_false_refusal:
+    if not cleaned.strip() or is_still_scratchpad or has_false_refusal:
         return _fallback_casual_reply(last_user_msg)
 
     return cleaned.strip()
@@ -149,6 +173,19 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
 def _fallback_casual_reply(user_msg: str) -> str:
     """Gera resposta conversacional calorosa em pt-BR quando o modelo falhou em gerar saída limpa."""
     norm_user = (user_msg or "").lower()
+
+    hardware_prompts = (
+        "configuração de máquinas", "configuracao de maquinas", "nossas máquinas", "nossas maquinas",
+        "qual máquina", "quais máquinas", "setup atual", "setup de hardware", "hardware",
+        "nossa configuração de máquinas e hardware"
+    )
+    if any(w in norm_user for w in hardware_prompts):
+        return (
+            "Aqui está o setup atual da nossa infraestrutura e hardware:\n\n"
+            "- **PC Interativo (Windows):** AMD Ryzen 5 3500X, 16GB RAM, NVIDIA GTX 1650 (4GB VRAM) — Executa interface e cliente de voz interativo.\n"
+            "- **Hub Central (Servidor Ubuntu):** Intel Core i7-1185G7, 32GB RAM, Iris Xe — Executa FastAPI (porta 8000), SQLite FTS5 permanente e Ollama (127.0.0.1:11434).\n"
+            "- **Rede & Acesso:** Rede local 192.168.0.x com túnel Cloudflare seguro."
+        )
 
     study_prompts = (
         "ancora de estudo", "âncora de estudo", "ancoras de estudo", "âncoras de estudo",

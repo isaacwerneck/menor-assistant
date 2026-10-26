@@ -121,5 +121,18 @@ I need to respond directly in Portuguese, as per the rules - no tool simulation,
         self.assertNotIn("Okay, the user wants me to write in Portuguese", result)
         self.assertIn("Com certeza, Isaac!", result)
 
+    def test_portuguese_scratchpad_filtering(self):
+        raw = (
+            "O usuário está perguntando sobre a configuração de máquinas e hardware. "
+            "Isso é uma pergunta direta que pode ser respondida com base nas informações do perfil do usuário "
+            "(USER_PROFILE) na Core Memory, que já contém os detalhes do hardware do Isaac."
+        )
+        result = sanitize_assistant_reply(raw, "qual é a nossa configuração de máquinas e hardware?")
+        self.assertNotIn("O usuário está perguntando", result)
+        self.assertNotIn("Isso é uma pergunta direta", result)
+        self.assertIn("GTX 1650", result)
+        self.assertIn("Servidor Ubuntu", result)
+
+
 if __name__ == "__main__":
     unittest.main()
