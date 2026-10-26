@@ -32,6 +32,8 @@ Regras Inegociáveis e Diretrizes de Execução:
   arquivos em blocos de texto ou markdown. Se precisar executar comandos ou ler/escrever arquivos, use
   OBRIGATORIAMENTE ferramentas reais via native tool calling. Se não houver ferramenta a chamar, responda
   diretamente sem inventar arquivos ou saídas fictícias.
+- Se o usuário pedir para rodar, executar, testar ou checar algo no terminal (ex: comandos git, pytest, bash, npm, ls, status),
+  chame OBRIGATORIAMENTE a ferramenta `terminal_run` com o campo 'command'. NUNCA devolva o comando dentro de bloco de código sem executá-lo.
 - NUNCA escreva código python simulando chamadas de ferramenta no texto (ex: ```python fs_write(...)```).
   Ferramentas devem ser executadas exclusivamente via native tool calling da API.
 - NUNCA diga que é apenas um modelo ou assistente de texto, que não pode criar arquivos ou que não tem ferramentas.
@@ -864,6 +866,59 @@ class Orchestrator:
                                         executed_tools_log.append(f"fs_write:{rfile}")
                                     except Exception as write_err:
                                         LOGGER.debug("Auto fs_write falhou para %s: %s", rfile, write_err)
+
+                # 3. Interceptação e auto-execução de comandos no terminal
+                term_triggers = (
+                    "rode", "roda", "execute", "executa", "rodar", "executar", "comando",
+                    "terminal", "bash", "shell", "git status", "git log", "git diff"
+                )
+                if any(w in norm_user for w in term_triggers):
+                    cmd_to_run = None
+                    t_match = re.search(
+                        r"terminal_run\(\s*(?:command\s*=\s*)?['\"](?P<cmd>[^'\"]+)['\"]\s*\)",
+                        reply_text,
+                    )
+                    if t_match:
+                        cmd_to_run = t_match.group("cmd")
+                    else:
+                        bash_blocks = re.findall(r"```(?:bash|sh|terminal|shell)?\s*\n([\s\S]*?)\n```", reply_text)
+                        if bash_blocks:
+                            cand = bash_blocks[0].strip()
+                            if not cand.startswith(("import ", "def ", "class ", "from ")):
+                                cmd_to_run = cand
+                        elif "git " in last_user:
+                            git_cmd = re.search(r"(git\s+[a-zA-Z0-9_\-\s\.]+)", last_user)
+                            if git_cmd:
+                                cmd_to_run = git_cmd.group(1).strip()
+
+                    if cmd_to_run and not any(isinstance(t, str) and t.startswith("terminal_run:") for t in executed_tools_log):
+                        try:
+                            from src.tools.core import terminal_run
+                            res_term = terminal_run(command=cmd_to_run)
+                            executed_tools_log.append(f"terminal_run:{cmd_to_run}")
+                            out = res_term.get("stdout", "").strip() or res_term.get("stderr", "").strip() or "Comando executado com sucesso (sem saída)."
+                            reply_text = f"Executei o comando no terminal:\n\n```bash\n$ {cmd_to_run}\n{out}\n```"
+                        except Exception as term_err:
+                            LOGGER.warning("Auto terminal_run falhou para %s: %s", cmd_to_run, term_err)
+
+                # 4. Interceptação e auto-leitura de arquivos (fs_read)
+                read_triggers = (
+                    "leia o arquivo", "ler o arquivo", "le o arquivo", "lê o arquivo",
+                    "conteúdo do arquivo", "conteudo do arquivo", "cat ", "mostre o arquivo", "mostra o arquivo"
+                )
+                if any(w in norm_user for w in read_triggers):
+                    r_files = re.findall(r"\b([a-zA-Z0-9_\-/\\]+\.(?:html|css|js|py|md|json|txt|sh|yml|yaml))\b", last_user)
+                    for rf in r_files:
+                        if not any(isinstance(t, str) and t.startswith(f"fs_read:{rf}") for t in executed_tools_log):
+                            try:
+                                from src.tools.core import fs_read
+                                res_read = fs_read(filepath=rf)
+                                if res_read.get("success"):
+                                    executed_tools_log.append(f"fs_read:{rf}")
+                                    reply_text = f"Aqui está o conteúdo de `{rf}`:\n\n```\n{res_read.get('content', '')}\n```"
+                                    break
+                            except Exception as read_err:
+                                LOGGER.debug("Auto fs_read falhou para %s: %s", rf, read_err)
 
                 return {
                     "success": True,

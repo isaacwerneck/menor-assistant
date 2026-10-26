@@ -159,6 +159,36 @@ class TestOrchestratorV2(unittest.TestCase):
         self.assertNotIn("fs_write(filepath=", result["reply"])
         self.assertIn("```html", result["reply"])
 
+    @patch("src.tools.core.terminal_run")
+    @patch("src.agent.orchestrator.requests.post")
+    def test_run_turn_intercept_simulated_terminal_run(self, mock_post, mock_term_run):
+        mock_term_run.return_value = {"success": True, "exit_code": 0, "stdout": "On branch main\nNothing to commit", "stderr": ""}
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "message": {
+                "role": "assistant",
+                "content": (
+                    "Aqui está o comando:\n\n"
+                    "```bash\n"
+                    "git status && git log -n 1 --oneline\n"
+                    "```\n"
+                ),
+            }
+        }
+        mock_post.return_value = mock_resp
+
+        orchestrator = Orchestrator()
+        result = orchestrator.run_turn(
+            messages=[{"role": "user", "content": "Rode no terminal: git status e git log -n 1 --oneline"}],
+            enable_tools=True,
+        )
+
+        self.assertTrue(result["success"])
+        mock_term_run.assert_called_once()
+        self.assertTrue(any("terminal_run:git status" in str(t) for t in result["tools_executed"]))
+        self.assertIn("On branch main", result["reply"])
+
 
 if __name__ == "__main__":
     unittest.main()
