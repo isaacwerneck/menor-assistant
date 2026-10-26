@@ -1,0 +1,81 @@
+{
+  "total_probes": 8,
+  "passed_probes": 5,
+  "failed_probes": 3,
+  "total_time_sec": 637.32,
+  "avg_latency_sec": 79.67,
+  "results": [
+    {
+      "id": "refusal_check",
+      "category": "Anti-Recusa & Identidade",
+      "prompt": "Você consegue programar um app para mim ou você é apenas um assistente de voz?",
+      "latency_sec": 67.18,
+      "reply_length": 101,
+      "passed": true,
+      "reply_preview": "Consigo sim, parceiro! Me passa os detalhes do que você precisa desenvolver que a gente já desenrola."
+    },
+    {
+      "id": "yagni_concept",
+      "category": "Engenharia de Software (YAGNI)",
+      "prompt": "Explique o princípio YAGNI na engenharia de software e dê um exemplo prático em Python.",
+      "latency_sec": 97.21,
+      "reply_length": 1602,
+      "passed": true,
+      "reply_preview": "# O Princípio YAGNI (You Ain't Gonna Need It)  ## Definição  **YAGNI** é um princípio de engenharia de software que diz: **\"Não implemente recursos que você não precisa agora\"**. É uma prática de desi"
+    },
+    {
+      "id": "fastapi_concurrency",
+      "category": "Backend FastAPI & Concorrência",
+      "prompt": "No FastAPI, como executar uma leitura demorada de arquivo sem travar o EventLoop no Python? Dê o código.",
+      "latency_sec": 86.56,
+      "reply_length": 1190,
+      "passed": false,
+      "reply_preview": "```python import asyncio from fastapi import FastAPI import aiofiles  # Para leitura assíncrona de arquivos  app = FastAPI()  @app.get(\"/read-file\") async def read_long_file():     \"\"\"Executa uma leit"
+    },
+    {
+      "id": "android_compose",
+      "category": "Mobile & Android Studio",
+      "prompt": "Modele em Kotlin uma ViewModel e UiState imutável para uma tela de produtos usando Room e StateFlow.",
+      "latency_sec": 97.04,
+      "reply_length": 989,
+      "passed": true,
+      "reply_preview": "Entendi. Vamos modelar essa arquitetura em Kotlin seguindo as melhores práticas: **MVVM**, **StateFlow** para reatividade, **Room** para persistência e **Data Classes Imutáveis** para o estado da UI. "
+    },
+    {
+      "id": "audio_dsp_kick",
+      "category": "Áudio DSP & Síntese Sonora",
+      "prompt": "Escreva uma função Web Audio API em JavaScript para sintetizar um som de bumbo (kick) com pitch drop exponencial.",
+      "latency_sec": 86.32,
+      "reply_length": 831,
+      "passed": false,
+      "reply_preview": "```html <!DOCTYPE html> <html lang=\"pt-BR\"> <head>     <meta charset=\"UTF-8\">     <title>Sintetizador de Kick Drum - Web Audio API</title>     <style>         body { font-family: monospace; padding: 2"
+    },
+    {
+      "id": "design_system",
+      "category": "Design System do Isaac",
+      "prompt": "Quais são as cores primárias, background e regras de micro-interações do Design System do Isaac?",
+      "latency_sec": 12.62,
+      "reply_length": 67,
+      "passed": false,
+      "reply_preview": "Opa Isaac! Tô na escuta, mano. O que você tá planejando fazer hoje?"
+    },
+    {
+      "id": "sql_schema",
+      "category": "Modelagem de Banco de Dados",
+      "prompt": "Escreva o DDL SQL com CREATE TABLE para um sistema de pedidos com clientes, itens, transações e chaves estrangeiras.",
+      "latency_sec": 93.06,
+      "reply_length": 1348,
+      "passed": true,
+      "reply_preview": "```sql -- DDL SQL para Sistema de Pedidos -- Arquivo: schema_pedidos.sql  CREATE TABLE clientes (     id INTEGER PRIMARY KEY AUTOINCREMENT,     nome VARCHAR(255) NOT NULL,     email VARCHAR(255) UNIQU"
+    },
+    {
+      "id": "web_preview",
+      "category": "Geração Web & Workspace",
+      "prompt": "Crie uma página HTML e CSS moderna de um estúdio de áudio com preview clicável.",
+      "latency_sec": 97.33,
+      "reply_length": 1352,
+      "passed": true,
+      "reply_preview": "Entendido, Isaac. Vamos construir essa interface de estúdio de áudio com um visual moderno, focado na experiência do usuário (UX) e performance.  Como estamos trabalhando no **Menor v2**, vou criar um"
+    }
+  ]
+}

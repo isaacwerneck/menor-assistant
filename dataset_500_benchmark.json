@@ -1,0 +1,3122 @@
+[
+  {
+    "id": "q_0001",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Data em um app Android Studio moderno usando Jetpack Compose?"
+  },
+  {
+    "id": "q_0002",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Data em um app Android Studio moderno usando Room Database?"
+  },
+  {
+    "id": "q_0003",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Data em um app Android Studio moderno usando StateFlow?"
+  },
+  {
+    "id": "q_0004",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Data em um app Android Studio moderno usando Coroutines?"
+  },
+  {
+    "id": "q_0005",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Data em um app Android Studio moderno usando Ktor Client?"
+  },
+  {
+    "id": "q_0006",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Data em um app Android Studio moderno usando Hilt?"
+  },
+  {
+    "id": "q_0007",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Domain em um app Android Studio moderno usando Jetpack Compose?"
+  },
+  {
+    "id": "q_0008",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Domain em um app Android Studio moderno usando Room Database?"
+  },
+  {
+    "id": "q_0009",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Domain em um app Android Studio moderno usando StateFlow?"
+  },
+  {
+    "id": "q_0010",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Domain em um app Android Studio moderno usando Coroutines?"
+  },
+  {
+    "id": "q_0011",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Domain em um app Android Studio moderno usando Ktor Client?"
+  },
+  {
+    "id": "q_0012",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Domain em um app Android Studio moderno usando Hilt?"
+  },
+  {
+    "id": "q_0013",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Presentation em um app Android Studio moderno usando Jetpack Compose?"
+  },
+  {
+    "id": "q_0014",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Presentation em um app Android Studio moderno usando Room Database?"
+  },
+  {
+    "id": "q_0015",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Presentation em um app Android Studio moderno usando StateFlow?"
+  },
+  {
+    "id": "q_0016",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Presentation em um app Android Studio moderno usando Coroutines?"
+  },
+  {
+    "id": "q_0017",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Presentation em um app Android Studio moderno usando Ktor Client?"
+  },
+  {
+    "id": "q_0018",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Presentation em um app Android Studio moderno usando Hilt?"
+  },
+  {
+    "id": "q_0019",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Repository em um app Android Studio moderno usando Jetpack Compose?"
+  },
+  {
+    "id": "q_0020",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Repository em um app Android Studio moderno usando Room Database?"
+  },
+  {
+    "id": "q_0021",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Repository em um app Android Studio moderno usando StateFlow?"
+  },
+  {
+    "id": "q_0022",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Repository em um app Android Studio moderno usando Coroutines?"
+  },
+  {
+    "id": "q_0023",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Repository em um app Android Studio moderno usando Ktor Client?"
+  },
+  {
+    "id": "q_0024",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Repository em um app Android Studio moderno usando Hilt?"
+  },
+  {
+    "id": "q_0025",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Network em um app Android Studio moderno usando Jetpack Compose?"
+  },
+  {
+    "id": "q_0026",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Network em um app Android Studio moderno usando Room Database?"
+  },
+  {
+    "id": "q_0027",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Network em um app Android Studio moderno usando StateFlow?"
+  },
+  {
+    "id": "q_0028",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Network em um app Android Studio moderno usando Coroutines?"
+  },
+  {
+    "id": "q_0029",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Network em um app Android Studio moderno usando Ktor Client?"
+  },
+  {
+    "id": "q_0030",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Network em um app Android Studio moderno usando Hilt?"
+  },
+  {
+    "id": "q_0031",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Cache em um app Android Studio moderno usando Jetpack Compose?"
+  },
+  {
+    "id": "q_0032",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Cache em um app Android Studio moderno usando Room Database?"
+  },
+  {
+    "id": "q_0033",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Cache em um app Android Studio moderno usando StateFlow?"
+  },
+  {
+    "id": "q_0034",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Cache em um app Android Studio moderno usando Coroutines?"
+  },
+  {
+    "id": "q_0035",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Cache em um app Android Studio moderno usando Ktor Client?"
+  },
+  {
+    "id": "q_0036",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Como estruturar a camada de Cache em um app Android Studio moderno usando Hilt?"
+  },
+  {
+    "id": "q_0037",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um ViewModel em Kotlin 2.0 para Android utilizando Material 3."
+  },
+  {
+    "id": "q_0038",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um ViewModel em Kotlin 2.0 para Android utilizando Room KTX."
+  },
+  {
+    "id": "q_0039",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um ViewModel em Kotlin 2.0 para Android utilizando Kotlinx Serialization."
+  },
+  {
+    "id": "q_0040",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um ViewModel em Kotlin 2.0 para Android utilizando Navigation Compose."
+  },
+  {
+    "id": "q_0041",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um ViewModel em Kotlin 2.0 para Android utilizando Paging 3."
+  },
+  {
+    "id": "q_0042",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Custom Composable em Kotlin 2.0 para Android utilizando Material 3."
+  },
+  {
+    "id": "q_0043",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Custom Composable em Kotlin 2.0 para Android utilizando Room KTX."
+  },
+  {
+    "id": "q_0044",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Custom Composable em Kotlin 2.0 para Android utilizando Kotlinx Serialization."
+  },
+  {
+    "id": "q_0045",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Custom Composable em Kotlin 2.0 para Android utilizando Navigation Compose."
+  },
+  {
+    "id": "q_0046",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Custom Composable em Kotlin 2.0 para Android utilizando Paging 3."
+  },
+  {
+    "id": "q_0047",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Room DAO em Kotlin 2.0 para Android utilizando Material 3."
+  },
+  {
+    "id": "q_0048",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Room DAO em Kotlin 2.0 para Android utilizando Room KTX."
+  },
+  {
+    "id": "q_0049",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Room DAO em Kotlin 2.0 para Android utilizando Kotlinx Serialization."
+  },
+  {
+    "id": "q_0050",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Room DAO em Kotlin 2.0 para Android utilizando Navigation Compose."
+  },
+  {
+    "id": "q_0051",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Room DAO em Kotlin 2.0 para Android utilizando Paging 3."
+  },
+  {
+    "id": "q_0052",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Repository Impl em Kotlin 2.0 para Android utilizando Material 3."
+  },
+  {
+    "id": "q_0053",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Repository Impl em Kotlin 2.0 para Android utilizando Room KTX."
+  },
+  {
+    "id": "q_0054",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Repository Impl em Kotlin 2.0 para Android utilizando Kotlinx Serialization."
+  },
+  {
+    "id": "q_0055",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Repository Impl em Kotlin 2.0 para Android utilizando Navigation Compose."
+  },
+  {
+    "id": "q_0056",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um Repository Impl em Kotlin 2.0 para Android utilizando Paging 3."
+  },
+  {
+    "id": "q_0057",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UseCase em Kotlin 2.0 para Android utilizando Material 3."
+  },
+  {
+    "id": "q_0058",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UseCase em Kotlin 2.0 para Android utilizando Room KTX."
+  },
+  {
+    "id": "q_0059",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UseCase em Kotlin 2.0 para Android utilizando Kotlinx Serialization."
+  },
+  {
+    "id": "q_0060",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UseCase em Kotlin 2.0 para Android utilizando Navigation Compose."
+  },
+  {
+    "id": "q_0061",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UseCase em Kotlin 2.0 para Android utilizando Paging 3."
+  },
+  {
+    "id": "q_0062",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UiState em Kotlin 2.0 para Android utilizando Material 3."
+  },
+  {
+    "id": "q_0063",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UiState em Kotlin 2.0 para Android utilizando Room KTX."
+  },
+  {
+    "id": "q_0064",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UiState em Kotlin 2.0 para Android utilizando Kotlinx Serialization."
+  },
+  {
+    "id": "q_0065",
+    "category_key": "android_mobile",
+    "category_name": "Android Studio & Kotlin Mobile",
+    "prompt": "Escreva o código de um UiState em Kotlin 2.0 para Android utilizando Navigation Compose."
+  },
+  {
+    "id": "q_0066",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar lifespan context manager no FastAPI utilizando boas práticas ASGI em ambiente de produção?"
+  },
+  {
+    "id": "q_0067",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar lifespan context manager no FastAPI utilizando Pydantic v2 em ambiente de produção?"
+  },
+  {
+    "id": "q_0068",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar lifespan context manager no FastAPI utilizando Starlette threadpool em ambiente de produção?"
+  },
+  {
+    "id": "q_0069",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar lifespan context manager no FastAPI utilizando prevenção de Path Traversal em ambiente de produção?"
+  },
+  {
+    "id": "q_0070",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar rate limiting defensivo no FastAPI utilizando boas práticas ASGI em ambiente de produção?"
+  },
+  {
+    "id": "q_0071",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar rate limiting defensivo no FastAPI utilizando Pydantic v2 em ambiente de produção?"
+  },
+  {
+    "id": "q_0072",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar rate limiting defensivo no FastAPI utilizando Starlette threadpool em ambiente de produção?"
+  },
+  {
+    "id": "q_0073",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar rate limiting defensivo no FastAPI utilizando prevenção de Path Traversal em ambiente de produção?"
+  },
+  {
+    "id": "q_0074",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar middleware de auditoria no FastAPI utilizando boas práticas ASGI em ambiente de produção?"
+  },
+  {
+    "id": "q_0075",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar middleware de auditoria no FastAPI utilizando Pydantic v2 em ambiente de produção?"
+  },
+  {
+    "id": "q_0076",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar middleware de auditoria no FastAPI utilizando Starlette threadpool em ambiente de produção?"
+  },
+  {
+    "id": "q_0077",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar middleware de auditoria no FastAPI utilizando prevenção de Path Traversal em ambiente de produção?"
+  },
+  {
+    "id": "q_0078",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar pool de conexões SQLite WAL no FastAPI utilizando boas práticas ASGI em ambiente de produção?"
+  },
+  {
+    "id": "q_0079",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar pool de conexões SQLite WAL no FastAPI utilizando Pydantic v2 em ambiente de produção?"
+  },
+  {
+    "id": "q_0080",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar pool de conexões SQLite WAL no FastAPI utilizando Starlette threadpool em ambiente de produção?"
+  },
+  {
+    "id": "q_0081",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar pool de conexões SQLite WAL no FastAPI utilizando prevenção de Path Traversal em ambiente de produção?"
+  },
+  {
+    "id": "q_0082",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar autenticação HMAC no FastAPI utilizando boas práticas ASGI em ambiente de produção?"
+  },
+  {
+    "id": "q_0083",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar autenticação HMAC no FastAPI utilizando Pydantic v2 em ambiente de produção?"
+  },
+  {
+    "id": "q_0084",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar autenticação HMAC no FastAPI utilizando Starlette threadpool em ambiente de produção?"
+  },
+  {
+    "id": "q_0085",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar autenticação HMAC no FastAPI utilizando prevenção de Path Traversal em ambiente de produção?"
+  },
+  {
+    "id": "q_0086",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Escreva um endpoint FastAPI assíncrono para leitura de arquivos de log grandes garantindo isolamento de I/O bloqueante."
+  },
+  {
+    "id": "q_0087",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Escreva um endpoint FastAPI assíncrono para execução de comandos no terminal garantindo isolamento de I/O bloqueante."
+  },
+  {
+    "id": "q_0088",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Escreva um endpoint FastAPI assíncrono para consulta FTS5 no SQLite garantindo isolamento de I/O bloqueante."
+  },
+  {
+    "id": "q_0089",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Escreva um endpoint FastAPI assíncrono para sincronização de cache garantindo isolamento de I/O bloqueante."
+  },
+  {
+    "id": "q_0090",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar async def com I/O síncrono e def síncrono no threadpool no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0091",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar async def com I/O síncrono e async def bloqueante no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0092",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar async def com I/O síncrono e Celery no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0093",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar async def com I/O síncrono e multiprocessing no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0094",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar starlette run_in_threadpool e def síncrono no threadpool no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0095",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar starlette run_in_threadpool e async def bloqueante no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0096",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar starlette run_in_threadpool e Celery no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0097",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar starlette run_in_threadpool e multiprocessing no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0098",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar loop.run_in_executor e def síncrono no threadpool no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0099",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar loop.run_in_executor e async def bloqueante no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0100",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar loop.run_in_executor e Celery no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0101",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar loop.run_in_executor e multiprocessing no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0102",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar BackgroundTasks e def síncrono no threadpool no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0103",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar BackgroundTasks e async def bloqueante no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0104",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar BackgroundTasks e Celery no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0105",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Qual a diferença entre usar BackgroundTasks e multiprocessing no EventLoop do Python com FastAPI?"
+  },
+  {
+    "id": "q_0106",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com threading.RLock para evitar race conditions em gravação de arquivos Markdown?"
+  },
+  {
+    "id": "q_0107",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com threading.RLock para evitar race conditions em atualização de índice FTS5?"
+  },
+  {
+    "id": "q_0108",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com threading.RLock para evitar race conditions em atualização de saldo?"
+  },
+  {
+    "id": "q_0109",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com threading.RLock para evitar race conditions em fila de tarefas?"
+  },
+  {
+    "id": "q_0110",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com asyncio.Lock para evitar race conditions em gravação de arquivos Markdown?"
+  },
+  {
+    "id": "q_0111",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com asyncio.Lock para evitar race conditions em atualização de índice FTS5?"
+  },
+  {
+    "id": "q_0112",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com asyncio.Lock para evitar race conditions em atualização de saldo?"
+  },
+  {
+    "id": "q_0113",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com asyncio.Lock para evitar race conditions em fila de tarefas?"
+  },
+  {
+    "id": "q_0114",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com semáforos de concorrência para evitar race conditions em gravação de arquivos Markdown?"
+  },
+  {
+    "id": "q_0115",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com semáforos de concorrência para evitar race conditions em atualização de índice FTS5?"
+  },
+  {
+    "id": "q_0116",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com semáforos de concorrência para evitar race conditions em atualização de saldo?"
+  },
+  {
+    "id": "q_0117",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com semáforos de concorrência para evitar race conditions em fila de tarefas?"
+  },
+  {
+    "id": "q_0118",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com transações atômicas para evitar race conditions em gravação de arquivos Markdown?"
+  },
+  {
+    "id": "q_0119",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com transações atômicas para evitar race conditions em atualização de índice FTS5?"
+  },
+  {
+    "id": "q_0120",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com transações atômicas para evitar race conditions em atualização de saldo?"
+  },
+  {
+    "id": "q_0121",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como implementar controle de concorrência com transações atômicas para evitar race conditions em fila de tarefas?"
+  },
+  {
+    "id": "q_0122",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Escreva uma classe Pydantic v2 com validações rigorosas para criação de usuário com senha forte."
+  },
+  {
+    "id": "q_0123",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Escreva uma classe Pydantic v2 com validações rigorosas para pagamento com cartão de crédito."
+  },
+  {
+    "id": "q_0124",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Escreva uma classe Pydantic v2 com validações rigorosas para payload de upload de arquivo."
+  },
+  {
+    "id": "q_0125",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Escreva uma classe Pydantic v2 com validações rigorosas para registro de telemetria."
+  },
+  {
+    "id": "q_0126",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar lifespan context manager no FastAPI utilizando boas práticas ASGI em ambiente de produção?"
+  },
+  {
+    "id": "q_0127",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar lifespan context manager no FastAPI utilizando Pydantic v2 em ambiente de produção?"
+  },
+  {
+    "id": "q_0128",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar lifespan context manager no FastAPI utilizando Starlette threadpool em ambiente de produção?"
+  },
+  {
+    "id": "q_0129",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar lifespan context manager no FastAPI utilizando prevenção de Path Traversal em ambiente de produção?"
+  },
+  {
+    "id": "q_0130",
+    "category_key": "backend_fastapi",
+    "category_name": "Backend FastAPI & Concorrência",
+    "prompt": "Como configurar rate limiting defensivo no FastAPI utilizando boas práticas ASGI em ambiente de produção?"
+  },
+  {
+    "id": "q_0131",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para estúdio de produção de áudio com tema dark minimalista."
+  },
+  {
+    "id": "q_0132",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para painel de telemetria de servidores com tema dark minimalista."
+  },
+  {
+    "id": "q_0133",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para dashboard financeiro de precisão com tema dark minimalista."
+  },
+  {
+    "id": "q_0134",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para player de sintetizador web com tema dark minimalista."
+  },
+  {
+    "id": "q_0135",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para cockpit de testes de IA com tema dark minimalista."
+  },
+  {
+    "id": "q_0136",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de player de ondas sonoras usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0137",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de gráfico de latência p50/p95 usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0138",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de árvore de navegação de arquivos usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0139",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de editor de markdown split-view usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0140",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de toggle switch de tema usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0141",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de espectro de áudio em tempo real com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0142",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de heatmap de atividade estilo GitHub com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0143",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de gráfico vetorial de nós com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0144",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de radar de performance com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0145",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de landing page de SaaS moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0146",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de documentação técnica de API moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0147",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de painel de controle executivo moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0148",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de portfolio minimalista moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0149",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para estúdio de produção de áudio com tema dark minimalista."
+  },
+  {
+    "id": "q_0150",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para painel de telemetria de servidores com tema dark minimalista."
+  },
+  {
+    "id": "q_0151",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para dashboard financeiro de precisão com tema dark minimalista."
+  },
+  {
+    "id": "q_0152",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para player de sintetizador web com tema dark minimalista."
+  },
+  {
+    "id": "q_0153",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para cockpit de testes de IA com tema dark minimalista."
+  },
+  {
+    "id": "q_0154",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de player de ondas sonoras usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0155",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de gráfico de latência p50/p95 usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0156",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de árvore de navegação de arquivos usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0157",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de editor de markdown split-view usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0158",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de toggle switch de tema usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0159",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de espectro de áudio em tempo real com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0160",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de heatmap de atividade estilo GitHub com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0161",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de gráfico vetorial de nós com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0162",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de radar de performance com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0163",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de landing page de SaaS moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0164",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de documentação técnica de API moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0165",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de painel de controle executivo moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0166",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de portfolio minimalista moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0167",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para estúdio de produção de áudio com tema dark minimalista."
+  },
+  {
+    "id": "q_0168",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para painel de telemetria de servidores com tema dark minimalista."
+  },
+  {
+    "id": "q_0169",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para dashboard financeiro de precisão com tema dark minimalista."
+  },
+  {
+    "id": "q_0170",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para player de sintetizador web com tema dark minimalista."
+  },
+  {
+    "id": "q_0171",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para cockpit de testes de IA com tema dark minimalista."
+  },
+  {
+    "id": "q_0172",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de player de ondas sonoras usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0173",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de gráfico de latência p50/p95 usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0174",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de árvore de navegação de arquivos usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0175",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de editor de markdown split-view usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0176",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de toggle switch de tema usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0177",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de espectro de áudio em tempo real com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0178",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de heatmap de atividade estilo GitHub com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0179",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de gráfico vetorial de nós com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0180",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de radar de performance com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0181",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de landing page de SaaS moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0182",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de documentação técnica de API moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0183",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de painel de controle executivo moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0184",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Gere uma página de portfolio minimalista moderna, elegante e responsiva com link de preview."
+  },
+  {
+    "id": "q_0185",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para estúdio de produção de áudio com tema dark minimalista."
+  },
+  {
+    "id": "q_0186",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para painel de telemetria de servidores com tema dark minimalista."
+  },
+  {
+    "id": "q_0187",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para dashboard financeiro de precisão com tema dark minimalista."
+  },
+  {
+    "id": "q_0188",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para player de sintetizador web com tema dark minimalista."
+  },
+  {
+    "id": "q_0189",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Crie uma interface web completa em HTML/CSS para cockpit de testes de IA com tema dark minimalista."
+  },
+  {
+    "id": "q_0190",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de player de ondas sonoras usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0191",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de gráfico de latência p50/p95 usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0192",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de árvore de navegação de arquivos usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0193",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de editor de markdown split-view usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0194",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Escreva o código de um componente interativo de toggle switch de tema usando CSS Grid e micro-interações."
+  },
+  {
+    "id": "q_0195",
+    "category_key": "web_previews",
+    "category_name": "Frontend Web & Previews",
+    "prompt": "Como renderizar um visualizador de espectro de áudio em tempo real com Canvas ou SVG sem bibliotecas pesadas?"
+  },
+  {
+    "id": "q_0196",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar bumbo 808 com pitch drop usando Web Audio API nativa."
+  },
+  {
+    "id": "q_0197",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar bumbo 808 com pitch drop usando scipy.signal em Python."
+  },
+  {
+    "id": "q_0198",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar bumbo 808 com pitch drop usando AudioWorklets."
+  },
+  {
+    "id": "q_0199",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar bumbo 808 com pitch drop usando síntese subtrativa 24dB/oct."
+  },
+  {
+    "id": "q_0200",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar caixa com ruído branco e senoide usando Web Audio API nativa."
+  },
+  {
+    "id": "q_0201",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar caixa com ruído branco e senoide usando scipy.signal em Python."
+  },
+  {
+    "id": "q_0202",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar caixa com ruído branco e senoide usando AudioWorklets."
+  },
+  {
+    "id": "q_0203",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar caixa com ruído branco e senoide usando síntese subtrativa 24dB/oct."
+  },
+  {
+    "id": "q_0204",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar prato hi-hat filtrado usando Web Audio API nativa."
+  },
+  {
+    "id": "q_0205",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar prato hi-hat filtrado usando scipy.signal em Python."
+  },
+  {
+    "id": "q_0206",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar prato hi-hat filtrado usando AudioWorklets."
+  },
+  {
+    "id": "q_0207",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar prato hi-hat filtrado usando síntese subtrativa 24dB/oct."
+  },
+  {
+    "id": "q_0208",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar baixo sintetizado Moog usando Web Audio API nativa."
+  },
+  {
+    "id": "q_0209",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar baixo sintetizado Moog usando scipy.signal em Python."
+  },
+  {
+    "id": "q_0210",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar baixo sintetizado Moog usando AudioWorklets."
+  },
+  {
+    "id": "q_0211",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar baixo sintetizado Moog usando síntese subtrativa 24dB/oct."
+  },
+  {
+    "id": "q_0212",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar pad atmosférico com chorus usando Web Audio API nativa."
+  },
+  {
+    "id": "q_0213",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar pad atmosférico com chorus usando scipy.signal em Python."
+  },
+  {
+    "id": "q_0214",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar pad atmosférico com chorus usando AudioWorklets."
+  },
+  {
+    "id": "q_0215",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar pad atmosférico com chorus usando síntese subtrativa 24dB/oct."
+  },
+  {
+    "id": "q_0216",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular frequência de corte do filtro passa-baixa com um LFO de onda senoidal."
+  },
+  {
+    "id": "q_0217",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular frequência de corte do filtro passa-baixa com um LFO de onda dente de serra."
+  },
+  {
+    "id": "q_0218",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular frequência de corte do filtro passa-baixa com um LFO de onda triangular."
+  },
+  {
+    "id": "q_0219",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular frequência de corte do filtro passa-baixa com um LFO de onda quadrada."
+  },
+  {
+    "id": "q_0220",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular ganho do amplificador com um LFO de onda senoidal."
+  },
+  {
+    "id": "q_0221",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular ganho do amplificador com um LFO de onda dente de serra."
+  },
+  {
+    "id": "q_0222",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular ganho do amplificador com um LFO de onda triangular."
+  },
+  {
+    "id": "q_0223",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular ganho do amplificador com um LFO de onda quadrada."
+  },
+  {
+    "id": "q_0224",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular pitch do oscilador com um LFO de onda senoidal."
+  },
+  {
+    "id": "q_0225",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular pitch do oscilador com um LFO de onda dente de serra."
+  },
+  {
+    "id": "q_0226",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular pitch do oscilador com um LFO de onda triangular."
+  },
+  {
+    "id": "q_0227",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular pitch do oscilador com um LFO de onda quadrada."
+  },
+  {
+    "id": "q_0228",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular profundidade de pan com um LFO de onda senoidal."
+  },
+  {
+    "id": "q_0229",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular profundidade de pan com um LFO de onda dente de serra."
+  },
+  {
+    "id": "q_0230",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular profundidade de pan com um LFO de onda triangular."
+  },
+  {
+    "id": "q_0231",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Escreva uma função Web Audio API para modular profundidade de pan com um LFO de onda quadrada."
+  },
+  {
+    "id": "q_0232",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Como aplicar compressor limiter com release adaptativo em uma trilha de áudio digital sem introduzir clipping ou pops?"
+  },
+  {
+    "id": "q_0233",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Como aplicar reverb convolucional em uma trilha de áudio digital sem introduzir clipping ou pops?"
+  },
+  {
+    "id": "q_0234",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Como aplicar delay estereofônico em uma trilha de áudio digital sem introduzir clipping ou pops?"
+  },
+  {
+    "id": "q_0235",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Como aplicar filtro passa-alta 80Hz em uma trilha de áudio digital sem introduzir clipping ou pops?"
+  },
+  {
+    "id": "q_0236",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de progressão i - VI - III - VII e como transpor para Lá menor natural?"
+  },
+  {
+    "id": "q_0237",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de progressão i - VI - III - VII e como transpor para Ré menor harmônico?"
+  },
+  {
+    "id": "q_0238",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de progressão i - VI - III - VII e como transpor para Fá sustenido dórico?"
+  },
+  {
+    "id": "q_0239",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de progressão i - VI - III - VII e como transpor para Mi menor pentatônico?"
+  },
+  {
+    "id": "q_0240",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de acordes menores com 9ª e 11ª e como transpor para Lá menor natural?"
+  },
+  {
+    "id": "q_0241",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de acordes menores com 9ª e 11ª e como transpor para Ré menor harmônico?"
+  },
+  {
+    "id": "q_0242",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de acordes menores com 9ª e 11ª e como transpor para Fá sustenido dórico?"
+  },
+  {
+    "id": "q_0243",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de acordes menores com 9ª e 11ª e como transpor para Mi menor pentatônico?"
+  },
+  {
+    "id": "q_0244",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de resolução de dominante secundário e como transpor para Lá menor natural?"
+  },
+  {
+    "id": "q_0245",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de resolução de dominante secundário e como transpor para Ré menor harmônico?"
+  },
+  {
+    "id": "q_0246",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de resolução de dominante secundário e como transpor para Fá sustenido dórico?"
+  },
+  {
+    "id": "q_0247",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de resolução de dominante secundário e como transpor para Mi menor pentatônico?"
+  },
+  {
+    "id": "q_0248",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de harmonia modal dórica e como transpor para Lá menor natural?"
+  },
+  {
+    "id": "q_0249",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de harmonia modal dórica e como transpor para Ré menor harmônico?"
+  },
+  {
+    "id": "q_0250",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de harmonia modal dórica e como transpor para Fá sustenido dórico?"
+  },
+  {
+    "id": "q_0251",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Qual a teoria harmônica por trás de harmonia modal dórica e como transpor para Mi menor pentatônico?"
+  },
+  {
+    "id": "q_0252",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar bumbo 808 com pitch drop usando Web Audio API nativa."
+  },
+  {
+    "id": "q_0253",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar bumbo 808 com pitch drop usando scipy.signal em Python."
+  },
+  {
+    "id": "q_0254",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar bumbo 808 com pitch drop usando AudioWorklets."
+  },
+  {
+    "id": "q_0255",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar bumbo 808 com pitch drop usando síntese subtrativa 24dB/oct."
+  },
+  {
+    "id": "q_0256",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar caixa com ruído branco e senoide usando Web Audio API nativa."
+  },
+  {
+    "id": "q_0257",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar caixa com ruído branco e senoide usando scipy.signal em Python."
+  },
+  {
+    "id": "q_0258",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar caixa com ruído branco e senoide usando AudioWorklets."
+  },
+  {
+    "id": "q_0259",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar caixa com ruído branco e senoide usando síntese subtrativa 24dB/oct."
+  },
+  {
+    "id": "q_0260",
+    "category_key": "audio_dsp",
+    "category_name": "Áudio DSP & Síntese Musical",
+    "prompt": "Explique a arquitetura de síntese para gerar prato hi-hat filtrado usando Web Audio API nativa."
+  },
+  {
+    "id": "q_0261",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para sistema de e-commerce com carrinho e estoque com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0262",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para gestão hospitalar com prontuários e leitos com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0263",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para rede social corporativa com posts e menções com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0264",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para gateway de telemetria de IoT com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0265",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para sistema de faturamento e assinaturas recorrentes com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0266",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para busca booleana em documentos markdown usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0267",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para autocompletar com prefixo trie usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0268",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para ranqueamento bm25 com pesos usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0269",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0270",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0271",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0272",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0273",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0274",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0275",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0276",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0277",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0278",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de sessões de usuários com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0279",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de sessões de usuários com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0280",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de sessões de usuários com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0281",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva uma transação SQL segura com rollback para transferência entre contas com dedução atômica."
+  },
+  {
+    "id": "q_0282",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva uma transação SQL segura com rollback para baixa de estoque com reserva preventiva."
+  },
+  {
+    "id": "q_0283",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva uma transação SQL segura com rollback para cancelamento de pedido com estorno."
+  },
+  {
+    "id": "q_0284",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para sistema de e-commerce com carrinho e estoque com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0285",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para gestão hospitalar com prontuários e leitos com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0286",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para rede social corporativa com posts e menções com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0287",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para gateway de telemetria de IoT com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0288",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para sistema de faturamento e assinaturas recorrentes com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0289",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para busca booleana em documentos markdown usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0290",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para autocompletar com prefixo trie usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0291",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para ranqueamento bm25 com pesos usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0292",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0293",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0294",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0295",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0296",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0297",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0298",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0299",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0300",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0301",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de sessões de usuários com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0302",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de sessões de usuários com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0303",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de sessões de usuários com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0304",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva uma transação SQL segura com rollback para transferência entre contas com dedução atômica."
+  },
+  {
+    "id": "q_0305",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva uma transação SQL segura com rollback para baixa de estoque com reserva preventiva."
+  },
+  {
+    "id": "q_0306",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva uma transação SQL segura com rollback para cancelamento de pedido com estorno."
+  },
+  {
+    "id": "q_0307",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para sistema de e-commerce com carrinho e estoque com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0308",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para gestão hospitalar com prontuários e leitos com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0309",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para rede social corporativa com posts e menções com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0310",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para gateway de telemetria de IoT com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0311",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Escreva o schema DDL SQL normalizado para sistema de faturamento e assinaturas recorrentes com chaves estrangeiras e índices."
+  },
+  {
+    "id": "q_0312",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para busca booleana em documentos markdown usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0313",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para autocompletar com prefixo trie usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0314",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Como otimizar uma query SQL de busca textual para ranqueamento bm25 com pesos usando SQLite FTS5?"
+  },
+  {
+    "id": "q_0315",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0316",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0317",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de transações financeiras com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0318",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0319",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0320",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de logs de auditoria com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0321",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0322",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0323",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de pedidos de clientes com alto volume de consultas com junções complexas?"
+  },
+  {
+    "id": "q_0324",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de sessões de usuários com alto volume de leitura concorrente?"
+  },
+  {
+    "id": "q_0325",
+    "category_key": "database_sql",
+    "category_name": "Modelagem de Banco de Dados & SQL",
+    "prompt": "Qual a estratégia recomendada de índice para a tabela de sessões de usuários com alto volume de inserção contínua (append-only)?"
+  },
+  {
+    "id": "q_0326",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para cores de background e elevação de superfícies no Design System do Isaac?"
+  },
+  {
+    "id": "q_0327",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para espaçamento e grid de 8pt no Design System do Isaac?"
+  },
+  {
+    "id": "q_0328",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para border radius para cards e botões no Design System do Isaac?"
+  },
+  {
+    "id": "q_0329",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para paleta de acentos violeta e cyan no Design System do Isaac?"
+  },
+  {
+    "id": "q_0330",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para dashboard de métricas densas no tema dark?"
+  },
+  {
+    "id": "q_0331",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para editor de código split-screen no tema dark?"
+  },
+  {
+    "id": "q_0332",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para painel de configurações no tema dark?"
+  },
+  {
+    "id": "q_0333",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para visualizador de árvore de diretórios no tema dark?"
+  },
+  {
+    "id": "q_0334",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para botões primários em hover?"
+  },
+  {
+    "id": "q_0335",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para modais e overlays de diálogo?"
+  },
+  {
+    "id": "q_0336",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para cards em expansão?"
+  },
+  {
+    "id": "q_0337",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para tags e badges de status?"
+  },
+  {
+    "id": "q_0338",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que o uso de fundos brancos puros (#ffffff) é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0339",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que sombras pretas borradas e opacas é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0340",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que transições lentas superiores a 300ms é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0341",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que fontes serifadas em dashboards técnicos é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0342",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para cores de background e elevação de superfícies no Design System do Isaac?"
+  },
+  {
+    "id": "q_0343",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para espaçamento e grid de 8pt no Design System do Isaac?"
+  },
+  {
+    "id": "q_0344",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para border radius para cards e botões no Design System do Isaac?"
+  },
+  {
+    "id": "q_0345",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para paleta de acentos violeta e cyan no Design System do Isaac?"
+  },
+  {
+    "id": "q_0346",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para dashboard de métricas densas no tema dark?"
+  },
+  {
+    "id": "q_0347",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para editor de código split-screen no tema dark?"
+  },
+  {
+    "id": "q_0348",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para painel de configurações no tema dark?"
+  },
+  {
+    "id": "q_0349",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para visualizador de árvore de diretórios no tema dark?"
+  },
+  {
+    "id": "q_0350",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para botões primários em hover?"
+  },
+  {
+    "id": "q_0351",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para modais e overlays de diálogo?"
+  },
+  {
+    "id": "q_0352",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para cards em expansão?"
+  },
+  {
+    "id": "q_0353",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para tags e badges de status?"
+  },
+  {
+    "id": "q_0354",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que o uso de fundos brancos puros (#ffffff) é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0355",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que sombras pretas borradas e opacas é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0356",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que transições lentas superiores a 300ms é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0357",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que fontes serifadas em dashboards técnicos é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0358",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para cores de background e elevação de superfícies no Design System do Isaac?"
+  },
+  {
+    "id": "q_0359",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para espaçamento e grid de 8pt no Design System do Isaac?"
+  },
+  {
+    "id": "q_0360",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para border radius para cards e botões no Design System do Isaac?"
+  },
+  {
+    "id": "q_0361",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para paleta de acentos violeta e cyan no Design System do Isaac?"
+  },
+  {
+    "id": "q_0362",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para dashboard de métricas densas no tema dark?"
+  },
+  {
+    "id": "q_0363",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para editor de código split-screen no tema dark?"
+  },
+  {
+    "id": "q_0364",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para painel de configurações no tema dark?"
+  },
+  {
+    "id": "q_0365",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para visualizador de árvore de diretórios no tema dark?"
+  },
+  {
+    "id": "q_0366",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para botões primários em hover?"
+  },
+  {
+    "id": "q_0367",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para modais e overlays de diálogo?"
+  },
+  {
+    "id": "q_0368",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para cards em expansão?"
+  },
+  {
+    "id": "q_0369",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para tags e badges de status?"
+  },
+  {
+    "id": "q_0370",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que o uso de fundos brancos puros (#ffffff) é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0371",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que sombras pretas borradas e opacas é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0372",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que transições lentas superiores a 300ms é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0373",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que fontes serifadas em dashboards técnicos é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0374",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para cores de background e elevação de superfícies no Design System do Isaac?"
+  },
+  {
+    "id": "q_0375",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para espaçamento e grid de 8pt no Design System do Isaac?"
+  },
+  {
+    "id": "q_0376",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para border radius para cards e botões no Design System do Isaac?"
+  },
+  {
+    "id": "q_0377",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para paleta de acentos violeta e cyan no Design System do Isaac?"
+  },
+  {
+    "id": "q_0378",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para dashboard de métricas densas no tema dark?"
+  },
+  {
+    "id": "q_0379",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para editor de código split-screen no tema dark?"
+  },
+  {
+    "id": "q_0380",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para painel de configurações no tema dark?"
+  },
+  {
+    "id": "q_0381",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Como estruturar a hierarquia tipográfica e contrastes acessíveis para visualizador de árvore de diretórios no tema dark?"
+  },
+  {
+    "id": "q_0382",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para botões primários em hover?"
+  },
+  {
+    "id": "q_0383",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para modais e overlays de diálogo?"
+  },
+  {
+    "id": "q_0384",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para cards em expansão?"
+  },
+  {
+    "id": "q_0385",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Qual a regra canônica de micro-interações e duração de transições para tags e badges de status?"
+  },
+  {
+    "id": "q_0386",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que o uso de fundos brancos puros (#ffffff) é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0387",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que sombras pretas borradas e opacas é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0388",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que transições lentas superiores a 300ms é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0389",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Explique por que fontes serifadas em dashboards técnicos é expressamente proibido no estilo visual do Menor."
+  },
+  {
+    "id": "q_0390",
+    "category_key": "design_system",
+    "category_name": "Design System & UI/UX",
+    "prompt": "Quais são os tokens e valores exatos para cores de background e elevação de superfícies no Design System do Isaac?"
+  },
+  {
+    "id": "q_0391",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode criar arquivos reais no workspace?"
+  },
+  {
+    "id": "q_0392",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode desenvolver um app Android completo?"
+  },
+  {
+    "id": "q_0393",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode escrever código Kotlin com Room?"
+  },
+  {
+    "id": "q_0394",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode gerar páginas HTML com preview?"
+  },
+  {
+    "id": "q_0395",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa um script de automação em Python agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0396",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa uma landing page completa com preview agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0397",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa uma arquitetura de microsserviço agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0398",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa um schema SQL com migrations agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0399",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para gravar arquivos em disco via fs_write no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0400",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para ler documentos do cérebro via fs_read no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0401",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para executar testes unitários no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0402",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para consultar o SQLite FTS5 no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0403",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Faça um app de estoque para a empresa'?"
+  },
+  {
+    "id": "q_0404",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Crie o design de um synth'?"
+  },
+  {
+    "id": "q_0405",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Monte a API em FastAPI'?"
+  },
+  {
+    "id": "q_0406",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Escreva um player de áudio'?"
+  },
+  {
+    "id": "q_0407",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode criar arquivos reais no workspace?"
+  },
+  {
+    "id": "q_0408",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode desenvolver um app Android completo?"
+  },
+  {
+    "id": "q_0409",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode escrever código Kotlin com Room?"
+  },
+  {
+    "id": "q_0410",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode gerar páginas HTML com preview?"
+  },
+  {
+    "id": "q_0411",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa um script de automação em Python agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0412",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa uma landing page completa com preview agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0413",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa uma arquitetura de microsserviço agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0414",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa um schema SQL com migrations agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0415",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para gravar arquivos em disco via fs_write no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0416",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para ler documentos do cérebro via fs_read no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0417",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para executar testes unitários no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0418",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para consultar o SQLite FTS5 no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0419",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Faça um app de estoque para a empresa'?"
+  },
+  {
+    "id": "q_0420",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Crie o design de um synth'?"
+  },
+  {
+    "id": "q_0421",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Monte a API em FastAPI'?"
+  },
+  {
+    "id": "q_0422",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Escreva um player de áudio'?"
+  },
+  {
+    "id": "q_0423",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode criar arquivos reais no workspace?"
+  },
+  {
+    "id": "q_0424",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode desenvolver um app Android completo?"
+  },
+  {
+    "id": "q_0425",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode escrever código Kotlin com Room?"
+  },
+  {
+    "id": "q_0426",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode gerar páginas HTML com preview?"
+  },
+  {
+    "id": "q_0427",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa um script de automação em Python agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0428",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa uma landing page completa com preview agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0429",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa uma arquitetura de microsserviço agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0430",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa um schema SQL com migrations agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0431",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para gravar arquivos em disco via fs_write no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0432",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para ler documentos do cérebro via fs_read no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0433",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para executar testes unitários no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0434",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para consultar o SQLite FTS5 no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0435",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Faça um app de estoque para a empresa'?"
+  },
+  {
+    "id": "q_0436",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Crie o design de um synth'?"
+  },
+  {
+    "id": "q_0437",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Monte a API em FastAPI'?"
+  },
+  {
+    "id": "q_0438",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Escreva um player de áudio'?"
+  },
+  {
+    "id": "q_0439",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode criar arquivos reais no workspace?"
+  },
+  {
+    "id": "q_0440",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode desenvolver um app Android completo?"
+  },
+  {
+    "id": "q_0441",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode escrever código Kotlin com Room?"
+  },
+  {
+    "id": "q_0442",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode gerar páginas HTML com preview?"
+  },
+  {
+    "id": "q_0443",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa um script de automação em Python agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0444",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa uma landing page completa com preview agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0445",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa uma arquitetura de microsserviço agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0446",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Eu preciso que você construa um schema SQL com migrations agora. Você consegue fazer isso?"
+  },
+  {
+    "id": "q_0447",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para gravar arquivos em disco via fs_write no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0448",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para ler documentos do cérebro via fs_read no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0449",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para executar testes unitários no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0450",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você tem permissão para consultar o SQLite FTS5 no servidor ou vai me dar uma desculpa de modelo de linguagem?"
+  },
+  {
+    "id": "q_0451",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Faça um app de estoque para a empresa'?"
+  },
+  {
+    "id": "q_0452",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Crie o design de um synth'?"
+  },
+  {
+    "id": "q_0453",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Monte a API em FastAPI'?"
+  },
+  {
+    "id": "q_0454",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Como o Menor lida com o pedido: 'Escreva um player de áudio'?"
+  },
+  {
+    "id": "q_0455",
+    "category_key": "anti_refusal_guardrails",
+    "category_name": "Blindagem de Respostas & Zero Recusas",
+    "prompt": "Você é apenas um assistente de voz ou pode criar arquivos reais no workspace?"
+  },
+  {
+    "id": "q_0456",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio YAGNI (You Aren't Gonna Need It) e demonstre como aplicá-lo em serviços FastAPI assíncronos."
+  },
+  {
+    "id": "q_0457",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio YAGNI (You Aren't Gonna Need It) e demonstre como aplicá-lo em módulos de repositório em Kotlin."
+  },
+  {
+    "id": "q_0458",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio YAGNI (You Aren't Gonna Need It) e demonstre como aplicá-lo em funções utilitárias de parsing."
+  },
+  {
+    "id": "q_0459",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio YAGNI (You Aren't Gonna Need It) e demonstre como aplicá-lo em pipelines de dados em memória."
+  },
+  {
+    "id": "q_0460",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio KISS (Keep It Simple, Stupid) e demonstre como aplicá-lo em serviços FastAPI assíncronos."
+  },
+  {
+    "id": "q_0461",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio KISS (Keep It Simple, Stupid) e demonstre como aplicá-lo em módulos de repositório em Kotlin."
+  },
+  {
+    "id": "q_0462",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio KISS (Keep It Simple, Stupid) e demonstre como aplicá-lo em funções utilitárias de parsing."
+  },
+  {
+    "id": "q_0463",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio KISS (Keep It Simple, Stupid) e demonstre como aplicá-lo em pipelines de dados em memória."
+  },
+  {
+    "id": "q_0464",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio Single Responsibility (SOLID) e demonstre como aplicá-lo em serviços FastAPI assíncronos."
+  },
+  {
+    "id": "q_0465",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio Single Responsibility (SOLID) e demonstre como aplicá-lo em módulos de repositório em Kotlin."
+  },
+  {
+    "id": "q_0466",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio Single Responsibility (SOLID) e demonstre como aplicá-lo em funções utilitárias de parsing."
+  },
+  {
+    "id": "q_0467",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio Single Responsibility (SOLID) e demonstre como aplicá-lo em pipelines de dados em memória."
+  },
+  {
+    "id": "q_0468",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio DRY pragmático sem premature generalization e demonstre como aplicá-lo em serviços FastAPI assíncronos."
+  },
+  {
+    "id": "q_0469",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio DRY pragmático sem premature generalization e demonstre como aplicá-lo em módulos de repositório em Kotlin."
+  },
+  {
+    "id": "q_0470",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio DRY pragmático sem premature generalization e demonstre como aplicá-lo em funções utilitárias de parsing."
+  },
+  {
+    "id": "q_0471",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio DRY pragmático sem premature generalization e demonstre como aplicá-lo em pipelines de dados em memória."
+  },
+  {
+    "id": "q_0472",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a regra de não simular ferramentas reais em projetos distribuídos de baixa latência?"
+  },
+  {
+    "id": "q_0473",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a regra de não simular ferramentas reais em projetos de longa duração com múltiplos subagentes?"
+  },
+  {
+    "id": "q_0474",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a regra de não simular ferramentas reais em projetos com SQLite e concorrência local?"
+  },
+  {
+    "id": "q_0475",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar o princípio de tipagem estrita em projetos distribuídos de baixa latência?"
+  },
+  {
+    "id": "q_0476",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar o princípio de tipagem estrita em projetos de longa duração com múltiplos subagentes?"
+  },
+  {
+    "id": "q_0477",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar o princípio de tipagem estrita em projetos com SQLite e concorrência local?"
+  },
+  {
+    "id": "q_0478",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a proibição de I/O bloqueante na thread principal em projetos distribuídos de baixa latência?"
+  },
+  {
+    "id": "q_0479",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a proibição de I/O bloqueante na thread principal em projetos de longa duração com múltiplos subagentes?"
+  },
+  {
+    "id": "q_0480",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a proibição de I/O bloqueante na thread principal em projetos com SQLite e concorrência local?"
+  },
+  {
+    "id": "q_0481",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código monolítico com funções de 300 linhas para torná-lo modular, enxuto e direto ao ponto usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0482",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código monolítico com funções de 300 linhas para torná-lo 100% testável com unittest puro usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0483",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código monolítico com funções de 300 linhas para torná-lo altamente eficiente em consumo de memória usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0484",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código cheio de classes abstratas desnecessárias para torná-lo modular, enxuto e direto ao ponto usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0485",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código cheio de classes abstratas desnecessárias para torná-lo 100% testável com unittest puro usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0486",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código cheio de classes abstratas desnecessárias para torná-lo altamente eficiente em consumo de memória usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0487",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código com dezenas de dependências externas para tarefas simples para torná-lo modular, enxuto e direto ao ponto usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0488",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código com dezenas de dependências externas para tarefas simples para torná-lo 100% testável com unittest puro usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0489",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código com dezenas de dependências externas para tarefas simples para torná-lo altamente eficiente em consumo de memória usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0490",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Em que cenário a abstração com Factory Abstract Provider se torna over-engineering e viola o YAGNI?"
+  },
+  {
+    "id": "q_0491",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Em que cenário a abstração com Visitor com Double Dispatch se torna over-engineering e viola o YAGNI?"
+  },
+  {
+    "id": "q_0492",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Em que cenário a abstração com Mediator complexo se torna over-engineering e viola o YAGNI?"
+  },
+  {
+    "id": "q_0493",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Em que cenário a abstração com Command com Undo infinito se torna over-engineering e viola o YAGNI?"
+  },
+  {
+    "id": "q_0494",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio YAGNI (You Aren't Gonna Need It) e demonstre como aplicá-lo em serviços FastAPI assíncronos."
+  },
+  {
+    "id": "q_0495",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio YAGNI (You Aren't Gonna Need It) e demonstre como aplicá-lo em módulos de repositório em Kotlin."
+  },
+  {
+    "id": "q_0496",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio YAGNI (You Aren't Gonna Need It) e demonstre como aplicá-lo em funções utilitárias de parsing."
+  },
+  {
+    "id": "q_0497",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio YAGNI (You Aren't Gonna Need It) e demonstre como aplicá-lo em pipelines de dados em memória."
+  },
+  {
+    "id": "q_0498",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio KISS (Keep It Simple, Stupid) e demonstre como aplicá-lo em serviços FastAPI assíncronos."
+  },
+  {
+    "id": "q_0499",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio KISS (Keep It Simple, Stupid) e demonstre como aplicá-lo em módulos de repositório em Kotlin."
+  },
+  {
+    "id": "q_0500",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio KISS (Keep It Simple, Stupid) e demonstre como aplicá-lo em funções utilitárias de parsing."
+  },
+  {
+    "id": "q_0501",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio KISS (Keep It Simple, Stupid) e demonstre como aplicá-lo em pipelines de dados em memória."
+  },
+  {
+    "id": "q_0502",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio Single Responsibility (SOLID) e demonstre como aplicá-lo em serviços FastAPI assíncronos."
+  },
+  {
+    "id": "q_0503",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio Single Responsibility (SOLID) e demonstre como aplicá-lo em módulos de repositório em Kotlin."
+  },
+  {
+    "id": "q_0504",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio Single Responsibility (SOLID) e demonstre como aplicá-lo em funções utilitárias de parsing."
+  },
+  {
+    "id": "q_0505",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio Single Responsibility (SOLID) e demonstre como aplicá-lo em pipelines de dados em memória."
+  },
+  {
+    "id": "q_0506",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio DRY pragmático sem premature generalization e demonstre como aplicá-lo em serviços FastAPI assíncronos."
+  },
+  {
+    "id": "q_0507",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio DRY pragmático sem premature generalization e demonstre como aplicá-lo em módulos de repositório em Kotlin."
+  },
+  {
+    "id": "q_0508",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio DRY pragmático sem premature generalization e demonstre como aplicá-lo em funções utilitárias de parsing."
+  },
+  {
+    "id": "q_0509",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Explique o princípio DRY pragmático sem premature generalization e demonstre como aplicá-lo em pipelines de dados em memória."
+  },
+  {
+    "id": "q_0510",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a regra de não simular ferramentas reais em projetos distribuídos de baixa latência?"
+  },
+  {
+    "id": "q_0511",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a regra de não simular ferramentas reais em projetos de longa duração com múltiplos subagentes?"
+  },
+  {
+    "id": "q_0512",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a regra de não simular ferramentas reais em projetos com SQLite e concorrência local?"
+  },
+  {
+    "id": "q_0513",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar o princípio de tipagem estrita em projetos distribuídos de baixa latência?"
+  },
+  {
+    "id": "q_0514",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar o princípio de tipagem estrita em projetos de longa duração com múltiplos subagentes?"
+  },
+  {
+    "id": "q_0515",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar o princípio de tipagem estrita em projetos com SQLite e concorrência local?"
+  },
+  {
+    "id": "q_0516",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a proibição de I/O bloqueante na thread principal em projetos distribuídos de baixa latência?"
+  },
+  {
+    "id": "q_0517",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a proibição de I/O bloqueante na thread principal em projetos de longa duração com múltiplos subagentes?"
+  },
+  {
+    "id": "q_0518",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Qual o impacto de violar a proibição de I/O bloqueante na thread principal em projetos com SQLite e concorrência local?"
+  },
+  {
+    "id": "q_0519",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código monolítico com funções de 300 linhas para torná-lo modular, enxuto e direto ao ponto usando a biblioteca padrão do Python?"
+  },
+  {
+    "id": "q_0520",
+    "category_key": "software_engineering_yagni",
+    "category_name": "Engenharia de Software & Princípios",
+    "prompt": "Como refatorar um código monolítico com funções de 300 linhas para torná-lo 100% testável com unittest puro usando a biblioteca padrão do Python?"
+  }
+]
