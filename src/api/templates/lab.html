@@ -597,7 +597,7 @@
                     const btnDiscard = document.getElementById('btnDiscard');
                     if (state.status === 'waiting_approval') {
                         row.style.display = 'flex';
-                        if (resData.final_score < 6.0) {
+                        if (resData.final_score < 7.0) {
                             btnApprove.style.display = 'none';
                             btnDiscard.className = 'btn btn-danger';
                             btnDiscard.textContent = `❌ Reprovado (${resData.final_score}/10) · Descartar & Avançar`;

@@ -81,15 +81,15 @@ Fala meu parceiro, tudo na paz?"""
 
     def test_strip_simulated_bash_tool_commands(self):
         raw = (
-            "Olá Isaac! Vou checar o que a gente fez com o site do Rebello.\n\n"
+            "Olá Isaac! Vou checar o que a gente fez com o site de áudio.\n\n"
             "```bash\n"
             "terminal_run ls -la ~/estudos/ 2>/dev/null || terminal_run ls -la ~/ancora_de_estudos/ 2>/dev/null\n"
             "```"
         )
-        result = sanitize_assistant_reply(raw, "mostra o site do rebello")
+        result = sanitize_assistant_reply(raw, "mostra o site de audio")
         self.assertNotIn("terminal_run", result)
         self.assertNotIn("ancora_de_estudos", result)
-        self.assertIn("site do Rebello", result)
+        self.assertIn("site de áudio", result)
 
     def test_looking_at_study_anchors_scratchpad(self):
         raw = """Looking at the current STUDY_ANCHORS in core memory:
