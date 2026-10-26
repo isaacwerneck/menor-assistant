@@ -447,6 +447,16 @@
             0%, 100% { opacity: 0.4; transform: scale(0.85); }
             50% { opacity: 1; transform: scale(1.3); }
         }
+        .bot-bubble-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            max-width: 720px;
+        }
+        .activity-container:empty {
+            display: none;
+        }
         .bot-text-body {
             line-height: 1.7;
             font-size: 0.95rem;
@@ -2645,9 +2655,30 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const avatarClass = role === 'user' ? 'user-avatar' : 'bot-avatar';
             const avatarText = role === 'user' ? 'I' : 'M';
 
+            const wallMs = timing?.browser_request_wall_ms || timing?.agent_wall_ms || timing?.duration_ms;
+            const timeAttr = (role === 'bot' && wallMs)
+                ? ` data-time="${(wallMs / 1000).toFixed(1)}s" title="Gerado em ${(wallMs / 1000).toFixed(1)}s"`
+                : '';
+            row.innerHTML = `<div class="avatar ${avatarClass}"${timeAttr}>${avatarText}</div>`;
+
             const content = document.createElement('div');
             content.className = 'message-content' + (animate ? ' cursor' : '');
             content.textContent = text;
+
+            if (role === 'bot') {
+                const bubble = document.createElement('div');
+                bubble.className = 'bot-bubble-wrapper';
+
+                const activityContainer = document.createElement('div');
+                activityContainer.className = 'activity-container';
+
+                bubble.appendChild(activityContainer);
+                bubble.appendChild(content);
+                row.appendChild(bubble);
+            } else {
+                row.appendChild(content);
+            }
+
             if (role === 'bot' && approval) {
                 content.textContent = '';
                 if (!approvalCard(content, approval, activeApproval)) content.textContent = text;
@@ -2664,12 +2695,6 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 content.appendChild(image);
             }
 
-            const wallMs = timing?.browser_request_wall_ms || timing?.agent_wall_ms || timing?.duration_ms;
-            const timeAttr = (role === 'bot' && wallMs)
-                ? ` data-time="${(wallMs / 1000).toFixed(1)}s" title="Gerado em ${(wallMs / 1000).toFixed(1)}s"`
-                : '';
-            row.innerHTML = `<div class="avatar ${avatarClass}"${timeAttr}>${avatarText}</div>`;
-            row.appendChild(content);
             container.appendChild(row);
             scrollToBottom();
             return content;
@@ -2958,7 +2983,7 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                                 options: {
                                     temperature: 0.4,
                                     num_predict: 350,
-                                    stop: ['\nThinking Process:', 'Thinking Process:', '<think>', 'Okay, let\'s']
+                                    stop: ['\nThinking Process:', 'Thinking Process:', '<think>']
                                 },
                                 stream: true
                             }),
@@ -2980,6 +3005,10 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                                 try {
                                     const parsed = JSON.parse(line);
                                     const token = parsed.message?.content || '';
+                                    const thinkingToken = parsed.message?.thinking || '';
+                                    if (thinkingToken && firstToken && act) {
+                                        act.addStep('Raciocinando na GPU Local (GTX 1650)...');
+                                    }
                                     if (token) {
                                         if (firstToken) {
                                             firstToken = false;
@@ -3014,7 +3043,8 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                             content.textContent = finalLocal;
                             const wallMs = activeGeneration ? Date.now() - activeGeneration.started : 0;
                             const secs = (wallMs / 1000).toFixed(1) + 's';
-                            const avatar = content.parentElement?.querySelector?.('.avatar.bot-avatar');
+                            const avatar = content.closest?.('.message-row')?.querySelector?.('.avatar.bot-avatar')
+                                || content.parentElement?.querySelector?.('.avatar.bot-avatar');
                             if (avatar && wallMs > 0) {
                                 if (avatar.dataset) avatar.dataset.time = secs;
                                 if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
@@ -3325,7 +3355,8 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             const wallMs = timing?.browser_request_wall_ms || timing?.agent_wall_ms || (activeGeneration ? Date.now() - activeGeneration.started : null);
             if (wallMs) {
                 const secs = (wallMs / 1000).toFixed(1) + 's';
-                const avatar = content.parentElement?.querySelector?.('.avatar.bot-avatar');
+                const avatar = content.closest?.('.message-row')?.querySelector?.('.avatar.bot-avatar')
+                    || content.parentElement?.querySelector?.('.avatar.bot-avatar');
                 if (avatar) {
                     if (avatar.dataset) avatar.dataset.time = secs;
                     if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
@@ -3765,15 +3796,15 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 },
                 render() {
                     if (this.completed) return;
-                    if (!botContent || typeof botContent.appendChild !== 'function') return;
+                    if (!botContent) return;
+                    const slot = (botContent.parentElement && botContent.parentElement.querySelector('.activity-container'))
+                        || botContent;
                     if (!this.box) {
                         this.box = document.createElement('div');
                         this.box.className = 'activity-live-box';
-                        if (botContent.firstChild && typeof botContent.insertBefore === 'function') {
-                            botContent.insertBefore(this.box, botContent.firstChild);
-                        } else {
-                            botContent.appendChild(this.box);
-                        }
+                        slot.appendChild(this.box);
+                    } else if (!slot.contains(this.box)) {
+                        slot.appendChild(this.box);
                     }
                     const elapsed = ((Date.now() - this.started) / 1000).toFixed(1);
                     let html = `<div class="activity-live-header" title="Clique para expandir/recolher os passos">`
@@ -3804,8 +3835,14 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 complete(summary) {
                     if (this.completed) return;
                     this.completed = true;
+                    const slot = (botContent.parentElement && botContent.parentElement.querySelector('.activity-container'))
+                        || botContent;
                     if (!this.box) {
-                        this.render();
+                        this.box = document.createElement('div');
+                        this.box.className = 'activity-live-box';
+                        slot.appendChild(this.box);
+                    } else if (!slot.contains(this.box)) {
+                        slot.appendChild(this.box);
                     }
                     if (!this.box || !this.box.classList) return;
                     const elapsed = ((Date.now() - this.started) / 1000).toFixed(1);
@@ -4085,7 +4122,8 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
                 }
                 const wallMs = Date.now() - generation.started;
                 const secs = (wallMs / 1000).toFixed(1) + 's';
-                const avatar = botContent.parentElement?.querySelector?.('.avatar.bot-avatar');
+                const avatar = botContent.closest?.('.message-row')?.querySelector?.('.avatar.bot-avatar')
+                    || botContent.parentElement?.querySelector?.('.avatar.bot-avatar');
                 if (avatar) {
                     if (avatar.dataset) avatar.dataset.time = secs;
                     if (typeof avatar.setAttribute === 'function') avatar.setAttribute('data-time', secs);
