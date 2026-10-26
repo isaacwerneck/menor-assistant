@@ -74,6 +74,7 @@ CANONICAL_PROBES = [
         "name": "Criação de Landing Page com Preview",
         "prompt": "Crie uma landing page moderna em HTML e CSS para um estúdio de áudio com preview.",
         "expected_preview": True,
+        "expected_code_lang": "html",
         "required_tool": "fs_write",
         "must_not_contain": ["apenas um assistente de voz", "não tenho a capacidade", "não posso criar"],
     },
@@ -150,6 +151,25 @@ class DualTierVerifier:
                 "tier1_pass": False,
             }
 
+        # 0. Checagem de Vazamento de Prompt / Diretrizes do Sistema
+        leak_patterns = (
+            "regra inegociável", "regras inegociáveis", "diretrizes de execução",
+            "chame obrigatoriamente", "se o usuário pedir para criar, fazer",
+            "o usuário pediu para criar", "você tem acesso a ferramentas reais",
+            "thinking process:", "thought process:", "<think>", "looking at the current"
+        )
+        if any(lp in norm_reply for lp in leak_patterns):
+            checks.append({
+                "name": "Integridade de Execução (Anti-Vazamento)",
+                "status": "FAIL",
+                "detail": "Modelo vazou regras do sistema ou monólogo em vez de responder diretamente.",
+            })
+            return {
+                "tier1_score": 0,
+                "tier1_checks": checks,
+                "tier1_pass": False,
+            }
+
         # 1. Checagem de palavras proibidas (recusas falsas)
         forbidden = probe.get("must_not_contain", [])
         found_forbidden = [f for f in forbidden if f.lower() in reply.lower()]
@@ -184,22 +204,48 @@ class DualTierVerifier:
                 "detail": "Todos os termos essenciais presentes",
             })
 
-        # 3. Checagem de link de preview
+        # 3. Checagem de Entrega de Artefato e Código
+        has_html = bool(re.search(r"<!DOCTYPE html|<html|<body|<div|<head", reply, re.IGNORECASE))
+        has_code_block = bool(re.findall(r"```[a-zA-Z0-9_\-]*\s*?\n[\s\S]*?\n```", reply))
+        has_preview = bool(re.search(r"/preview/[a-zA-Z0-9_\-\.\/]+\.html", reply))
+
         if probe.get("expected_preview"):
-            has_preview = bool(re.search(r"/preview/[a-zA-Z0-9_\-\.\/]+\.html", reply))
             if has_preview:
                 checks.append({
                     "name": "Link de Pré-visualização",
                     "status": "PASS",
                     "detail": "Link /preview/ válido retornado",
                 })
-            else:
+            elif has_html or has_code_block:
                 checks.append({
                     "name": "Link de Pré-visualização",
                     "status": "FAIL",
-                    "detail": "Nenhum link /preview/...html encontrado na resposta",
+                    "detail": "Código gerado, porém faltou link de acesso /preview/...html",
                 })
                 score -= 15
+            else:
+                checks.append({
+                    "name": "Entrega do Artefato Solicitado",
+                    "status": "FAIL",
+                    "detail": "Nenhum código HTML/CSS nem link de preview foi entregue pelo modelo.",
+                })
+                return {
+                    "tier1_score": 0,
+                    "tier1_checks": checks,
+                    "tier1_pass": False,
+                }
+
+        if probe.get("expected_code_lang") and not (has_code_block or has_html):
+            checks.append({
+                "name": "Entrega do Artefato Solicitado",
+                "status": "FAIL",
+                "detail": f"Nenhum bloco de código {probe.get('expected_code_lang')} entregue.",
+            })
+            return {
+                "tier1_score": 0,
+                "tier1_checks": checks,
+                "tier1_pass": False,
+            }
 
         # 4. Checagem de AST Python se houver bloco de código python
         py_blocks = re.findall(r"```python(.*?)```", reply, re.DOTALL)
@@ -222,7 +268,14 @@ class DualTierVerifier:
 
         # 5. Checagem de Truncamento e Simulação de Criação de Arquivos
         code_fences = reply.count("```")
-        is_truncated = (code_fences % 2 != 0)
+        is_fence_truncated = (code_fences % 2 != 0)
+
+        stripped = reply.strip()
+        terminal_punct = (".", "!", "?", '"', "'", "```", "}", "]", ")", ">")
+        ends_incomplete = (
+            stripped.endswith((",", ";", ":", "-", "/", "(", "...", "chame", "para", "com", "de", "em", "ou", "e", "que", "se"))
+            or (bool(stripped) and stripped[-1].isalpha() and not stripped.endswith(terminal_punct))
+        )
 
         blocks = re.findall(r"```(?:[a-zA-Z0-9_\-]*\n)?(.*?)```", reply, re.DOTALL)
         code_keywords = (
@@ -235,11 +288,16 @@ class DualTierVerifier:
         expects_code = bool(probe.get("expected_code_lang"))
         has_simulated_files = (promised_files or expects_code) and not has_real_code
 
-        if is_truncated or has_simulated_files:
+        if is_fence_truncated or ends_incomplete or has_simulated_files:
+            detail = (
+                "Resposta cortada abruptamente no meio de uma frase." if ends_incomplete
+                else ("Bloco de código com formatação truncada." if is_fence_truncated
+                else "Simulação de criação de arquivos sem entrega de código real.")
+            )
             checks.append({
                 "name": "Integridade de Execução (Anti-Truncamento)",
                 "status": "FAIL",
-                "detail": "Resposta truncada ou simulação de arquivos sem entrega de código real.",
+                "detail": detail,
             })
             score = 0
         else:
@@ -277,14 +335,23 @@ class DualTierVerifier:
                 "learning": "Nenhum aprendizado gerado: falha técnica na infraestrutura de execução.",
             }
 
-        # Se o Tier 1 falhou por truncamento ou simulação, nota ZERO imediata
-        t1_fails = [c["detail"] for c in (tier1_checks or []) if c.get("status") == "FAIL"]
-        has_truncation_or_sim = any("truncad" in f.lower() or "simula" in f.lower() for f in t1_fails)
-        if has_truncation_or_sim:
+        # Se o Tier 1 falhou criticamente (nota 0, truncamento, vazamento ou falta de artefato), nota ZERO imediata
+        t1_fails = [c for c in (tier1_checks or []) if c.get("status") == "FAIL"]
+        critical_fail_names = (
+            "Comunicação & Execução do Modelo",
+            "Integridade de Execução (Anti-Vazamento)",
+            "Integridade de Execução (Anti-Truncamento)",
+            "Entrega do Artefato Solicitado"
+        )
+        has_critical = any(c.get("name") in critical_fail_names for c in t1_fails)
+        has_truncation_or_sim = any("truncad" in c.get("detail", "").lower() or "simula" in c.get("detail", "").lower() for c in t1_fails)
+
+        if has_critical or has_truncation_or_sim:
+            details_str = "; ".join(c.get("detail", "") for c in t1_fails)
             return {
                 "tier2_score": 0,
-                "critique": "Resposta truncada com simulação indevida de arquivos sem código funcional.",
-                "learning_extracted": "Nenhum aprendizado gerado: resposta descartada por truncamento ou simulação.",
+                "critique": f"Reprovado com nota zero por falha crítica: {details_str}.",
+                "learning_extracted": "Nenhum aprendizado gerado: resposta reprovada por nota zero (ausência de artefato, vazamento de prompt ou truncamento).",
             }
 
         score = 40  # Base média qualitativa

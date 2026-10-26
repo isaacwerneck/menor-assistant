@@ -147,8 +147,24 @@ class TestLabV2(unittest.TestCase):
 
         t2 = DualTierVerifier.verify_tier2_qualitative(probe, simulated_reply, "", t1["tier1_checks"])
         self.assertEqual(t2["tier2_score"], 0)
-        self.assertIn("truncad", t2["critique"].lower())
-        self.assertIn("descartad", t2["learning_extracted"].lower())
+        self.assertIn("reprovado com nota zero", t2["critique"].lower())
+        self.assertIn("nota zero", t2["learning_extracted"].lower())
+
+    def test_dual_tier_verifier_zero_on_prompt_leak_or_truncated_directive(self):
+        from src.lab.eval_engine import CANONICAL_PROBES
+        probe = CANONICAL_PROBES[0]
+        leak_reply = (
+            "O usuário pediu para criar uma landing page moderna em HTML e CSS para um estúdio de áudio com preview.\n\n"
+            "Regra Inegociável: Se o usuário pedir para criar, fazer, programar ou salvar um site, página ou arquivo, chame"
+        )
+        t1 = DualTierVerifier.verify_tier1(probe, leak_reply)
+        self.assertFalse(t1["tier1_pass"])
+        self.assertEqual(t1["tier1_score"], 0)
+
+        t2 = DualTierVerifier.verify_tier2_qualitative(probe, leak_reply, "", t1["tier1_checks"])
+        self.assertEqual(t2["tier2_score"], 0)
+        self.assertIn("reprovado com nota zero", t2["critique"].lower())
+        self.assertIn("nota zero", t2["learning_extracted"].lower())
 
 
 if __name__ == "__main__":
