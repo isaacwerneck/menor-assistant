@@ -3316,14 +3316,20 @@ text-decoration:none;border-radius:9px;padding:9px 12px;font-size:.85rem}
             let cleaned = txt.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, '');
             cleaned = cleaned.replace(/^[\s\S]*?<\/(?:think|thought)>/gi, '');
             cleaned = cleaned.replace(/<(?:think|thought)>[\s\S]*/gi, '');
-            if (/^\s*(?:Thinking Process|Thought Process|Thinking):/i.test(cleaned) || /^\s*Okay,?\s+let's/i.test(cleaned) || /^\s*Wait,\s+the user/i.test(cleaned)) {
+            const scratchpadStart = /^\s*(?:Thinking Process|Thought Process|Thinking|Okay,?\s+(?:let's|the user|I)|Let's\s+|Wait,?\s+the user|Looking at\b|Given (?:their|the)|I need to\b|The user (?:is|wants)|Let me (?:check|see))/i;
+            if (scratchpadStart.test(cleaned)) {
                 const parts = cleaned.split(/\n\s*(?:Resposta|Response|Final Answer|Assistant|Menor):\s*/i);
                 if (parts.length > 1 && parts[parts.length - 1].trim()) {
                     return parts[parts.length - 1].trim();
                 }
                 const lines = cleaned.split('\n').filter(l => {
                     const low = l.trim().toLowerCase();
-                    return !low.startsWith('okay, let') && !low.startsWith('wait, the user') && !low.startsWith('so i should') && !low.startsWith('first, i');
+                    return !low.startsWith('okay, let') && !low.startsWith('okay, the user')
+                        && !low.startsWith('wait, the user') && !low.startsWith('so i should')
+                        && !low.startsWith('first, i') && !low.startsWith('looking at')
+                        && !low.startsWith('given their') && !low.startsWith('i need to')
+                        && !low.startsWith('let me check') && !low.startsWith('the user wants')
+                        && !low.startsWith('the user is') && !low.startsWith('thinking process');
                 });
                 return lines.join('\n').trim();
             }

@@ -48,8 +48,18 @@ Regras Inegociáveis e Diretrizes de Execução:
 - NUNCA faça propaganda não solicitada de ferramentas ou projetos no meio de conversas comuns.
   Responda estritamente ao que foi perguntado.
 - NUNCA invente reuniões, compromissos ou presuma a rotina pessoal do Isaac.
-- Entenda gírias brasileiras comuns: "a gnt" significa "a gente" (nós, você e o Isaac juntos).
-  NUNCA interprete "a gnt" como sigla corporativa (como "Grupo Nacional de Tecnologia").
+- Entenda gírias brasileiras comuns de chat:
+  * "pf" / "pff" / "pls" / "plz" = "por favor" (NUNCA interprete "pf" como sigla corporativa, "tópicos prioritários", "prato feito" ou "polícia federal").
+  * "a gnt" = "a gente" (nós, você e o Isaac juntos; NUNCA interprete como "Grupo Nacional de Tecnologia").
+  * "oq" / "o que" = "o que".
+  * "vc" / "vcs" = "você" / "vocês".
+  * "tb" / "tbm" = "também".
+  * "pq" = "por que" ou "porque".
+  * "blz" = "beleza".
+- NUNCA pense em voz alta em inglês (NUNCA emita "Looking at...", "Given their...", "I need to...", "Okay, the user...", "The user is asking...", "Wait, the user...").
+  Inicie a sua resposta IMEDIATAMENTE no texto em português brasileiro voltado ao Isaac.
+- O Isaac é desenvolvedor de software e atua construindo: sites modernos, jogos 2D, música/DSP de áudio, aplicativos mobile Android (Kotlin/Compose) e sistemas/backends. Ao sugerir estudos ou debater arquitetura, alinhe-se a essas áreas reais.
+- Suas Âncoras de Estudo oficiais estão no bloco [STUDY_ANCHORS] da Core Memory. Se o usuário perguntar quais são, cite as âncoras reais de Core Memory e NUNCA invente tópicos não relacionados (como Kubernetes ou APIs de pagamento).
 - Se o Isaac perguntar sobre projetos, softwares ou tarefas que "a gnt" já fez ou está fazendo,
   cite estritamente os projetos e tarefas reais registrados no contexto (Menor v2, sites e arquivos criados).
 - NUNCA use tags <think> ou raciocínio em inglês. Responda diretamente em português brasileiro.
@@ -62,8 +72,13 @@ Converse diretamente em português brasileiro, de forma natural, amigável e des
 
 Diretrizes essenciais:
 - Você tem total acesso ao ecossistema de ferramentas do Menor e ao Hub Central.
-- Entenda gírias brasileiras comuns: "a gnt" significa "a gente" (nós, você e o Isaac juntos).
-  NUNCA invente siglas corporativas como "Grupo Nacional de Tecnologia".
+- Compreenda gírias e abreviações brasileiras comuns:
+  * "pf" / "pff" / "pls" = "por favor" (NUNCA interprete como sigla corporativa ou tópicos prioritários).
+  * "a gnt" = "a gente" (nós, você e o Isaac juntos).
+  * "oq" = "o que"; "vc" = "você"; "tb" = "também"; "pq" = "porque".
+- NUNCA pense em voz alta em inglês ("Looking at...", "Given their...", "I need to...", "Okay, the user..."). Responda diretamente em português do Brasil.
+- Suas Âncoras de Estudo oficiais estão no bloco [STUDY_ANCHORS] da Core Memory.
+- O Isaac desenvolve: sites modernos, jogos 2D, música/DSP, aplicativos mobile Android e sistemas de software.
 - Se o Isaac perguntar sobre o que "a gnt" já fez, mencione o Menor v2 e as tarefas do Hub.
 - NUNCA diga que é apenas um assistente de texto, que não tem memória ou que não pode criar/enviar arquivos.
 - Se o usuário perguntar sobre a conversa anterior, consulte o histórico no contexto e responda com clareza.
@@ -101,9 +116,13 @@ class Orchestrator:
             parts = []
             try:
                 from src.memory.core_memory import CoreMemoryManager
-                user_prof = CoreMemoryManager(self.store).get_block("user_profile")
+                cm = CoreMemoryManager(self.store)
+                user_prof = cm.get_block("user_profile")
                 if user_prof:
                     parts.append(f"Perfil do Usuário:\n{user_prof.strip()}")
+                study_anch = cm.get_block("study_anchors")
+                if study_anch:
+                    parts.append(f"Âncoras de Estudo (Core Memory):\n{study_anch.strip()}")
             except Exception:
                 pass
             try:
@@ -233,7 +252,9 @@ class Orchestrator:
             "faz ", "fazer", "faça", "constru", "program", "desenvolv", "implement", "html", "css", "js",
             "mand", "mostr", "ver", "envi", "cadê", "cade", "onde tá", "onde ta", "preview", "link",
             "design", "regra", "regras", "arquitetur", "android", "kotlin", "compose", "room", "audio",
-            "áudio", "synth", "músic", "music", "qual", "quais", "o que", "oq ", "expliq", "descrev",
+            "áudio", "synth", "músic", "music", "ancora", "âncora", "topico", "tópico", "estudo", "estudad",
+            "os que tem", "quais tem", "o que tem", "sugira", "sugerir", "jogos", "mobile",
+            "qual", "quais", "o que", "oq ", "expliq", "descrev",
         )
         return any(t in last_user for t in triggers)
 
@@ -340,6 +361,40 @@ class Orchestrator:
                     )
             except Exception as exc:
                 LOGGER.debug("Grounding de relatório de estudos ignorado: %s", exc)
+
+        # Grounding de Âncoras e Tópicos de Estudo
+        study_anchor_triggers = (
+            "ancora", "âncora", "ancoras", "âncoras",
+            "tópicos de estudo", "topicos de estudo", "tópico de estudo", "topico de estudo",
+            "tópicos estudados", "topicos estudados", "mudar esses topicos", "mudar tópicos",
+            "mudar os tópicos", "mudar os topicos", "redefinir tópicos", "redefinir topicos",
+            "quais os que tem", "quais que tem", "os que tem", "o que tem na fila",
+            "sugira topicos", "sugira tópicos", "sugerir tópicos", "sugira estudos",
+        )
+        if any(t in norm_user for t in study_anchor_triggers):
+            try:
+                from src.memory.core_memory import CoreMemoryManager
+                from src.agent.study import TopicManager
+                cm = CoreMemoryManager(self.store)
+                anchors = cm.get_block("study_anchors") or ""
+                tm = TopicManager(self.store)
+                upcoming = tm.list_topics(uncompleted_only=True)
+                upcoming_str = "\n".join(f"- {t['text']}" for t in upcoming[:5]) if upcoming else "Nenhum tópico avulso pendente."
+                full_system += (
+                    f"\n\n[DADOS REAIS DAS ÂNCORAS E FILA DE ESTUDO DO MENOR]:\n"
+                    f"Âncoras Oficiais de Estudo (Core Memory):\n{anchors}\n\n"
+                    f"Tópicos na Fila de Estudo Ativa:\n{upcoming_str}\n\n"
+                    f"Perfil Real do Isaac:\n"
+                    f"Desenvolvedor de software que cria: sites modernos, jogos 2D, música/DSP/áudio, aplicativos mobile Android (Kotlin/Compose) e sistemas/backends.\n\n"
+                    f"DIRETRIZES OBRIGATÓRIAS:\n"
+                    f"1. 'pf' significa 'por favor' (NUNCA interprete 'pf' como tópicos prioritários ou siglas).\n"
+                    f"2. Se o Isaac perguntar quais são os tópicos ou âncoras existentes, liste estritamente as Âncoras Oficiais reais acima.\n"
+                    f"3. Se o Isaac perguntar se podemos mudar, confirme imediatamente que sim (via Core Memory) e pergunte quais tópicos ele quer focar.\n"
+                    f"4. Se o Isaac pedir sugestões alinhadas ao perfil dele (sites, jogos 2D, música, apps, sistemas), sugira tópicos de engenharia profundos dessas 5 áreas reais.\n"
+                    f"5. NUNCA pense em voz alta em inglês ('Looking at...', 'Given their...', 'I need to...'). Responda diretamente em português."
+                )
+            except Exception as exc:
+                LOGGER.debug("Grounding de âncoras de estudo ignorado: %s", exc)
 
         # Inspeção rápida de saúde do código via AST
         inspect_triggers = (

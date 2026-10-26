@@ -496,9 +496,14 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
 
     base_system = (
         "Você é o Menor v2, assistente executivo e parceiro pessoal do Isaac.\n"
-        "Compreenda perfeitamente gírias e abreviações da internet brasileira (vc, hj, eai, blz, oq, pra).\n"
         "Responda sempre de forma natural, calorosa e fluente em português brasileiro.\n"
         "Em conversas casuais e cumprimentos, seja descontraído e NUNCA force nem puxe assunto sobre trabalho.\n"
+        "Compreenda gírias brasileiras comuns de chat:\n"
+        "- 'pf' / 'pff' / 'pls' = 'por favor' (NUNCA interprete como 'prioritários' ou siglas corporativas).\n"
+        "- 'a gnt' = 'a gente' (nós, você e o Isaac juntos; NUNCA interprete como sigla corporativa).\n"
+        "- 'oq' / 'o que' = 'o que'; 'vc' / 'vcs' = 'você' / 'vocês'; 'tb' / 'tbm' = 'também'; 'pq' = 'porque'.\n"
+        "NUNCA pense em voz alta em inglês ('Looking at...', 'Given their...', 'I need to...', 'Okay, the user...').\n"
+        "O Isaac desenvolve: sites modernos, jogos 2D, música/DSP de áudio, aplicativos mobile Android (Kotlin) e sistemas/backends.\n"
         "Respeite estritamente as preferências, diretrizes e perfil do usuário salvas na memória.\n"
         "NUNCA simule saídas de terminal ou invente pastas inexistentes (ex: ```terminal $ ls ...```).\n"
         "Sua Âncora de Estudos oficial está no bloco [STUDY_ANCHORS] da sua Core Memory acima."
@@ -528,7 +533,10 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
             "num_predict": 1024,
             "num_thread": get_optimal_threads(),
             "num_ctx": 4096,
-            "stop": ["\nThinking Process:", "Thinking Process:", "Okay, let's", "Let's tackle"],
+            "stop": [
+                "\nThinking Process:", "Thinking Process:", "Okay, let's", "Let's tackle",
+                "Looking at the current", "Given their work profile", "Okay, the user wants",
+            ],
         },
     }
 
@@ -557,8 +565,11 @@ def chat_stream(req: ChatRequest, _access=Depends(require_chat_access)):
                         if (
                             "thinking process" in buf_lower
                             or "<think>" in buf_lower
-                            or buf_lower.startswith("okay, let's")
-                            or buf_lower.startswith("let's tackle")
+                            or buf_lower.startswith((
+                                "okay, let's", "let's tackle", "looking at", "given their",
+                                "okay, the user", "the user is", "the user wants",
+                                "i need to", "wait, the user", "first, i need", "let me check"
+                            ))
                         ):
                             in_thought = True
                             buffer = ""

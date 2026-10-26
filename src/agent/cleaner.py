@@ -11,15 +11,26 @@ from typing import Optional
 THINKING_STARTERS = (
     r"^\s*(?:Thinking Process|Thought Process|Thinking):",
     r"^\s*Okay,?\s+let's\s+",
+    r"^\s*Okay,?\s+the user\b",
+    r"^\s*Okay,?\s+I\b",
     r"^\s*Let's\s+(?:tackle|analyze|break down|think)\s+",
-    r"^\s*The user is asking\s+",
+    r"^\s*The user (?:is|wants|asked|is asking)\s+",
     r"^\s*First,\s+I need to\s+",
     r"^\s*Wait,\s+the user\s+",
+    r"^\s*Looking at\b",
+    r"^\s*Given (?:their|the|this)\b",
+    r"^\s*I (?:need|should|will|must|have) to\b",
+    r"^\s*Let me (?:check|see|think|review)\b",
+    r"^\s*Since (?:they|the user|this)\b",
+    r"^\s*Based on (?:the|their)\b",
+    r"^\s*To answer this\b",
+    r"^\s*In this case\b",
 )
 
 INTERNAL_SCRATCHPAD_PHRASES = (
     "thinking process",
     "okay, let's",
+    "okay, the user",
     "wait, the user",
     "let's analyze",
     "according to the guidelines",
@@ -28,6 +39,13 @@ INTERNAL_SCRATCHPAD_PHRASES = (
     "ask for code",
     "internal thought",
     "my role as menor",
+    "looking at the current",
+    "given their work profile",
+    "i need to respond directly",
+    "let me check the previous",
+    "the user wants me to",
+    "the user is asking",
+    "as per the rules",
 )
 
 
@@ -102,9 +120,16 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
     is_still_english_scratchpad = any(phrase in cleaned_lower for phrase in (
         "thinking process",
         "okay, let's",
+        "okay, the user",
         "wait, the user",
         "let's analyze",
         "according to the guidelines",
+        "looking at the current",
+        "given their work profile",
+        "i need to respond directly",
+        "let me check the previous",
+        "the user wants me to write",
+        "as per the rules",
     ))
 
     has_false_refusal = any(phrase in cleaned_lower for phrase in (
@@ -124,6 +149,25 @@ def sanitize_assistant_reply(raw_content: Optional[str], last_user_msg: str = ""
 def _fallback_casual_reply(user_msg: str) -> str:
     """Gera resposta conversacional calorosa em pt-BR quando o modelo falhou em gerar saída limpa."""
     norm_user = (user_msg or "").lower()
+
+    study_prompts = (
+        "ancora de estudo", "âncora de estudo", "ancoras de estudo", "âncoras de estudo",
+        "ancora", "âncora", "ancoras", "âncoras", "topicos de estudo", "tópicos de estudo",
+        "estudos", "estudar", "sugira topicos", "sugira tópicos", "sugerir tópicos",
+        "ferramenta de trabalho", "jogos 2d", "escreve em portugues", "escreva em portugues",
+        "em portugues", "em português"
+    )
+    if any(w in norm_user for w in study_prompts):
+        return (
+            "Com certeza, mano! Pensando no seu perfil (sites modernos, jogos 2D, música/DSP, aplicativos mobile e sistemas), "
+            "as âncoras e tópicos ideais para o Menor dominar e acelerar o seu trabalho são:\n\n"
+            "1. **Jogos 2D & Simulação:** Arquitetura de Game Loops, Shaders 2D (GLSL), ECS (Entity Component System), física e detecção de colisões.\n"
+            "2. **Áudio, Música & DSP:** Síntese sonora (FM, wavetable, subtrativa), Web Audio API / AudioWorklets em tempo real, protocolos MIDI e processamento digital de sinais.\n"
+            "3. **Aplicativos Mobile (Android):** Kotlin Coroutines/Flow, Jetpack Compose avançado, Clean Architecture e Room/Ktor offline-first.\n"
+            "4. **Sites & Frontend de Alta Performance:** Micro-interações fluidas no Tailwind, renderização Canvas/WebGL e WebSockets de baixa latência.\n"
+            "5. **Sistemas & Backend Assíncrono:** Concorrência no FastAPI, SQLite FTS5 de alta velocidade e agentes autônomos locais.\n\n"
+            "Essas áreas cobrem exatamente tudo o que você constrói. Quer que eu adicione esses tópicos diretamente na nossa Core Memory de estudos agora?"
+        )
     preview_prompts = (
         "mostrar o site", "mostra o site", "mostrar site", "mostra o arquivo",
         "mandar o arquivo", "manda o arquivo", "onde está o site", "onde ta o site",

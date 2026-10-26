@@ -18,10 +18,11 @@ _CORE_MEM_LOCK = threading.RLock()
 DEFAULT_BLOCKS = {
     "user_profile": (
         "Nome: Isaac Werneck\n"
-        "Papel: Fundador e Desenvolvedor Líder\n"
+        "Papel: Fundador e Desenvolvedor Líder (Desenvolve sites modernos, jogos 2D, música/DSP/áudio, "
+        "aplicativos mobile Android e sistemas de software)\n"
         "Hardware: PC Desktop (Ryzen 5 3500X, 16GB RAM, GTX 1650 4GB VRAM) e "
         "Notebook Servidor Ubuntu (Intel Core i7-1185G7, 32GB RAM, Iris Xe)\n"
-        "Stack: Python, FastAPI, Node.js, SQLite, Ollama, Linux, Windows."
+        "Stack: Python, FastAPI, Node.js, SQLite, Kotlin, Android, Web Audio, Tailwind, Linux, Windows."
     ),
     "system_directives": (
         "1. Seja direto, técnico e aja como parceiro sênior de engenharia.\n"
@@ -36,8 +37,11 @@ DEFAULT_BLOCKS = {
     "study_anchors": (
         "1. Inteligência Artificial e Agentes (RAG, Agentes Autônomos, Embeddings, MoE, Fine-tuning)\n"
         "2. Engenharia de Software e Backend (Python assíncrono, FastAPI, Concorrência, SQLite, Arquitetura)\n"
-        "3. Frontend e JavaScript (EventLoop, WebSockets, Web Workers, Web Audio API, DOM Performance)\n"
-        "4. Design e UI/UX (Design Systems, Micro-interações, Teoria das Cores, Acessibilidade)"
+        "3. Frontend e Web Moderna (Tailwind, WebSockets, Web Workers, Web Audio API, DOM Performance)\n"
+        "4. Desenvolvimento Mobile e Android (Kotlin, Jetpack Compose, Clean Architecture, Coroutines)\n"
+        "5. Jogos 2D e Simulação (Game Loops, Física 2D, Sprites, Shaders, WebGL/Canvas)\n"
+        "6. Áudio, Música e DSP (Síntese Sonora, MIDI, Web Audio API, Filtros e Processamento Digital de Sinais)\n"
+        "7. Design e UI/UX (Design Systems Dark/Minimalista, Micro-interações, Acessibilidade)"
     ),
 }
 
@@ -70,6 +74,11 @@ class CoreMemoryManager:
                 if k not in data:
                     data[k] = v
                     updated = True
+            current_anchors = data.get("study_anchors", "").lower()
+            if "jogos" not in current_anchors or "android" not in current_anchors or "áudio" not in current_anchors:
+                data["study_anchors"] = DEFAULT_BLOCKS["study_anchors"]
+                data["user_profile"] = DEFAULT_BLOCKS["user_profile"]
+                updated = True
             if updated:
                 with _CORE_MEM_LOCK:
                     self._write_atomic(data)
