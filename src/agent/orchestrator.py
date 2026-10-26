@@ -890,22 +890,30 @@ class Orchestrator:
                 )
                 if any(w in norm_user for w in term_triggers):
                     cmd_to_run = None
-                    t_match = re.search(
-                        r"terminal_run\(\s*(?:command\s*=\s*)?['\"](?P<cmd>[^'\"]+)['\"]\s*\)",
-                        reply_text,
+                    explicit_cmd = re.search(
+                        r"(?:execute|roda|rode|rodar|executar)\s+(?:no\s+terminal\s*:\s*|o\s+comando\s*:\s*)([^\r\n]+)",
+                        last_user,
+                        re.IGNORECASE,
                     )
-                    if t_match:
-                        cmd_to_run = t_match.group("cmd")
+                    if explicit_cmd:
+                        cmd_to_run = explicit_cmd.group(1).strip("`\"' ")
                     else:
-                        bash_blocks = re.findall(r"```(?:bash|sh|terminal|shell)?\s*?(?:\r?\n)([\s\S]*?)(?:\r?\n)```", reply_text)
-                        if bash_blocks:
-                            cand = bash_blocks[0].strip()
-                            if not cand.startswith(("import ", "def ", "class ", "from ")):
-                                cmd_to_run = cand
-                        elif "git " in last_user:
-                            git_cmd = re.search(r"(git\s+[a-zA-Z0-9_\-\s\.]+)", last_user)
-                            if git_cmd:
-                                cmd_to_run = git_cmd.group(1).strip()
+                        t_match = re.search(
+                            r"terminal_run\(\s*(?:command\s*=\s*)?['\"](?P<cmd>[^'\"]+)['\"]\s*\)",
+                            reply_text,
+                        )
+                        if t_match:
+                            cmd_to_run = t_match.group("cmd")
+                        else:
+                            bash_blocks = re.findall(r"```(?:bash|sh|terminal|shell)?\s*?(?:\r?\n)([\s\S]*?)(?:\r?\n)```", reply_text)
+                            if bash_blocks:
+                                cand = bash_blocks[0].strip()
+                                if not cand.startswith(("import ", "def ", "class ", "from ")):
+                                    cmd_to_run = cand
+                            elif "git " in last_user:
+                                git_cmd = re.search(r"(git\s+[a-zA-Z0-9_\-\s\.]+)", last_user)
+                                if git_cmd:
+                                    cmd_to_run = git_cmd.group(1).strip()
 
                     if cmd_to_run and not any(isinstance(t, str) and t.startswith("terminal_run:") for t in executed_tools_log):
                         try:

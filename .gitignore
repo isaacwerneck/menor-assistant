@@ -31,3 +31,7 @@ Thumbs.db
 /dist/
 .cloudflared/
 *.cloudflared.json
+
+# Stubs temporários de testes de sandbox e ferramentas dinâmicas
+tests/test_stub_*
+src/tools/dynamic/*.py

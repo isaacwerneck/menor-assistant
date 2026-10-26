@@ -45,6 +45,8 @@ main() {
         echo "Deploy requer a branch main." >&2
         return 1
     fi
+    git restore --staged tests/test_stub_* 2>/dev/null || true
+    rm -f tests/test_stub_* 2>/dev/null || true
     if [[ -n "$(git status --porcelain -uno)" ]]; then
         echo "Deploy bloqueado: há alterações locais em arquivos rastreados. Salve-as antes de atualizar." >&2
         return 1

@@ -134,6 +134,7 @@ class SandboxRefactorEngine:
 
             # Retorna para a branch original por segurança
             self._run_git(["checkout", orig_branch])
+            self._run_git(["restore", "--staged", "."])
 
             return {
                 "success": True,
@@ -228,6 +229,9 @@ class SandboxRefactorEngine:
             prop_file.write_text(proposal_md, encoding="utf-8")
 
             self._run_git(["checkout", orig_branch])
+            if test_file.exists():
+                test_file.unlink()
+            self._run_git(["restore", "--staged", "."])
 
             return {
                 "success": True,
